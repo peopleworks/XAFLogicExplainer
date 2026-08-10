@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'docs/assets/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -33,11 +34,18 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # The site is a single self-contained HTML file: no build step, no dependencies, nothing
-      # to go out of date. .nojekyll stops GitHub running Jekyll over it, which would otherwise
-      # drop any file or directory beginning with an underscore.
+      # The page itself is one hand-written HTML file: no build step, no dependencies, nothing to
+      # go out of date. .nojekyll stops GitHub running Jekyll over it, which would otherwise drop
+      # any file or directory beginning with an underscore.
+      #
+      # The figures are copied in rather than linked from raw.githubusercontent.com. Served from
+      # the same origin they arrive with the page instead of after it, and the site stops
+      # depending on a host that is not the one it is published on.
       - name: Prepare artifact
-        run: touch site/.nojekyll
+        run: |
+          touch site/.nojekyll
+          mkdir -p site/assets
+          cp docs/assets/* site/assets/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
