@@ -56,6 +56,23 @@ jobs:
       - name: Smoke test the CLI
         run: dotnet run --project src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj -c Release --no-build -- --help
 
+  container:
+    name: MCP server in a container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # MCP directories run automated safety and quality checks against a container, and a server
+      # that fails them is listed but never appears in search results. Building the image here
+      # means that is found on a push rather than by a directory rejecting the entry.
+      - name: Build the image
+        run: docker build -t xaflogic-mcp .
+
+      # Proves the container speaks MCP, not merely that it starts: initialize, tools/list, and one
+      # real tool call against the demo application baked into the image.
+      - name: Handshake
+        run: python3 .github/scripts/mcp-handshake.py docker run --rm -i xaflogic-mcp
+
   pack:
     name: Verify packaging
     runs-on: ubuntu-latest

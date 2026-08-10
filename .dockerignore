@@ -1,0 +1,29 @@
+# The build context is uploaded to the Docker daemon in full, so this file is a boundary, not an
+# optimization. `.claude/` in particular holds local machine settings that have no business
+# leaving the working tree.
+.claude/
+.git/
+.github/
+.dotnet_cli_home/
+
+# Build output. Copying a host bin/obj into the image would mix Windows artifacts into a Linux
+# build and defeat layer caching for no gain.
+**/bin/
+**/obj/
+artifacts/
+nupkg/
+
+# Nothing the server needs at run time.
+docs/
+site/
+plugins/
+tools/
+.claude-plugin/
+
+# The fixtures are excluded wholesale except the demo application, which the image ships.
+tests/XafLogicExplainer.Tests/Fixtures/XpoSolution/
+tests/XafLogicExplainer.Tests/Fixtures/EfCoreSolution/
+
+*.user
+*.suo
+.vs/
