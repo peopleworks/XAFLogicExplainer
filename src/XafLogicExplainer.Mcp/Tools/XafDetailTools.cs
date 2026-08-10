@@ -415,6 +415,74 @@ public sealed class XafDetailTools
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Returns what happened to the data between released versions.
+    /// </summary>
+    [McpServerTool(Name = "xaf_migrations")]
+    [Description(
+        "Updater blocks that ran once when an existing database was upgraded past a version, and " +
+        "never again. Use when asked why a column contains what it contains, where legacy data " +
+        "came from, or what changed between releases — the code running today cannot explain any " +
+        "of that, and reasoning from it produces a plausible wrong answer.")]
+    public async Task<string> MigrationsAsync(
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        if (app.Migrations.Count == 0)
+        {
+            return $"{app.ProjectName} has no version-gated migrations. Its updater only seeds a " +
+                   "fresh database; no block runs conditionally on an upgrade, so no data was " +
+                   "transformed by a past release.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Data migrations — {app.ProjectName}");
+        sb.AppendLine();
+        sb.AppendLine("Each ran **once**, on databases older than the version named, and never again.");
+
+        foreach (var migration in app.Migrations.OrderBy(m => m.TargetVersion, StringComparer.Ordinal))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Upgrading to {migration.TargetVersion ?? "an unknown version"}");
+            sb.AppendLine();
+
+            sb.AppendLine(migration.Phase switch
+            {
+                MigrationPhase.BeforeSchemaUpdate =>
+                    "- Ran **before** the schema changed, so the new columns did not exist yet.",
+                MigrationPhase.AfterSchemaUpdate =>
+                    "- Ran **after** the schema changed, so anything dropped was already gone.",
+                _ => "- Schema phase could not be established.",
+            });
+
+            if (!string.IsNullOrWhiteSpace(migration.MinimumVersion))
+                sb.AppendLine($"- Existing databases only, from {migration.MinimumVersion} upward.");
+
+            sb.AppendLine($"- Condition: `{migration.Condition}`");
+
+            if (migration.CallsMethods.Count > 0)
+                sb.AppendLine($"- Calls: {string.Join(", ", migration.CallsMethods)}");
+
+            if (!string.IsNullOrWhiteSpace(migration.Description))
+            {
+                sb.AppendLine();
+                sb.AppendLine(migration.Description);
+            }
+
+            if (!string.IsNullOrWhiteSpace(migration.Code))
+            {
+                sb.AppendLine();
+                sb.AppendLine("```csharp");
+                sb.AppendLine(Cap(migration.Code));
+                sb.AppendLine("```");
+            }
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Writes an entity's validation, appearance and calculation rules.</summary>
     private static void AppendRules(StringBuilder sb, ExtractedEntity entity)
     {

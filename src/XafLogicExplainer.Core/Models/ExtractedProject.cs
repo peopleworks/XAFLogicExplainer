@@ -77,6 +77,15 @@ public class ExtractedProject
     public List<ExtractedEditor> Editors { get; set; } = [];
 
     /// <summary>
+    /// Updater blocks that ran once, when an existing database was upgraded past a version.
+    /// </summary>
+    /// <remarks>
+    /// Seed data says what a fresh database contains; this says what happened to every database
+    /// that was not fresh.
+    /// </remarks>
+    public List<ExtractedMigration> Migrations { get; set; } = [];
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>

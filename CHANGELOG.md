@@ -32,6 +32,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     *selectable* in the Model Editor. Only the first is reported as being used by an entity —
     listing every string property in an application as "uses the barcode scanner" would be plainly
     false.
+- **Version-gated data migrations** from the module updater — the blocks guarded by
+  `CurrentDBVersion < new Version("1.1.0.0")`. Each ran **once**, on somebody's production
+  database, and never again. Reading the code that runs today cannot recover what they did, which
+  is why an agent asked "why does this column contain that?" reasons from current code and invents
+  a cause.
+  - Records the version being upgraded to, the "existing databases only" lower bound, **which
+    schema phase it ran in** — a block running before the schema changed could not use the new
+    columns — the methods it calls, and the code itself.
+  - Captures **the comment above the block**, which is usually the only surviving record of *why*,
+    and the question anyone reading a migration actually has.
+  - Kept separate from seed data throughout: seed data says what a fresh database contains,
+    migrations say what happened to every database that was not fresh.
+  - Surfaced in `AGENTS.md`, the explainer, and a new `xaf_migrations` MCP tool.
 - A **fourteen-entity demo application** (`Fixtures/DemoSolution`) with a platform project, a
   custom editor and a version-gated updater, so the diagrams and screenshots show a realistic
   application that belongs to nobody.

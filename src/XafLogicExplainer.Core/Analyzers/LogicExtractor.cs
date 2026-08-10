@@ -159,8 +159,11 @@ public class LogicExtractor : ILogicExtractor
 
         LinkEditorsToProperties(project);
 
-        // 3. Extract seed data from Updater
+        // 3. Extract seed data from Updater, and the version-gated blocks beside it. The second
+        //    kind never runs again on a database that has already been upgraded, which is exactly
+        //    why nothing else can recover what it did.
         project.SeedData = _updaterAnalyzer.AnalyzeUpdater(projectPath, options);
+        project.Migrations = _updaterAnalyzer.AnalyzeMigrations(projectPath, options);
 
         // 4. Extract module info
         project.ModuleInfo = _moduleAnalyzer.AnalyzeModule(projectPath, options);

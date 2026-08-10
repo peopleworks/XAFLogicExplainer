@@ -73,6 +73,7 @@ public sealed class AgentContextGenerator
         WriteNavigation(sb, project);
         WriteCriteriaExamples(sb, conventions);
         WriteEditors(sb, project);
+        WriteMigrations(sb, project);
         WriteConventions(sb, project, conventions);
         WriteRecipes(sb, project, conventions);
         WriteDetailPointers(sb, detailFiles);
@@ -499,6 +500,48 @@ public sealed class AgentContextGenerator
         EditorKind.ViewItem => "view item",
         _ => "editor",
     };
+
+    /// <summary>
+    /// Lists what happened to the data between released versions.
+    /// </summary>
+    /// <remarks>
+    /// Belongs in the always-loaded tier because it prevents a specific wrong answer: asked why a
+    /// column holds what it holds, an agent will reason from code that runs today and invent a
+    /// cause. The real one ran once, years ago, and only the updater remembers it.
+    /// </remarks>
+    private static void WriteMigrations(StringBuilder sb, ExtractedProject project)
+    {
+        if (project.Migrations.Count == 0)
+            return;
+
+        sb.AppendLine("## Data migrations");
+        sb.AppendLine();
+        sb.AppendLine("These ran **once**, when an existing database was upgraded, and never again. They explain");
+        sb.AppendLine("data that the code running today does not account for:");
+        sb.AppendLine();
+
+        foreach (var migration in project.Migrations.OrderBy(m => m.TargetVersion, StringComparer.Ordinal))
+        {
+            sb.Append($"- **Upgrading to {migration.TargetVersion ?? "an unknown version"}**");
+
+            if (migration.Phase != MigrationPhase.Unknown)
+            {
+                sb.Append(migration.Phase == MigrationPhase.BeforeSchemaUpdate
+                    ? " (before the schema changed)"
+                    : " (after the schema changed)");
+            }
+
+            sb.AppendLine();
+
+            if (!string.IsNullOrWhiteSpace(migration.Description))
+                sb.AppendLine($"  - {Cell(migration.Description)}");
+
+            if (migration.CallsMethods.Count > 0)
+                sb.AppendLine($"  - calls {string.Join(", ", migration.CallsMethods.Select(m => $"`{m}`"))}");
+        }
+
+        sb.AppendLine();
+    }
 
     private static void WriteConventions(
         StringBuilder sb,

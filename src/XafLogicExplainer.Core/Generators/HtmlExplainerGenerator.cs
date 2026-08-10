@@ -55,6 +55,7 @@ public sealed class HtmlExplainerGenerator
         WriteModelEditor(sb, project);
         WriteEditors(sb, project);
         WriteSeedData(sb, project);
+        WriteMigrations(sb, project);
         sb.AppendLine("</main>");
 
         WriteFooter(sb, project);
@@ -134,6 +135,7 @@ public sealed class HtmlExplainerGenerator
         if (project.ModelEditorInfo is not null) sb.AppendLine("  <li><a href=\"#model\">Model Editor</a></li>");
         if (project.Editors.Count > 0) sb.AppendLine("  <li><a href=\"#editors\">Custom editors</a></li>");
         if (project.SeedData.Count > 0) sb.AppendLine("  <li><a href=\"#seed\">Seed data</a></li>");
+        if (project.Migrations.Count > 0) sb.AppendLine("  <li><a href=\"#migrations\">Migrations</a></li>");
         sb.AppendLine("</ul></div></nav>");
     }
 
@@ -658,6 +660,59 @@ public sealed class HtmlExplainerGenerator
 
         sb.AppendLine("</section>");
     }
+
+    // ------------------------------------------------------------ migrations
+
+    private static void WriteMigrations(StringBuilder sb, ExtractedProject project)
+    {
+        if (project.Migrations.Count == 0)
+            return;
+
+        sb.AppendLine("<section id=\"migrations\">");
+        sb.AppendLine("  <h2>What happened to the data</h2>");
+        sb.AppendLine("  <p class=\"lede\">These ran <strong>once</strong>, when an existing database was upgraded past a version — and then never again. Reading the current code cannot recover what they did, which makes this the answer to “why does this column contain that?”.</p>");
+
+        foreach (var migration in project.Migrations
+                     .OrderBy(m => m.TargetVersion, StringComparer.Ordinal))
+        {
+            var haystack = Haystack(migration.TargetVersion, migration.Description,
+                string.Join(" ", migration.CallsMethods));
+
+            sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
+            sb.AppendLine("    <div class=\"card__head\">");
+            sb.AppendLine($"      <span class=\"card__name\">upgrading to {E(migration.TargetVersion ?? "an unknown version")}</span>");
+            sb.AppendLine($"      <span class=\"pill\">{E(Describe(migration.Phase))}</span>");
+            if (!string.IsNullOrWhiteSpace(migration.MinimumVersion))
+                sb.AppendLine($"      <span class=\"card__meta\">existing databases only, from {E(migration.MinimumVersion)}</span>");
+            sb.AppendLine("    </div>");
+
+            // The comment is the only record of *why*, which is the question a reader has.
+            if (!string.IsNullOrWhiteSpace(migration.Description))
+                sb.AppendLine($"    <p class=\"card__desc\">{E(migration.Description)}</p>");
+
+            sb.AppendLine("    <table><tbody>");
+            sb.AppendLine($"      <tr><th>Runs when</th><td class=\"mono\"><code class=\"crit\">{E(migration.Condition)}</code></td></tr>");
+            if (migration.CallsMethods.Count > 0)
+                sb.AppendLine($"      <tr><th>Calls</th><td class=\"mono\">{E(string.Join(", ", migration.CallsMethods))}</td></tr>");
+            sb.AppendLine("    </tbody></table>");
+
+            if (!string.IsNullOrWhiteSpace(migration.Code))
+                sb.AppendLine($"    <details><summary>What it did</summary><pre><code>{E(Cap(migration.Code))}</code></pre></details>");
+
+            sb.AppendLine("  </article>");
+        }
+
+        sb.AppendLine("</section>");
+    }
+
+    private static string Describe(MigrationPhase phase) => phase switch
+    {
+        // Stated as a consequence, not as a method name: a reader needs to know which columns
+        // existed when the block ran, not which override it sat in.
+        MigrationPhase.BeforeSchemaUpdate => "before the schema changed — new columns did not exist yet",
+        MigrationPhase.AfterSchemaUpdate => "after the schema changed — anything dropped was already gone",
+        _ => "phase unknown",
+    };
 
     private void WriteFooter(StringBuilder sb, ExtractedProject project)
     {

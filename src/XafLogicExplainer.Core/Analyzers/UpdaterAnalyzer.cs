@@ -63,6 +63,161 @@ public class UpdaterAnalyzer
     }
 
     /// <summary>
+    /// Finds the blocks that run only when an existing database is upgraded.
+    /// </summary>
+    /// <remarks>
+    /// A version-gated block runs once, on somebody's production database, and then sits in the
+    /// updater forever describing a decision nobody remembers. Reading the current code cannot
+    /// recover it, which makes it some of the most valuable knowledge in an inherited application
+    /// and the reason a column contains what it contains.
+    /// </remarks>
+    /// <param name="sourceDirectory">Project source root.</param>
+    /// <param name="options">Extraction options controlling output detail.</param>
+    public List<ExtractedMigration> AnalyzeMigrations(string sourceDirectory, ExtractionOptions options)
+    {
+        var migrations = new List<ExtractedMigration>();
+        var classDecl = FindUpdaterClass(sourceDirectory, options);
+
+        if (classDecl is null)
+            return migrations;
+
+        foreach (var method in classDecl.Members.OfType<MethodDeclarationSyntax>())
+        {
+            if (method.Body is null)
+                continue;
+
+            var phase = method.Identifier.Text switch
+            {
+                "UpdateDatabaseBeforeUpdateSchema" => MigrationPhase.BeforeSchemaUpdate,
+                "UpdateDatabaseAfterUpdateSchema" => MigrationPhase.AfterSchemaUpdate,
+                _ => MigrationPhase.Unknown,
+            };
+
+            foreach (var ifStatement in method.Body.DescendantNodes().OfType<IfStatementSyntax>())
+            {
+                var condition = ifStatement.Condition.ToString();
+
+                // The gate is always a comparison against CurrentDBVersion. Anything else in an
+                // updater is ordinary branching and says nothing about upgrades.
+                if (!condition.Contains("CurrentDBVersion", StringComparison.Ordinal))
+                    continue;
+
+                var versions = ReadVersions(ifStatement.Condition);
+
+                migrations.Add(new ExtractedMigration
+                {
+                    Condition = Collapse(condition),
+                    Phase = phase,
+                    // Highest is the version being upgraded to; the lower bound, when present, is
+                    // the "not a brand new database" guard. MaxBy, not Max: Max returns the
+                    // projected Version, and what is wanted is the string it came from.
+                    TargetVersion = versions.Count > 0 ? versions.MaxBy(Compare) : null,
+                    MinimumVersion = versions.Count > 1 ? versions.MinBy(Compare) : null,
+                    Description = CommentAbove(ifStatement),
+                    CallsMethods = CalledMethods(ifStatement),
+                    Code = options.IncludeSourceCode ? ifStatement.Statement.ToString() : string.Empty,
+                });
+            }
+        }
+
+        return migrations;
+    }
+
+    /// <summary>Reads every <c>new Version("…")</c> out of a condition.</summary>
+    private static List<string> ReadVersions(ExpressionSyntax condition) =>
+        condition.DescendantNodesAndSelf()
+            .OfType<ObjectCreationExpressionSyntax>()
+            .Where(c => c.Type.ToString().EndsWith("Version", StringComparison.Ordinal))
+            .Select(c => c.ArgumentList?.Arguments.FirstOrDefault()?.Expression)
+            .OfType<ExpressionSyntax>()
+            .Select(SyntaxLiteral.ValueOf)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    /// <summary>
+    /// Orders version strings the way versions order, not the way strings do.
+    /// </summary>
+    /// <remarks>
+    /// Sorted as text, "1.10.0.0" comes before "1.9.0.0" — which would report the wrong bound as
+    /// soon as an application reaches its tenth minor release.
+    /// </remarks>
+    private static Version Compare(string value) =>
+        Version.TryParse(value, out var parsed) ? parsed : new Version(0, 0);
+
+    /// <summary>
+    /// Reads the comment above a migration block.
+    /// </summary>
+    /// <remarks>
+    /// The code says what the migration did. The comment is usually the only record of why, and
+    /// why is the question anyone reading it actually has.
+    /// </remarks>
+    private static string? CommentAbove(SyntaxNode node)
+    {
+        var lines = node.GetLeadingTrivia()
+            .ToFullString()
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith("//", StringComparison.Ordinal))
+            .Select(line => line.TrimStart('/').Trim())
+            .Where(line => line.Length > 0)
+            .ToList();
+
+        return lines.Count == 0 ? null : string.Join(" ", lines);
+    }
+
+    /// <summary>Names the methods a block calls, which is where the work usually lives.</summary>
+    private static List<string> CalledMethods(SyntaxNode block) =>
+        block.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Select(i => i.Expression switch
+            {
+                IdentifierNameSyntax identifier => identifier.Identifier.Text,
+                MemberAccessExpressionSyntax member => member.Name.Identifier.Text,
+                _ => null,
+            })
+            .OfType<string>()
+            .Where(name => name is not ("CommitChanges" or "GetObjects" or "FirstOrDefault"))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    private static string Collapse(string text)
+    {
+        var single = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+
+        while (single.Contains("  ", StringComparison.Ordinal))
+            single = single.Replace("  ", " ", StringComparison.Ordinal);
+
+        return single;
+    }
+
+    /// <summary>
+    /// Locates and parses the updater class, shared by seed and migration extraction.
+    /// </summary>
+    private static ClassDeclarationSyntax? FindUpdaterClass(string sourceDirectory, ExtractionOptions options)
+    {
+        var updaterFile = FindUpdaterFile(sourceDirectory, options);
+
+        if (updaterFile is null)
+            return null;
+
+        try
+        {
+            var root = CSharpSyntaxTree.ParseText(File.ReadAllText(updaterFile), path: updaterFile).GetRoot();
+
+            return root.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault(c => c.Identifier.Text == "Updater"
+                                  || c.BaseList?.Types.Any(t =>
+                                         t.Type.ToString().Contains("ModuleUpdater", StringComparison.Ordinal)) == true);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Traverses update entry points to find delegated seed methods.
     /// </summary>
     private static void AnalyzeUpdateMethod(ClassDeclarationSyntax classDecl, BlockSyntax body, List<ExtractedSeedData> seedData, ExtractionOptions options)
