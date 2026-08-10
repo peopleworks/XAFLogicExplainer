@@ -93,53 +93,61 @@ public class ModuleAnalyzer
             types.AddRange(typeofExpressions);
         }
 
+        // AdditionalExportedTypes.Add(typeof(X)) is the idiomatic place to export a business
+        // class, and it is written in the constructor -- which none of the scans above look at.
+        types.AddRange(CollectAddedTypes(classDecl, "AdditionalExportedTypes"));
+
         return types.Distinct().ToList();
     }
 
     /// <summary>
     /// Extracts required module references from module members.
     /// </summary>
-    private static List<string> ExtractRequiredModules(ClassDeclarationSyntax classDecl)
+    private static List<string> ExtractRequiredModules(ClassDeclarationSyntax classDecl) =>
+        CollectAddedTypes(classDecl, "RequiredModuleTypes");
+
+    /// <summary>
+    /// Collects the <c>typeof(...)</c> arguments passed to <c>&lt;collection&gt;.Add(...)</c>
+    /// anywhere in a class.
+    /// </summary>
+    /// <remarks>
+    /// The collection name has to be matched on the invocation target, not merely present
+    /// somewhere in the class. An earlier version accepted any invocation whose expression
+    /// contained "Add", which matched every <c>.Add()</c> call in the constructor — so
+    /// <c>AdditionalExportedTypes.Add(typeof(Cliente))</c> registered a business entity as a
+    /// required XAF module. Being listed under the wrong heading in generated documentation is
+    /// worse than being absent, because it reads as authoritative.
+    /// </remarks>
+    /// <param name="classDecl">The module class.</param>
+    /// <param name="collectionName">Collection being added to, e.g. <c>RequiredModuleTypes</c>.</param>
+    private static List<string> CollectAddedTypes(ClassDeclarationSyntax classDecl, string collectionName)
     {
-        var modules = new List<string>();
+        var results = new List<string>();
 
-        // Find AdditionalExportedTypes or RequiredModuleTypes overrides
-        var methods = classDecl.Members.OfType<MethodDeclarationSyntax>();
-        foreach (var method in methods)
+        var invocations = classDecl.DescendantNodes().OfType<InvocationExpressionSyntax>();
+
+        foreach (var invocation in invocations)
         {
-            if (method.Body == null) continue;
+            // The call must be `<something>.<collectionName>.Add(...)`, so inspect the member
+            // access itself rather than searching the rendered expression for a substring.
+            if (invocation.Expression is not MemberAccessExpressionSyntax { Name.Identifier.Text: "Add" } add)
+                continue;
 
-            var typeofExpressions = method.Body.DescendantNodes()
+            var target = add.Expression.ToString();
+            var isTargetCollection =
+                target.Equals(collectionName, StringComparison.Ordinal) ||
+                target.EndsWith($".{collectionName}", StringComparison.Ordinal);
+
+            if (!isTargetCollection)
+                continue;
+
+            results.AddRange(invocation.ArgumentList.Arguments
+                .Select(a => a.Expression)
                 .OfType<TypeOfExpressionSyntax>()
-                .Select(t => t.Type.ToString())
-                .Where(t => t.Contains("Module"));
-
-            modules.AddRange(typeofExpressions);
+                .Select(t => t.Type.ToString()));
         }
 
-        // Check constructor for RequiredModuleTypes.Add(typeof(...))
-        var ctors = classDecl.Members.OfType<ConstructorDeclarationSyntax>();
-        foreach (var ctor in ctors)
-        {
-            if (ctor.Body == null) continue;
-
-            // Find .Add(typeof(SomeModule)) invocations
-            var invocations = ctor.Body.DescendantNodes()
-                .OfType<InvocationExpressionSyntax>()
-                .Where(i => i.Expression.ToString().Contains("RequiredModuleTypes")
-                             || i.Expression.ToString().Contains("Add"));
-
-            foreach (var invocation in invocations)
-            {
-                var typeofArgs = invocation.DescendantNodes()
-                    .OfType<TypeOfExpressionSyntax>()
-                    .Select(t => t.Type.ToString());
-
-                modules.AddRange(typeofArgs);
-            }
-        }
-
-        return modules.Distinct().ToList();
+        return results.Distinct(StringComparer.Ordinal).ToList();
     }
 
     /// <summary>

@@ -7,12 +7,39 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`xaflogic agents`** — writes `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`
+  so any AI coding agent understands the analyzed application. No account, key or server.
+  - Output is **tiered**: a compact index (~11 KB) that agents load on every request, and detail
+    files in `.xaflogic/` (~70 KB) they open only when a question needs them. An `AGENTS.md` is
+    prepended to every conversation, so putting the full documentation there would consume the
+    context the user's actual question needs.
+  - The index leads with **ground rules**: which ORM this application uses and which APIs
+    therefore do not exist in it, that the inventories are complete so an absent entity is
+    genuinely absent, and that some behavior lives in the Model Editor rather than in C#.
+  - **Conventions are inferred from the codebase** — namespaces, folder layout, base classes, how
+    associations and validation are written — so generated code matches the surrounding style
+    instead of a generic tutorial.
+  - Includes **real criteria expressions** taken from the source. XAF's criteria language is
+    neither SQL nor C#, and worked examples teach the dialect better than a description of it.
+  - Generated text is written between markers: anything you wrote by hand is preserved, and
+    regenerating produces byte-identical output when nothing has changed.
+- `IDocumentationSink`, making a publishing target something the caller chooses. PeopleWorks
+  Copilot is now one implementation of it rather than the destination the tool is built around.
+
+### Fixed
+
+- `ModuleAnalyzer` reported business entities as required XAF modules. It accepted any invocation
+  whose expression contained `Add`, so `AdditionalExportedTypes.Add(typeof(Cliente))` was read as
+  a module dependency. On a real project this listed nine entities and six framework base types
+  among twelve genuine modules. It now matches the target collection, and
+  `AdditionalExportedTypes` feeds the registered-types list where it belongs.
+
 ### Planned
 
-- `AGENTS.md` / `CLAUDE.md` / `copilot-instructions.md` output — no infrastructure required
 - MCP server, so any agent can query an XAF codebase live
 - Agent skill installable from this repository, alongside DevExpress's own `dx-xaf` plugin
-- `IDocumentationSink` abstraction, making PeopleWorks Copilot one target among several
 - AI provider abstraction (OpenAI, Azure OpenAI, Anthropic, Ollama) for `--enrich`
 - xUnit test suite over a synthetic XAF fixture that needs no DevExpress reference
 - Optional DevExpress ground-truth catalog, generated locally by licensees

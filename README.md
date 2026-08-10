@@ -56,16 +56,36 @@ tool never links against DevExpress assemblies:
 ```bash
 dotnet tool install -g XafLogicExplainer.Cli
 
-# Extract, writing Markdown + JSON into .xaflogic-output/
-xaflogic extract --project "C:\MySolution\MyApp.Module"
+xaflogic agents --project "C:\MySolution\MyApp.Module"
 ```
 
-Documentation is generated in **English or Spanish** (`--lang en|es`).
+That writes `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md` at your solution root.
+No account, no API key, no server. Your agent understands the application on its next question.
+
+### What it writes, and why it is split in two
+
+`AGENTS.md` is prepended to *every* request an agent makes in the repository, so its cost is paid
+forever. Dumping 70 KB of entity detail there would crowd out the actual question. So the output is
+tiered:
+
+| | | |
+| --- | --- | --- |
+| `AGENTS.md` | ~11 KB | Always loaded: ground rules, complete inventories, conventions, recipes |
+| `.xaflogic/*.md` | ~70 KB | Opened on demand: full properties, handler code, rule messages, `.xafml` |
+
+The most valuable part is the smallest. `AGENTS.md` opens with **ground rules** — that this
+application uses XPO and never EF Core, that the inventories are *complete* so anything absent
+genuinely does not exist, and that some behavior lives in the Model Editor rather than in C#. Those
+few paragraphs stop most of the confident invention agents produce about unfamiliar XAF codebases.
+
+Existing files are never clobbered: generated text lives between markers, anything you wrote by
+hand is preserved, and regenerating is byte-identical when nothing changed.
 
 ### Commands
 
 | Command | What it does |
 | --- | --- |
+| `agents` | **Write `AGENTS.md` / `CLAUDE.md` / Copilot instructions for your agent** |
 | `extract` | Read the project, write Markdown + JSON locally |
 | `diff` | Compare against the previous extraction and report what changed |
 | `status` | Show the change-detection hash and whether a re-extract is needed |
@@ -74,6 +94,8 @@ Documentation is generated in **English or Spanish** (`--lang en|es`).
 | `chat` | Ask questions about the extracted project |
 | `config` | Set defaults in `~/.xaflogic/config.json` |
 | `projects` | Manage several XAF projects; most commands accept `--all` |
+
+Documentation is generated in **English or Spanish** (`--lang en|es`).
 
 Useful flags: `--orm auto\|xpo\|efcore`, `--lang en\|es`, `--enrich` (AI-generated business-logic
 summaries per controller and action), `--force`, `--all`.
@@ -93,15 +115,14 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Incremental change detection, diff reports, multi-project, watch mode |
 | ✅ | AI enrichment of controllers and actions (`--enrich`) |
 | ✅ | Blazor in-app help panel |
-| 🚧 | **`AGENTS.md` / `CLAUDE.md` output** — zero infrastructure, works for everyone |
+| ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
+| ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | 🚧 | **MCP server** — let any agent query your XAF app live |
 | 🚧 | **Claude Code / Copilot / Cursor skill**, installable from this repo |
-| 🚧 | Pluggable publishing targets (`IDocumentationSink`) |
 | 🚧 | xUnit test suite over a synthetic XAF fixture |
 
-Today the only remote publishing target is PeopleWorks Copilot, which is where this tool grew up.
-That is being generalized: it becomes one sink among several, and the interesting outputs
-(`AGENTS.md`, MCP) need no server at all.
+PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the
+destination everything was built around. The outputs that matter most need no server at all.
 
 ## Repository layout
 

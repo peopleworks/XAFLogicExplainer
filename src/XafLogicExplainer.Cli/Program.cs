@@ -10,6 +10,7 @@ using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Diff;
 using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Hashing;
+using XafLogicExplainer.Core.Sinks;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using XafLogicExplainer.Core.Models;
@@ -21,7 +22,7 @@ using XafLogicExplainer.Core.Models;
 if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
 {
     AnsiConsole.Write(new FigletText("XAF Logic").Color(Color.Blue));
-    AnsiConsole.MarkupLine("[grey]Extract, document, and sync XAF project logic to PeopleWorks Copilot[/]");
+    AnsiConsole.MarkupLine("[grey]Teach your AI coding agent what your XAF application actually does[/]");
     AnsiConsole.WriteLine();
 }
 
@@ -1371,8 +1372,202 @@ diffCommand.SetHandler(async (projectPath, language, previousFile) =>
 rootCommand.AddCommand(diffCommand);
 
 // ============================================================
+// COMMAND: agents
+// ============================================================
+var agentsCommand = new Command(
+    "agents",
+    "Generate AGENTS.md, CLAUDE.md and Copilot instructions so AI agents understand this XAF app");
+
+var agentsOutputOption = new Option<string?>(
+    "--output",
+    "Where to write (default: the solution or repository root above the module)");
+var agentsOnlyOption = new Option<string?>(
+    "--only",
+    "Limit the files written: agents, claude, copilot (comma-separated)");
+
+agentsCommand.AddOption(projectPathOption);
+agentsCommand.AddOption(languageOption);
+agentsCommand.AddOption(forceOption);
+agentsCommand.AddOption(ormOption);
+agentsCommand.AddOption(allOption);
+agentsCommand.AddOption(enrichOption);
+agentsCommand.AddOption(agentsOutputOption);
+agentsCommand.AddOption(agentsOnlyOption);
+
+// InvocationContext rather than a typed handler: SetHandler tops out at eight parameters, and
+// this command already sits at that boundary. sync and watch resolve options the same way.
+agentsCommand.SetHandler(async (context) =>
+{
+    var agentsProjectPath = context.ParseResult.GetValueForOption(projectPathOption);
+    var agentsLanguage = context.ParseResult.GetValueForOption(languageOption);
+    var agentsForce = context.ParseResult.GetValueForOption(forceOption);
+    var agentsOrm = context.ParseResult.GetValueForOption(ormOption);
+    var agentsAll = context.ParseResult.GetValueForOption(allOption);
+    var agentsEnrich = context.ParseResult.GetValueForOption(enrichOption);
+    var agentsOutput = context.ParseResult.GetValueForOption(agentsOutputOption);
+    var agentsOnly = context.ParseResult.GetValueForOption(agentsOnlyOption);
+
+    var agentsConfig = ConfigHelper.Load();
+    var agentsOptions = ParseAgentTargets(agentsOnly, agentsOutput);
+
+    if (agentsAll)
+    {
+        if (agentsConfig.Projects.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[red]✗[/] No projects configured. Add one with: [cyan]xaflogic projects add[/]");
+            return;
+        }
+
+        foreach (var configured in agentsConfig.Projects)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[bold blue]▸ {Markup.Escape(configured.Name)}[/]");
+
+            await GenerateAgentFiles(
+                configured.ProjectPath,
+                configured.Language ?? agentsLanguage ?? agentsConfig.Language ?? "es",
+                configured.Orm ?? agentsOrm,
+                agentsForce,
+                agentsEnrich,
+                agentsOptions,
+                agentsConfig);
+        }
+
+        return;
+    }
+
+    var singleProjectPath = agentsProjectPath ?? agentsConfig.ProjectPath;
+
+    if (string.IsNullOrEmpty(singleProjectPath) || !Directory.Exists(singleProjectPath))
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] --project is required. Set it with: [cyan]xaflogic config --project <path>[/]");
+        return;
+    }
+
+    await GenerateAgentFiles(
+        singleProjectPath,
+        agentsLanguage ?? agentsConfig.Language ?? "es",
+        agentsOrm ?? agentsConfig.Orm,
+        agentsForce,
+        agentsEnrich,
+        agentsOptions,
+        agentsConfig);
+});
+
+rootCommand.AddCommand(agentsCommand);
+
+// ============================================================
 // HELPERS
 // ============================================================
+
+// Turns the --only and --output values into sink options.
+static AgentFilesOptions ParseAgentTargets(string? only, string? output)
+{
+    if (string.IsNullOrWhiteSpace(only))
+        return new AgentFilesOptions { OutputRoot = output };
+
+    var requested = only
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(t => t.ToLowerInvariant())
+        .ToHashSet();
+
+    return new AgentFilesOptions
+    {
+        OutputRoot = output,
+        WriteAgentsMd = requested.Contains("agents"),
+        WriteClaudeMd = requested.Contains("claude"),
+        WriteCopilotInstructions = requested.Contains("copilot"),
+    };
+}
+
+// Extracts one project and writes the agent-facing context files.
+static async Task GenerateAgentFiles(
+    string projectPath,
+    string language,
+    string? orm,
+    bool force,
+    bool enrich,
+    AgentFilesOptions options,
+    CliConfig config)
+{
+    if (!Directory.Exists(projectPath))
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] Not found: {Markup.Escape(projectPath)}");
+        return;
+    }
+
+    var agentHashCalc = new ProjectHashCalculator();
+    if (!force && !agentHashCalc.HasChanged(projectPath))
+    {
+        AnsiConsole.MarkupLine("[yellow]⊘[/] No source changes since the last run. Use [cyan]--force[/] to regenerate anyway.");
+        return;
+    }
+
+    ExtractedProject agentProject = null!;
+    await AnsiConsole.Status().Spinner(Spinner.Known.Dots).StartAsync("Reading the application...", async ctx =>
+    {
+        var agentExtractor = new LogicExtractor();
+        agentProject = agentExtractor.ExtractFromSourceDirectory(projectPath, BuildExtractionOptions(language, orm));
+        await Task.CompletedTask;
+    });
+
+    if (enrich)
+    {
+        await EnrichWithAi(agentProject, config, language);
+    }
+
+    var agentGenerator = new MarkdownDocumentationGenerator(language);
+    var agentSections = agentGenerator.GenerateSections(agentProject);
+
+    var agentSink = new AgentFilesSink(options, ThisAssemblyVersion());
+    var agentResult = await agentSink.PublishAsync(agentProject, agentSections);
+
+    if (!agentResult.Success)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(agentResult.Summary)}");
+        return;
+    }
+
+    agentHashCalc.SaveHash(projectPath, agentProject.SourceHash);
+
+    // What the agent now knows, stated as facts rather than file sizes -- the point of the command
+    // is the knowledge, not the bytes.
+    var agentActions = agentProject.Controllers.Sum(c => c.Actions.Count);
+    var knows = new Table().Border(TableBorder.Rounded).AddColumn("Your agent now knows").AddColumn("");
+    knows.AddRow("Business entities", agentProject.Entities.Count.ToString());
+    knows.AddRow("Controllers", agentProject.Controllers.Count.ToString());
+    knows.AddRow("Actions", agentActions.ToString());
+    knows.AddRow("ORM", agentProject.OrmType);
+    if (agentProject.Navigation.Count > 0)
+        knows.AddRow("Navigation groups", agentProject.Navigation.Count.ToString());
+    if (agentProject.ModelEditorInfo is { } modelInfo && modelInfo.Views.Count > 0)
+        knows.AddRow("Model Editor views", modelInfo.Views.Count.ToString());
+    AnsiConsole.Write(knows);
+
+    AnsiConsole.WriteLine();
+    foreach (var artifact in agentResult.Artifacts.Where(a =>
+                 !a.Contains(AgentContextGenerator.DetailFolder, StringComparison.Ordinal)))
+    {
+        AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(artifact)}");
+    }
+
+    var detailCount = agentResult.Artifacts.Count(a =>
+        a.Contains(AgentContextGenerator.DetailFolder, StringComparison.Ordinal));
+    if (detailCount > 0)
+    {
+        AnsiConsole.MarkupLine(
+            $"[grey]+ {detailCount} detail files in {AgentContextGenerator.DetailFolder}/ (read on demand, not loaded every request)[/]");
+    }
+
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine("[grey]Ask your agent something only this codebase could answer.[/]");
+}
+
+// The tool version, stamped into generated files so a stale one can be identified.
+static string ThisAssemblyVersion() =>
+    System.Reflection.Assembly.GetExecutingAssembly().GetName().Version is { } v
+        ? $"{v.Major}.{v.Minor}.{v.Build}"
+        : "0.9.0";
 
 static ExtractionOptions BuildExtractionOptions(string language, string? orm = null)
 {
