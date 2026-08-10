@@ -7,6 +7,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-08-10
+
+Everything that lives *outside* the business classes.
+
 ### Added
 
 - **Custom property and list editors.** A property rendered by one does not show the control its
@@ -250,7 +254,8 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.11.0
 [0.10.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.1
 [0.10.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.9.0
