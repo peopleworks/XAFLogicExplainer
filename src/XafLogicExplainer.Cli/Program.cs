@@ -1500,7 +1500,9 @@ mcpCommand.SetHandler(async (context) =>
         // Falling back to discovery matters for the plugin install path: a marketplace plugin
         // declares `xaflogic mcp` with no arguments, because it cannot know where anyone's module
         // lives. Finding it under the working directory is what makes that work with no setup.
-        var resolvedPath = mcpProjectPath ?? mcpConfig.ProjectPath ?? DiscoverXafModule(Directory.GetCurrentDirectory());
+        // Shared with the standalone server package, which is in exactly the same position.
+        var resolvedPath = mcpProjectPath ?? mcpConfig.ProjectPath
+            ?? XafModuleLocator.Locate(Directory.GetCurrentDirectory());
 
         if (string.IsNullOrEmpty(resolvedPath) || !Directory.Exists(resolvedPath))
         {
@@ -1611,57 +1613,6 @@ rootCommand.AddCommand(catalogCommand);
 // ============================================================
 // HELPERS
 // ============================================================
-
-// Looks for an XAF module directory at or below a starting point, so the MCP server can be
-// launched with no configuration from the root of a solution. Returns null when nothing convincing
-// is found -- guessing wrong is worse than asking, because the server would confidently answer
-// about the wrong application.
-static string? DiscoverXafModule(string startDirectory)
-{
-    if (Directory.Exists(startDirectory) && LooksLikeXafModule(startDirectory))
-        return startDirectory;
-
-    try
-    {
-        // Two levels is enough for the conventional layout (Solution/App.Module) without turning
-        // a launch in a large tree into a full recursive scan.
-        foreach (var child in Directory.EnumerateDirectories(startDirectory))
-        {
-            if (LooksLikeXafModule(child))
-                return child;
-
-            foreach (var grandchild in Directory.EnumerateDirectories(child))
-            {
-                if (LooksLikeXafModule(grandchild))
-                    return grandchild;
-            }
-        }
-    }
-    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-    {
-        return null;
-    }
-
-    return null;
-}
-
-// An XAF module is a directory holding a .csproj plus a class deriving from ModuleBase.
-static bool LooksLikeXafModule(string directory)
-{
-    try
-    {
-        if (!Directory.EnumerateFiles(directory, "*.csproj").Any())
-            return false;
-
-        return Directory
-            .EnumerateFiles(directory, "*.cs", SearchOption.TopDirectoryOnly)
-            .Any(f => File.ReadAllText(f).Contains("ModuleBase", StringComparison.Ordinal));
-    }
-    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-    {
-        return false;
-    }
-}
 
 // Turns the --only and --output values into sink options.
 static AgentFilesOptions ParseAgentTargets(string? only, string? output)

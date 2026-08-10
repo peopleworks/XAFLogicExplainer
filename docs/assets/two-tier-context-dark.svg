@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330" viewBox="0 0 900 330" role="img" aria-labelledby="fig-ctx-t fig-ctx-d">
+  <style>
+    svg {
+      --fig-bg: #0a0d12;
+      --fig-panel: #10151d;
+      --fig-line: #232b36;
+      --fig-graphite: #46505e;
+      --fig-graphite-ink: #737f8f;
+      --fig-ink: #e8edf3;
+      --fig-mute: #8794a4;
+      --fig-yours: #ff8a3d;
+      --fig-yours-soft: rgba(255,138,61,.14);
+      --fig-ok: #4ade80;
+    }
+
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .t-mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+    .t-cap { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+             font-size: 11px; letter-spacing: .12em; text-transform: uppercase; fill: var(--fig-mute); }
+    .t-title { font-size: 15px; font-weight: 640; fill: var(--fig-ink); }
+    .t-body { font-size: 12.5px; fill: var(--fig-mute); }
+    .t-yours { fill: var(--fig-yours); font-weight: 640; }
+    .t-grey { fill: var(--fig-graphite-ink); }
+  </style>
+  
+          <title id="fig-ctx-t">What a full dump costs an agent's context on every request</title>
+          <desc id="fig-ctx-d">Putting all documentation in AGENTS.md consumes most of the context
+            window before the user has asked anything. Tiering leaves that room free.</desc>
+
+          <rect width="900" height="330" fill="var(--fig-bg)"/>
+          <defs>
+            <clipPath id="clip-a"><rect x="20" y="66" width="860" height="52" rx="9"/></clipPath>
+            <clipPath id="clip-b"><rect x="20" y="212" width="860" height="52" rx="9"/></clipPath>
+            <marker id="fig-tick" viewBox="0 0 10 10" refX="8" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--fig-yours)"/>
+            </marker>
+          </defs>
+
+          <text class="t-cap" x="20" y="26">Every request the agent answers in your repository</text>
+
+          <!-- A: the naive dump -->
+          <text class="t-title t-grey" x="20" y="52">Everything in AGENTS.md</text>
+          <text class="t-cap" x="838" y="52" text-anchor="middle" style="fill:var(--fig-yours)">the question</text>
+          <g clip-path="url(#clip-a)">
+            <rect x="20" y="66" width="860" height="52" fill="var(--fig-panel)"/>
+            <rect x="20" y="66" width="757" height="52" fill="var(--fig-graphite)" opacity=".55"/>
+            <rect x="777" y="66" width="103" height="52" fill="var(--fig-yours)" opacity=".65"/>
+          </g>
+          <rect x="20" y="66" width="860" height="52" rx="9" fill="none" stroke="var(--fig-line)"/>
+          <text class="t-body" x="398" y="97" text-anchor="middle" style="fill:var(--fig-ink)">
+            application documentation · every entity, every handler
+          </text>
+          <text class="t-body" x="20" y="140">Paid on every request, forever — before anyone has asked anything.</text>
+
+          <!-- B: tiered -->
+          <text class="t-title t-yours" x="20" y="198">Tiered</text>
+          <text class="t-cap" x="80" y="198" style="fill:var(--fig-yours)"> </text>
+          <g clip-path="url(#clip-b)">
+            <rect x="20" y="212" width="860" height="52" fill="var(--fig-panel)"/>
+            <rect x="20" y="212" width="120" height="52" fill="var(--fig-yours)" opacity=".85"/>
+          </g>
+          <rect x="20" y="212" width="860" height="52" rx="9" fill="none" stroke="var(--fig-line)"/>
+          <text class="t-cap" x="80" y="243" text-anchor="middle" style="fill:var(--fig-bg)">index</text>
+          <text class="t-body" x="510" y="243" text-anchor="middle">
+            room for the question, the files being discussed, and the answer
+          </text>
+
+          <!-- detail, fetched on demand -->
+          <path  d="M300,296 V268" fill="none" stroke="var(--fig-yours)"
+                stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fig-tick)"/>
+          <rect x="140" y="296" width="320" height="26" rx="7" fill="none"
+                stroke="var(--fig-line)" stroke-dasharray="5 4"/>
+          <text class="t-cap" x="300" y="313" text-anchor="middle">detail · opened only when a question needs it</text>
+
+          <text class="t-mono t-body" x="880" y="181" text-anchor="end">~11 KB of 72</text>
+        </svg>

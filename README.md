@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml/badge.svg)](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/peopleworks/XAFLogicExplainer?color=blue)](LICENSE)
+[![NuGet CLI](https://img.shields.io/nuget/v/XafLogicExplainer.Cli?logo=nuget&label=CLI)](https://www.nuget.org/packages/XafLogicExplainer.Cli)
+[![NuGet Core](https://img.shields.io/nuget/v/XafLogicExplainer.Core?logo=nuget&label=Core)](https://www.nuget.org/packages/XafLogicExplainer.Core)
+[![NuGet MCP](https://img.shields.io/nuget/v/XafLogicExplainer.Mcp?logo=nuget&label=MCP%20server)](https://www.nuget.org/packages/XafLogicExplainer.Mcp)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![MCP](https://img.shields.io/badge/MCP-server-000000?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
 [![XAF](https://img.shields.io/badge/DevExpress-XAF-FF7200?logo=devexpress&logoColor=white)](https://www.devexpress.com/products/net/application_framework/)
@@ -22,6 +25,11 @@ whatever agent you code with.
 DevExpress has done excellent work making AI agents fluent in XAF. Two pieces already exist,
 and this is the third:
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-fits-dark.svg">
+  <img alt="Three kinds of knowledge an agent needs about an XAF codebase. Two are already solved by DevExpress tooling; the third — what your own application does — is the gap this project fills." src="docs/assets/how-it-fits-light.svg">
+</picture>
+
 | Teaches the agent… | Tool |
 | --- | --- |
 | How XAF works in general | [DevExpress `agent-skills`](https://github.com/DevExpress/agent-skills) |
@@ -39,6 +47,11 @@ That gap is not solvable by better prompting. It is solvable by extraction.
 for the official reference, and use this for your own codebase. None of them replaces the others.
 
 ## What it extracts
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/extraction-pipeline-dark.svg">
+  <img alt="Source files are parsed as syntax by Roslyn, never compiled, producing a model rendered to agent files, an MCP server, or Markdown and JSON." src="docs/assets/extraction-pipeline-light.svg">
+</picture>
 
 Everything below is read as **syntax**, using Roslyn. Your project never has to compile, and this
 tool never links against DevExpress assemblies:
@@ -71,6 +84,12 @@ No account, no API key, no server. Your agent understands the application on its
 forever. Dumping 70 KB of entity detail there would crowd out the actual question. So the output is
 tiered:
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/two-tier-context-dark.svg">
+  <img alt="What a full documentation dump costs an agent's context on every request, against the tiered output that leaves that room free." src="docs/assets/two-tier-context-light.svg">
+</picture>
+
+
 | | | |
 | --- | --- | --- |
 | `AGENTS.md` | ~11 KB | Always loaded: ground rules, complete inventories, conventions, recipes |
@@ -94,17 +113,24 @@ application while you work on it, and cannot go stale.
 /plugin install xaf-logic-explainer@peopleworks-xaf
 ```
 
-That installs a skill and an MCP server in one step. For any other MCP client, add:
+That installs a skill and an MCP server in one step. For any other MCP client, either run it
+straight from NuGet with no install:
 
 ```json
 {
   "mcpServers": {
-    "xaf": { "command": "xaflogic", "args": ["mcp"] }
+    "xaf": { "command": "dnx", "args": ["XafLogicExplainer.Mcp", "--yes"] }
   }
 }
 ```
 
-Started from a solution directory it finds the XAF module by itself.
+…or point at the CLI if you already have it:
+
+```json
+{ "mcpServers": { "xaf": { "command": "xaflogic", "args": ["mcp"] } } }
+```
+
+Started from a solution directory it finds the XAF module by itself, so neither form needs a path.
 
 | Tool | Answers |
 | --- | --- |

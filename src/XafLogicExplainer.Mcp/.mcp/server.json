@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.peopleworks/xaf-logic-explainer",
+  "version": "0.10.0",
+  "title": "XAF Logic Explainer",
+  "description": "Query a specific DevExpress XAF application: its entities, controllers, actions, business rules and Model Editor customizations, read from source with Roslyn.",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "registryBaseUrl": "https://api.nuget.org/v3/index.json",
+      "identifier": "XafLogicExplainer.Mcp",
+      "version": "0.10.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "dnx",
+      "packageArguments": [],
+      "environmentVariables": [
+        {
+          "name": "XAFLOGIC_PROJECT",
+          "description": "Directory of the XAF module to analyze. Optional: with no value the module is looked for at or below the working directory, so a client launched from a solution folder needs no configuration.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/peopleworks/XAFLogicExplainer",
+    "source": "github"
+  }
+}

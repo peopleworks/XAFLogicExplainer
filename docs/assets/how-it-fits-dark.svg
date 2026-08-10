@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="372" viewBox="0 0 900 372" role="img" aria-labelledby="fig-gap-t fig-gap-d">
+  <style>
+    svg {
+      --fig-bg: #0a0d12;
+      --fig-panel: #10151d;
+      --fig-line: #232b36;
+      --fig-graphite: #46505e;
+      --fig-graphite-ink: #737f8f;
+      --fig-ink: #e8edf3;
+      --fig-mute: #8794a4;
+      --fig-yours: #ff8a3d;
+      --fig-yours-soft: rgba(255,138,61,.14);
+      --fig-ok: #4ade80;
+    }
+
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .t-mono { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+    .t-cap { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+             font-size: 11px; letter-spacing: .12em; text-transform: uppercase; fill: var(--fig-mute); }
+    .t-title { font-size: 15px; font-weight: 640; fill: var(--fig-ink); }
+    .t-body { font-size: 12.5px; fill: var(--fig-mute); }
+    .t-yours { fill: var(--fig-yours); font-weight: 640; }
+    .t-grey { fill: var(--fig-graphite-ink); }
+  </style>
+  
+          <title id="fig-gap-t">Three kinds of knowledge an agent needs about an XAF codebase</title>
+          <desc id="fig-gap-d">Two are already solved by DevExpress tooling and drawn in grey. The
+            third — what your own application does — is the gap this project fills, drawn in colour.</desc>
+
+          <rect width="900" height="372" fill="var(--fig-bg)"/>
+          <text class="t-cap" x="450" y="30" text-anchor="middle">Three things an agent needs to know · two are already solved</text>
+
+          <!-- 1. framework knowledge: plentiful, grey -->
+          <g class="pop">
+            <rect x="15" y="52" width="265" height="172" rx="12" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <circle cx="45" cy="86" r="13" fill="none" stroke="var(--fig-graphite)" stroke-width="2"/>
+            <path d="M39,86 l4.5,5 L52,80" fill="none" stroke="var(--fig-graphite)" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <text class="t-title t-grey" x="70" y="91">How XAF works</text>
+            <text class="t-body" x="37" y="126">Controllers, actions, views,</text>
+            <text class="t-body" x="37" y="145">validation, security, the model.</text>
+            <text class="t-body" x="37" y="164">The framework, in general.</text>
+            <text class="t-cap" x="37" y="200">DevExpress agent-skills</text>
+          </g>
+
+          <!-- 2. documentation: plentiful, grey -->
+          <g class="pop pop--2">
+            <rect x="317" y="52" width="265" height="172" rx="12" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <circle cx="347" cy="86" r="13" fill="none" stroke="var(--fig-graphite)" stroke-width="2"/>
+            <path d="M341,86 l4.5,5 L354,80" fill="none" stroke="var(--fig-graphite)" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <text class="t-title t-grey" x="372" y="91">What the docs say</text>
+            <text class="t-body" x="339" y="126">Every published page, exact</text>
+            <text class="t-body" x="339" y="145">API signatures, official</text>
+            <text class="t-body" x="339" y="164">guidance and examples.</text>
+            <text class="t-cap" x="339" y="200">DevExpress Docs MCP</text>
+          </g>
+
+          <!-- 3. YOUR application: the scarce one, in colour -->
+          <g class="pop pop--3">
+            <rect x="619" y="52" width="265" height="172" rx="12"
+                  fill="var(--fig-yours-soft)" stroke="var(--fig-yours)" stroke-width="1.5"/>
+            <circle cx="649" cy="86" r="13" fill="none" stroke="var(--fig-yours)" stroke-width="2"/>
+            <path d="M649,79 v9 M649,93 v.5" stroke="var(--fig-yours)" stroke-width="2.4" stroke-linecap="round"/>
+            <text class="t-title t-yours" x="674" y="91">What YOUR app does</text>
+            <text class="t-body" x="641" y="126">Your 19 entities. The rule that</text>
+            <text class="t-body" x="641" y="145">blocks approval. The columns</text>
+            <text class="t-body" x="641" y="164">hidden in the Model Editor.</text>
+            <text class="t-cap" x="641" y="200" style="fill:var(--fig-yours)">Nothing else can know this</text>
+          </g>
+
+          <!-- the fill -->
+          <path  d="M751,300 V232" fill="none" stroke="var(--fig-yours)"
+                stroke-width="2" marker-end="url(#fig-arrow)"/>
+          <rect x="592" y="300" width="318" height="52" rx="10" fill="none"
+                stroke="var(--fig-yours)" stroke-width="1.5" stroke-dasharray="0"/>
+          <text class="t-title t-yours" x="751" y="325" text-anchor="middle">XAF Logic Explainer</text>
+          <text class="t-cap" x="751" y="343" text-anchor="middle">reads your source with Roslyn</text>
+
+          <text class="t-body" x="15" y="322">Install all three.</text>
+          <text class="t-body" x="15" y="341">They answer different questions.</text>
+
+          <defs>
+            <marker id="fig-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--fig-yours)"/>
+            </marker>
+          </defs>
+        </svg>

@@ -7,6 +7,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-08-10
+
+First release published to NuGet. Version 0.9.0 was the point the repository went public; nothing
+was ever pushed to a package feed under it, so everything since is gathered here.
+
+Three packages: `XafLogicExplainer.Core` (the extraction engine),
+`XafLogicExplainer.Cli` (the `xaflogic` tool) and `XafLogicExplainer.Mcp`
+(an MCP server, installable on its own with `dnx`).
+
+Still 0.x deliberately. The extraction engine is production-proven, but this release changed its
+behaviour in six places and has been verified against one real application. 1.0.0 is earned once
+the extractor has read codebases we did not write.
+
 ### Added
 
 - **`xaflogic agents`** — writes `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`
@@ -112,11 +125,8 @@ documentation:
 
 ### Planned
 
-- MCP server, so any agent can query an XAF codebase live
-- Agent skill installable from this repository, alongside DevExpress's own `dx-xaf` plugin
 - AI provider abstraction (OpenAI, Azure OpenAI, Anthropic, Ollama) for `--enrich`
-- xUnit test suite over a synthetic XAF fixture that needs no DevExpress reference
-- Optional DevExpress ground-truth catalog, generated locally by licensees
+- Splitting the 1,500-line `Program.cs` into one file per command
 
 ## [0.9.0] — 2026-08-10
 
@@ -164,5 +174,6 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.9.0

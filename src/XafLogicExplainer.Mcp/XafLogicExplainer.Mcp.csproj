@@ -4,14 +4,23 @@
     The MCP server: lets any agent that speaks Model Context Protocol interrogate an XAF
     application directly, instead of reading a generated file about it.
 
-    A library rather than an executable. The CLI hosts it as `xaflogic mcp`, so users install one
-    tool and configure one project path. Packaging it separately would mean two installs that have
-    to agree about where the code lives.
+    Packaged as a dotnet tool so `dnx XafLogicExplainer.Mcp` runs it with nothing installed, and
+    referenced by the CLI so `xaflogic mcp` runs the same server. One implementation, two ways in.
   -->
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>xaflogic-mcp</AssemblyName>
+    <RootNamespace>XafLogicExplainer.Mcp</RootNamespace>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>xaflogic-mcp</ToolCommandName>
     <PackageId>XafLogicExplainer.Mcp</PackageId>
-    <Description>Model Context Protocol server for DevExpress XAF applications. Exposes an application's entities, controllers, actions, business rules and Model Editor customizations as MCP tools, so any agent can query a specific XAF codebase instead of guessing about it.</Description>
+    <Description>Model Context Protocol server for DevExpress XAF applications. Exposes an application's entities, controllers, actions, business rules and Model Editor customizations as MCP tools, so an agent can query a specific XAF codebase instead of guessing about it. Reads source with Roslyn; no DevExpress licence required.</Description>
+
+    <!-- PackAsTool already contributes DotnetTool, which is what makes `dnx` work. McpServer is
+         additional, and is what lets the MCP registry find and describe this package. -->
+    <PackageType>McpServer</PackageType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +30,11 @@
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+
+  <!-- The registry reads this manifest out of the package itself, so it has to be packed. -->
+  <ItemGroup>
+    <None Include=".mcp/server.json" Pack="true" PackagePath="/.mcp/" />
   </ItemGroup>
 
 </Project>

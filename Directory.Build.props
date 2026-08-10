@@ -10,10 +10,11 @@
   -->
 
   <PropertyGroup>
-    <!-- One version for the whole repo. 0.9.x is deliberate: the extraction pipeline is
-         proven in production, but the agent-facing surface (MCP server, AGENTS.md sink)
-         is still landing. 1.0.0 is earned when those ship, not assumed. -->
-    <Version>0.9.0</Version>
+    <!-- One version for the whole repo, and the version the release tag must match.
+         Still 0.x deliberately: the extraction engine is production-proven, but this release
+         changed its behaviour in six places and has been verified against one real application.
+         1.0.0 is earned once the extractor has read codebases we did not write. -->
+    <Version>0.10.0</Version>
 
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -37,6 +38,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/peopleworks/XAFLogicExplainer</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageTags>xaf;devexpress;expressapp;roslyn;documentation;mcp;ai-agents;xpo;efcore;xafml</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
@@ -66,9 +68,11 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <!-- The README is packed into every NuGet package, so each one needs it at its own root. -->
+  <!-- The README and icon are packed into every NuGet package, so each one needs them at its own
+       root. Declared once here rather than repeated in three csproj files that would drift. -->
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>
