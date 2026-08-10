@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XAF Logic Explainer — teach your AI agent what your XAF app does</title>
+<meta name="description" content="Roslyn-based extraction for DevExpress XAF applications. Gives any AI coding agent complete knowledge of your entities, controllers, business rules and Model Editor customizations.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>◆</text></svg>">
+
+<meta property="og:title" content="XAF Logic Explainer">
+<meta property="og:description" content="Your agent knows XAF. It has never seen your app.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://peopleworks.github.io/XAFLogicExplainer/">
+
+<style>
+/* ------------------------------------------------------------------ tokens */
+:root {
+  --bg: #07090c;
+  --bg-soft: #0c1015;
+  --ink: #f2f5f8;
+  --ink-muted: #98a4b3;
+  --ink-faint: #64707e;
+  --line: #1b2029;
+  --line-strong: #2a323e;
+
+  /* DevExpress orange into .NET purple: the two ecosystems this sits between. */
+  --accent: #ff8a3d;
+  --accent-2: #8b5cf6;
+  --accent-3: #38bdf8;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif;
+
+  --measure: 34rem;
+  --gap-section: clamp(6rem, 14vw, 11rem);
+}
+
+:root[data-theme="light"] {
+  --bg: #fbfbfd;
+  --bg-soft: #ffffff;
+  --ink: #0d1117;
+  --ink-muted: #4a5563;
+  --ink-faint: #6b7684;
+  --line: #e4e7ec;
+  --line-strong: #cfd5de;
+  --accent: #c2410c;
+  --accent-2: #6d28d9;
+  --accent-3: #0369a1;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Ambient glows. Fixed so they drift behind the content rather than scrolling with it. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: .5;
+  pointer-events: none;
+}
+body::before {
+  width: 46rem; height: 46rem;
+  top: -14rem; right: -12rem;
+  background: radial-gradient(circle, rgba(139,92,246,.30), transparent 68%);
+}
+body::after {
+  width: 40rem; height: 40rem;
+  bottom: -16rem; left: -14rem;
+  background: radial-gradient(circle, rgba(255,138,61,.20), transparent 68%);
+}
+:root[data-theme="light"] body::before { opacity: .35; }
+:root[data-theme="light"] body::after { opacity: .3; }
+
+/* --------------------------------------------------------------------- nav */
+.nav {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .5rem .4rem .95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-soft) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: 0 8px 30px rgba(0,0,0,.28);
+  max-width: calc(100vw - 2rem);
+}
+.nav__brand {
+  display: flex; align-items: center; gap: .5rem;
+  font-weight: 650; font-size: .9rem;
+  padding-right: .75rem;
+  border-right: 1px solid var(--line);
+  white-space: nowrap;
+}
+.nav__mark {
+  width: .7rem; height: .7rem; border-radius: 3px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: .875rem;
+  padding: .4rem .7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: color .18s, background .18s;
+}
+.nav a:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.nav a.is-cta {
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.nav a.is-cta:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+.theme {
+  position: fixed; top: 1.35rem; right: 1.35rem; z-index: 50;
+  width: 2.2rem; height: 2.2rem;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-soft) 72%, transparent);
+  backdrop-filter: blur(16px);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: .95rem;
+  transition: color .18s, border-color .18s;
+}
+.theme:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+@media (max-width: 720px) {
+  .nav__hideable { display: none; }
+  .theme { top: auto; bottom: 1.1rem; right: 1.1rem; }
+}
+
+/* ------------------------------------------------------------------ layout */
+.wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.6rem; }
+
+section { padding-block: var(--gap-section); }
+section:first-of-type { padding-top: clamp(7rem, 18vh, 12rem); }
+
+.eyebrow {
+  display: flex; align-items: center; gap: .6rem;
+  font-family: var(--mono);
+  font-size: .74rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 1.4rem;
+}
+.eyebrow::before {
+  content: "";
+  width: .42rem; height: .42rem;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: var(--accent);
+}
+
+h1, h2 {
+  margin: 0;
+  font-weight: 660;
+  letter-spacing: -.03em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+h1 { font-size: clamp(2.7rem, 7.4vw, 5.1rem); }
+h2 { font-size: clamp(2rem, 4.6vw, 3.1rem); }
+h3 { margin: 0 0 .5rem; font-size: 1.05rem; font-weight: 640; letter-spacing: -.01em; }
+
+.lede {
+  margin: .9rem 0 0;
+  font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+  font-weight: 380;
+  color: var(--ink-faint);
+  letter-spacing: -.02em;
+}
+
+.rule {
+  width: 5.5rem; height: 2px; margin: 2rem 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 2px;
+}
+
+p { max-width: var(--measure); color: var(--ink-muted); }
+p.wide { max-width: 46rem; }
+
+code {
+  font-family: var(--mono);
+  font-size: .875em;
+  color: var(--accent-3);
+  background: color-mix(in srgb, var(--accent-3) 11%, transparent);
+  padding: .12em .38em;
+  border-radius: 4px;
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2.4rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .68rem 1.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: .93rem;
+  transition: color .18s, border-color .18s, background .18s, transform .18s;
+}
+.btn:hover { transform: translateY(-1px); color: var(--ink); border-color: var(--ink-faint); }
+.btn--primary {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.btn--primary:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 17%, transparent); }
+
+/* ------------------------------------------------------------------ pieces */
+.card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-soft) 62%, transparent);
+  backdrop-filter: blur(8px);
+  padding: 1.5rem;
+}
+
+.grid { display: grid; gap: 1rem; margin-top: 2.6rem; }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }
+
+.card p { margin: 0; font-size: .95rem; max-width: none; }
+.card__tag {
+  font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .8rem;
+}
+.card--lit {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background:
+    linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent), transparent),
+    color-mix(in srgb, var(--bg-soft) 62%, transparent);
+}
+.card--lit h3 { color: var(--accent); }
+
+/* Terminal-ish block. Scrolls inside itself so the page never scrolls sideways. */
+.term {
+  margin-top: 2.4rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, #000 34%, var(--bg-soft));
+  overflow: hidden;
+}
+:root[data-theme="light"] .term { background: #0d1117; border-color: #222831; }
+.term__bar {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .7rem 1rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: .74rem; color: var(--ink-faint);
+}
+:root[data-theme="light"] .term__bar { border-color: #222831; color: #7d8795; }
+.term__dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--line-strong); }
+.term pre {
+  margin: 0; padding: 1.15rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--mono); font-size: .84rem; line-height: 1.75;
+  color: #cbd5e1;
+}
+.term .c-prompt { color: var(--accent); }
+.term .c-ok { color: #4ade80; }
+.term .c-dim { color: #64748b; }
+.term .c-key { color: #7dd3fc; }
+
+/* Two-tier weight comparison. */
+.tier { display: grid; gap: .8rem; margin-top: 2.4rem; }
+.tier__row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13rem) 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
+}
+.tier__name { font-family: var(--mono); font-size: .84rem; color: var(--ink); }
+.tier__bar { height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--ink) 9%, transparent); overflow: hidden; }
+.tier__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.tier__size { font-family: var(--mono); font-size: .8rem; color: var(--ink-faint); white-space: nowrap; }
+.tier__note { font-size: .84rem; color: var(--ink-faint); grid-column: 1 / -1; margin: 0; max-width: none; }
+@media (max-width: 620px) {
+  .tier__row { grid-template-columns: 1fr auto; }
+  .tier__bar { grid-column: 1 / -1; }
+}
+
+/* Comparison table */
+.table-scroll { overflow-x: auto; margin-top: 2.6rem; }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: .95rem; }
+th, td { text-align: left; padding: .95rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+td { color: var(--ink-muted); }
+tr.is-us td { color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+tr.is-us td:first-child { font-weight: 620; }
+
+.quote {
+  margin: 2.4rem 0 0;
+  padding: 1.3rem 1.5rem;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-radius: 0 10px 10px 0;
+  font-family: var(--mono);
+  font-size: .86rem;
+  line-height: 1.75;
+  color: var(--ink-muted);
+  max-width: 46rem;
+}
+.quote strong { color: var(--ink); font-weight: 600; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 2.6rem; margin-top: 2.8rem; }
+.stat__n {
+  font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 660; letter-spacing: -.03em;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1.1;
+}
+.stat__l { font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-block: 3.5rem 4.5rem;
+  color: var(--ink-faint);
+  font-size: .88rem;
+}
+footer a { color: var(--ink-muted); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+footer a:hover { color: var(--ink); }
+footer p { max-width: 44rem; }
+.footer__note { font-size: .82rem; margin-top: 1.6rem; }
+
+/* Scroll reveal, disabled for anyone who asked for less motion. */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.is-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <span class="nav__brand"><span class="nav__mark"></span>XAF Logic Explainer</span>
+  <a href="#gap" class="nav__hideable">The gap</a>
+  <a href="#output" class="nav__hideable">Output</a>
+  <a href="#mcp" class="nav__hideable">MCP</a>
+  <a href="#install" class="is-cta">Install</a>
+</nav>
+
+<button class="theme" id="theme" type="button" aria-label="Switch between light and dark">☀</button>
+
+<main class="wrap">
+
+  <!-- ------------------------------------------------------------ hero -->
+  <section>
+    <p class="eyebrow">Open source · MIT · .NET 10</p>
+    <h1>Your agent knows XAF.<br>It has never seen your app.</h1>
+    <p class="lede">One command changes that.</p>
+    <div class="rule"></div>
+    <p>
+      An agent that has read every page of the DevExpress documentation still does not know that
+      your <code>Invoice</code> total is calculated from its lines, that
+      <code>ApproveController</code> refuses to run when the period is closed, or that three
+      columns were hidden in the Model Editor and appear in no C# file at all.
+    </p>
+    <p>
+      It will confidently invent all three. That gap is not solvable by better prompting — it is
+      solvable by reading the code.
+    </p>
+    <div class="buttons">
+      <a class="btn btn--primary" href="#install">Get started</a>
+      <a class="btn" href="https://github.com/peopleworks/XAFLogicExplainer">View on GitHub&nbsp;↗</a>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- gap -->
+  <section id="gap" class="reveal">
+    <p class="eyebrow">Where this fits</p>
+    <h2>DevExpress teaches the framework.<br>This teaches your application.</h2>
+    <p class="wide">
+      These compose. Install the official skills for how XAF works, keep the documentation server
+      for the official reference, and add this for the one thing neither of them can know.
+    </p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Teaches the agent…</th><th>Tool</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>How XAF works in general</td><td>DevExpress <code>agent-skills</code></td></tr>
+          <tr><td>What the official documentation says</td><td>DevExpress Docs MCP server</td></tr>
+          <tr class="is-us"><td>What YOUR application does</td><td>XAF Logic Explainer</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid--3">
+      <div class="card">
+        <div class="card__tag">Reads</div>
+        <h3>Entities and relationships</h3>
+        <p>Properties, types, associations, aggregation, and the XAF attributes that give them
+           meaning. XPO and EF&nbsp;Core, detected from your <code>using</code> statements.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">Reads</div>
+        <h3>Controllers and actions</h3>
+        <p>Every action, its target criteria, and the C# that actually runs when someone presses
+           the button.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">Reads</div>
+        <h3>Rules and the Model Editor</h3>
+        <p>Validation with its messages, conditional appearance, calculated properties — and the
+           <code>.xafml</code> customizations that exist in no C# file.</p>
+      </div>
+    </div>
+
+    <p class="footer__note" style="margin-top:2rem">
+      All of it read as <em>syntax</em>. Your project never has to compile, and no DevExpress
+      licence is needed to run any of this.
+    </p>
+  </section>
+
+  <!-- ---------------------------------------------------------- output -->
+  <section id="output" class="reveal">
+    <p class="eyebrow">The output</p>
+    <h2>An <code>AGENTS.md</code> is read on every request.<br>So most of it isn't in there.</h2>
+    <p>
+      That file is prepended to every question an agent answers in your repository — its size is a
+      tax paid forever. Seventy kilobytes of entity detail there would crowd out the thing the
+      user actually asked.
+    </p>
+    <p>So the output is tiered.</p>
+
+    <div class="tier">
+      <div class="tier__row">
+        <span class="tier__name">AGENTS.md</span>
+        <span class="tier__bar"><span class="tier__fill" style="width:14%"></span></span>
+        <span class="tier__size">~11 KB</span>
+        <p class="tier__note">Always loaded. Ground rules, complete inventories, conventions inferred from your codebase, and step-by-step recipes.</p>
+      </div>
+      <div class="tier__row">
+        <span class="tier__name">.xaflogic/*.md</span>
+        <span class="tier__bar"><span class="tier__fill" style="width:100%"></span></span>
+        <span class="tier__size">~72 KB</span>
+        <p class="tier__note">Opened on demand. Full property lists, action handler code, rule messages, Model Editor settings.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:2.4rem">
+      The most valuable part is the smallest. The index opens with <strong>ground rules</strong> —
+      which ORM this application uses and which APIs therefore do not exist in it, that the
+      inventories are <em>complete</em> so anything absent genuinely is, and that some behavior
+      lives in XML rather than in code.
+    </p>
+
+    <p>
+      <code>CLAUDE.md</code> and <code>.github/copilot-instructions.md</code> are written too.
+      Anything you added by hand survives regeneration, and regenerating twice produces identical
+      bytes.
+    </p>
+  </section>
+
+  <!-- ------------------------------------------------------------- mcp -->
+  <section id="mcp" class="reveal">
+    <p class="eyebrow">Live, not a snapshot</p>
+    <h2>Or let the agent<br>ask questions directly.</h2>
+    <p>
+      A generated file is a snapshot. The MCP server is a connection: seven tools your agent calls
+      against the source while you are still changing it, so it cannot go stale.
+    </p>
+
+    <div class="grid grid--2">
+      <div class="card">
+        <div class="card__tag">xaf_overview</div>
+        <p>What this application is, and the complete list of everything in it.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">xaf_entity</div>
+        <p>Every property, relationship, rule and calculation on one entity.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">xaf_controller</div>
+        <p>What an action does — including the C# that runs when it fires.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">xaf_search · xaf_rules · xaf_model · xaf_refresh</div>
+        <p>Find a business term, list what the app enforces, read the Model Editor, re-read the source.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:2.8rem">Ask for something that isn't there, and the answer is the useful one:</p>
+
+    <blockquote class="quote">
+      <strong>There is no entity called 'PurchaseOrder' in this application.</strong><br>
+      This is the complete list of 19 entities, extracted from the whole source tree: …<br>
+      If the user expects 'PurchaseOrder' to exist, it has not been created yet.
+    </blockquote>
+
+    <p style="margin-top:1.6rem">
+      A bare “not found” invites an agent to assume it looked in the wrong place and invent the
+      type anyway. Extraction reads the whole tree, which is what makes the stronger claim true.
+    </p>
+  </section>
+
+  <!-- --------------------------------------------------------- catalog -->
+  <section id="catalog" class="reveal">
+    <p class="eyebrow">Optional, for licensees</p>
+    <h2>Tell your code apart<br>from DevExpress's.</h2>
+    <p>
+      Reading source alone leaves one question unanswerable: is
+      <code>DeleteObjectsViewController</code> something your team wrote, or something DevExpress
+      ships? <code>xaflogic catalog build</code> reads <em>your own</em> installation and answers it.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><div class="stat__n">~850</div><div class="stat__l">framework types</div></div>
+      <div class="stat"><div class="stat__n">50</div><div class="stat__l">assemblies read</div></div>
+      <div class="stat"><div class="stat__n">0</div><div class="stat__l">committed to your repo</div></div>
+    </div>
+
+    <div class="grid grid--2">
+      <div class="card card--lit">
+        <h3>“This extends built-in behavior”</h3>
+        <p>A controller deriving from <code>DeleteObjectsViewController</code> is changing how
+           deletion works application-wide, not adding a feature beside it.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>“This attribute is yours”</h3>
+        <p>An attribute in neither XAF nor .NET was invented by your team — its meaning lives in
+           your codebase and in no documentation anywhere.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:2.2rem" class="footer__note">
+      Generated locally and written outside your repository, because it is derived from licensed
+      software. Everything works without it; the catalog only sharpens the output.
+    </p>
+  </section>
+
+  <!-- --------------------------------------------------------- install -->
+  <section id="install" class="reveal">
+    <p class="eyebrow">Install</p>
+    <h2>Two minutes.</h2>
+    <p>A .NET global tool. No account, no API key, no server.</p>
+
+    <div class="term">
+      <div class="term__bar">
+        <span class="term__dot"></span><span class="term__dot"></span><span class="term__dot"></span>
+        <span style="margin-left:.5rem">terminal</span>
+      </div>
+<pre><span class="c-prompt">$</span> dotnet tool install -g XafLogicExplainer.Cli
+
+<span class="c-dim"># Write the context files at your solution root</span>
+<span class="c-prompt">$</span> xaflogic agents --project <span class="c-key">"C:\MySolution\MyApp.Module"</span>
+
+<span class="c-ok">✓</span> AGENTS.md
+<span class="c-ok">✓</span> CLAUDE.md
+<span class="c-ok">✓</span> .github\copilot-instructions.md
+<span class="c-dim">+ 7 detail files in .xaflogic/</span>
+
+<span class="c-dim"># Ask your agent something only this codebase could answer.</span></pre>
+    </div>
+
+    <p style="margin-top:2.8rem">Prefer the agent to query live? Install the plugin:</p>
+
+    <div class="term">
+      <div class="term__bar">
+        <span class="term__dot"></span><span class="term__dot"></span><span class="term__dot"></span>
+        <span style="margin-left:.5rem">claude code</span>
+      </div>
+<pre><span class="c-prompt">/</span>plugin marketplace add peopleworks/XAFLogicExplainer
+<span class="c-prompt">/</span>plugin install xaf-logic-explainer@peopleworks-xaf
+
+<span class="c-dim"># Pair it with the official DevExpress skills:</span>
+<span class="c-prompt">/</span>plugin marketplace add DevExpress/agent-skills
+<span class="c-prompt">/</span>plugin install dx-xaf@DevExpress-agent-skills</pre>
+    </div>
+
+    <div class="buttons">
+      <a class="btn btn--primary" href="https://github.com/peopleworks/XAFLogicExplainer">Read the docs&nbsp;↗</a>
+      <a class="btn" href="https://github.com/peopleworks/XAFLogicExplainer/issues/new?template=extraction-gap.yml">Report a missed pattern&nbsp;↗</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>
+    Built by <a href="https://github.com/peopleworks">Pedro Hernández</a> (PeopleWorks),
+    <a href="https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5">Microsoft MVP for .NET</a>
+    — for the DevExpress and XAF community.
+  </p>
+  <p class="footer__note">
+    <a href="https://github.com/peopleworks/XAFLogicExplainer/blob/main/LICENSE">MIT licensed</a>.
+    An independent community project: not affiliated with, endorsed by, or supported by
+    Developer Express Inc. It contains no DevExpress source code and needs no DevExpress licence to
+    build or run. <em>DevExpress</em>, <em>XAF</em> and <em>eXpressApp Framework</em> are trademarks
+    of Developer Express Inc.
+  </p>
+</footer>
+
+<script>
+// Theme. Honours the system setting until someone chooses, then remembers the choice.
+(function () {
+  var root = document.documentElement;
+  var button = document.getElementById('theme');
+  var stored = null;
+
+  try { stored = localStorage.getItem('xaflogic-theme'); } catch (e) { /* private mode */ }
+
+  var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  apply(stored || system);
+
+  button.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(next);
+    try { localStorage.setItem('xaflogic-theme', next); } catch (e) { /* ignore */ }
+  });
+
+  function apply(theme) {
+    root.setAttribute('data-theme', theme);
+    button.textContent = theme === 'dark' ? '☀' : '☾';
+  }
+})();
+
+// Reveal on scroll. Everything is visible without JavaScript; this only softens the entrance.
+(function () {
+  var targets = document.querySelectorAll('.reveal');
+
+  if (!('IntersectionObserver' in window) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    targets.forEach(function (el) { el.classList.add('is-in'); });
+    return;
+  }
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '0px 0px -12% 0px' });
+
+  targets.forEach(function (el) { observer.observe(el); });
+})();
+</script>
+
+</body>
+</html>
