@@ -93,6 +93,19 @@ if you can, include the reduced snippet that motivated it so it can become a tes
 
 By contributing you agree your work is licensed under the [MIT License](LICENSE).
 
+## Releasing (maintainers)
+
+See [docs/RELEASING.md](docs/RELEASING.md). Two landmines worth knowing before you touch either
+file:
+
+**`src/XafLogicExplainer.Mcp/README.md` ends with `mcp-name: io.github.peopleworks/xaf-logic-explainer`.**
+The MCP registry reads that line out of the published NuGet package to verify ownership. It looks
+like decoration. It is not — remove or reword it and registry publishing stops working, silently,
+on the next release.
+
+**The version lives in two files and both are checked against the release tag:**
+`Directory.Build.props` and the two version fields in `src/XafLogicExplainer.Mcp/.mcp/server.json`.
+
 ## Code of conduct
 
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).

@@ -7,6 +7,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-08-10
+
+### Fixed
+
+- `XafLogicExplainer.Mcp` packed the repository README, which does not carry the
+  `mcp-name: io.github.peopleworks/xaf-logic-explainer` line. The MCP registry reads that line out
+  of the published package to confirm that whoever submits the registry entry also owns the NuGet
+  package, so 0.10.0 could never have been registered. The package now carries its own README.
+
+  The line looks like decoration and is not. Removing or rewording it breaks registry publishing
+  quietly — the next release simply stops being accepted, with nothing in the build to say why.
+
 ## [0.10.0] — 2026-08-10
 
 First release published to NuGet. Version 0.9.0 was the point the repository went public; nothing
@@ -174,6 +186,7 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.1
 [0.10.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.9.0

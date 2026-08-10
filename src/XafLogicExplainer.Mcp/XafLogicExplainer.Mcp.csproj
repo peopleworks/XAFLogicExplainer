@@ -37,4 +37,20 @@
     <None Include=".mcp/server.json" Pack="true" PackagePath="/.mcp/" />
   </ItemGroup>
 
+  <!--
+    This package carries its own README instead of the repository one, and that is load-bearing.
+
+    It ends with `mcp-name: io.github.peopleworks/xaf-logic-explainer`. The MCP registry reads that
+    line out of the published package to confirm that whoever submits the registry entry also owns
+    the NuGet package. It looks like decoration; removing it breaks registry publishing, and it
+    breaks it quietly — the next release simply stops being accepted.
+
+    Overriding the item is not enough: Directory.Build.props already contributes the repository
+    README at the package root, so it is removed first to avoid two files claiming that path.
+  -->
+  <ItemGroup>
+    <None Remove="$(MSBuildThisFileDirectory)..\..\README.md" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>
