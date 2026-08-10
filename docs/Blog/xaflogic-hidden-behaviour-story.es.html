@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu agente de código sabe XAF. Nunca ha visto tu aplicación. · SignsOfAI</title>
+<meta name="description" content="Un agente de IA puede recitarte la documentación de XAF y aun así equivocarse con total seguridad sobre tu aplicación, porque buena parte de lo que hace una app XAF no está en las clases de negocio. Esto es lo que construí, y los cuatro sitios donde se esconde el comportamiento.">
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111a2e; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.10);
+  --ink:#eaf1fb; --muted:#96a8c6; --brand:#6d7cff; --brand2:#db2777;
+  --lex:#db2777; --rhet:#f59e0b; --syn:#22b8cf; --stat:#f0556f; --ok:#2fd27a;
+  --code-bg:#0a1223;
+}
+:root[data-theme="light"]{
+  --bg:#f7f9ff; --bg2:#eef2fb; --card:rgba(10,20,40,.03); --line:rgba(10,20,40,.10);
+  --ink:#141c2e; --muted:#54617a; --brand:#4553d6; --brand2:#be2168;
+  --lex:#be2168; --rhet:#b7790a; --syn:#0e7490; --stat:#d63a53; --ok:#188a53;
+  --code-bg:#0d1526;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f7f9ff; --bg2:#eef2fb; --card:rgba(10,20,40,.03); --line:rgba(10,20,40,.10);
+    --ink:#141c2e; --muted:#54617a; --brand:#4553d6; --brand2:#be2168;
+    --lex:#be2168; --rhet:#b7790a; --syn:#0e7490; --stat:#d63a53; --ok:#188a53;
+    --code-bg:#0d1526;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(900px 500px at 88% -8%, rgba(219,39,119,.14), transparent 60%),
+    radial-gradient(820px 480px at 8% -6%, rgba(109,124,255,.16), transparent 60%),
+    linear-gradient(180deg, var(--bg), var(--bg2));
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.68; font-size:18px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px 72px}
+.top{display:flex;align-items:center;gap:12px;padding:26px 0 8px}
+.brand{font-weight:700;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
+.brand .mark{width:26px;height:26px;border-radius:7px;
+  background:conic-gradient(from 210deg,var(--lex),var(--rhet),var(--syn),var(--stat),var(--lex));
+  display:inline-block;box-shadow:0 0 0 1px var(--line)}
+.tag{margin-left:auto;font-size:12.5px;color:var(--muted);border:1px solid var(--line);
+  padding:4px 10px;border-radius:999px;white-space:nowrap}
+.kicker{margin-top:28px;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:var(--brand);font-weight:700}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.14;margin:.35em 0 .3em;letter-spacing:-.4px}
+.lead{font-size:20px;color:var(--ink);opacity:.95}
+.byline{color:var(--muted);font-size:15px;margin:.4em 0 1.4em}
+h2{font-size:26px;margin:2em 0 .5em;line-height:1.22;letter-spacing:-.2px}
+p{margin:.85em 0}
+a{color:var(--brand);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:currentColor}
+strong{color:var(--ink)}
+code{font-family:'Cascadia Code','Consolas',monospace;font-size:.9em;background:var(--code-bg);
+  color:#dbe7ff;padding:.12em .42em;border-radius:6px;border:1px solid var(--line)}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+  overflow:auto;font-family:'Cascadia Code','Consolas',monospace;font-size:14.5px;line-height:1.55}
+pre code{background:none;border:0;padding:0}
+blockquote{margin:1.3em 0;padding:.7em 1.1em;border-left:3px solid var(--brand);
+  background:linear-gradient(90deg,rgba(109,124,255,.10),transparent);border-radius:0 10px 10px 0;color:var(--ink)}
+figure{margin:1.8em 0}
+figure img{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:14px}
+figcaption{margin-top:.6em;font-size:14.5px;color:var(--muted,#6b7280);text-align:center;font-style:italic}
+ul{padding-left:1.2em}
+li{margin:.35em 0}
+.cta{display:block;margin:1.4em 0;padding:16px 20px;border:1px solid var(--line);border-radius:14px;
+  background:var(--card);color:var(--ink)}
+.cta b{color:var(--brand)}
+.chip{display:inline-block;font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:999px;
+  border:1px solid var(--line);margin-right:4px}
+.chip.lex{color:var(--lex)} .chip.rhet{color:var(--rhet)} .chip.syn{color:var(--syn)} .chip.stat{color:var(--stat)}
+hr{border:0;border-top:1px solid var(--line);margin:1.6em 0}
+footer{margin-top:2.4em;padding-top:1.2em;border-top:1px solid var(--line);color:var(--muted);font-size:14.5px}
+
+/* Tables. The maker story had none, so the shared sheet had no rule for them until an article
+   arrived carrying a comparison. Kept quiet: a thin rule under the header, numbers right-aligned. */
+table{width:100%;border-collapse:collapse;margin:1.4em 0;font-size:.95em}
+th,td{padding:.5em .7em;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:600;font-size:.85em;letter-spacing:.02em}
+tbody tr:last-child td{border-bottom:0}
+td:not(:first-child),th:not(:first-child){text-align:right;white-space:nowrap}
+@media (max-width:640px){table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <span class="brand"><span class="mark"></span> SignsOfAI</span>
+    <span class="tag">PeopleWorks · <a href="https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5" target="_blank" rel="noopener">Microsoft MVP for .NET</a></span>
+  </div>
+
+  <div class="kicker">Historia de taller · Ingeniería</div>
+  <h1>Tu agente de código sabe XAF. Nunca ha visto tu aplicación.</h1>
+  <p class="lead">Un agente de IA puede recitarte la documentación de XAF y aun así equivocarse con total seguridad sobre tu aplicación, porque buena parte de lo que hace una app XAF no está en las clases de negocio. Esto es lo que construí, y los cuatro sitios donde se esconde el comportamiento.</p>
+  <p class="byline">Pedro Hernández (PeopleWorks)</p>
+
+  <a class="cta" href="https://github.com/peopleworks/SignsofAI"><b>▶ Descárgalo o pruébalo</b> — gratis, MIT, web y Windows.</a>
+
+  <hr>
+
+  <p>Pídele a tu asistente de IA que añada una regla de validación a <code>Invoice</code> y observa. Escribe XAF impecable: <code>RuleCriteria</code>, el contexto correcto, un <code>CustomMessageTemplate</code>, todo en su sitio. Y entonces referencia <code>Invoice.TotalAmount</code>, cuando tu clase tiene <code>Total</code>. O filtra por <code>[Status] = 'Approved'</code> y tu aplicación guarda un enum. O añade una columna que el Model Editor va a ocultar en cuanto arranque la app.</p>
+  <p>No está alucinando XAF. Sabe XAF. Lo que no ha visto nunca es <strong>tu</strong> XAF.</p>
+  <p>DevExpress ha hecho un trabajo excelente cerrando parte de esta brecha. Hay <a href="https://github.com/DevExpress/agent-skills">skills oficiales para agentes</a> que le enseñan cómo funciona el framework, y un servidor MCP de documentación que le da la referencia oficial. Los dos son buenos de verdad. Ninguno ha leído una sola línea de tu código.</p>
+  <p>Así que construí la tercera pieza, gratis y con licencia MIT: <strong><a href="https://github.com/peopleworks/XAFLogicExplainer">XAF Logic Explainer</a></strong>.</p>
+  <table>
+    <thead><tr><th>Le enseña al agente…</th><th>Herramienta</th></tr></thead>
+    <tbody>
+      <tr><td>Cómo funciona XAF en general</td><td><code>agent-skills</code> de DevExpress</td></tr>
+      <tr><td>Qué dice la documentación oficial</td><td>MCP de documentación de DevExpress</td></tr>
+      <tr><td><strong>Qué hace TU aplicación</strong></td><td><strong>XAF Logic Explainer</strong></td></tr>
+    </tbody>
+  </table>
+  <p>Se complementan. Ninguna sustituye a las otras.</p>
+  <h2>Dos minutos</h2>
+  <pre><code class="language-bash">dotnet tool install -g XafLogicExplainer.Cli
+xaflogic agents --project "C:\MiSolucion\MiApp.Module"</code></pre>
+  <p>Eso escribe <code>AGENTS.md</code>, <code>CLAUDE.md</code> y <code>.github/copilot-instructions.md</code> en la raíz de tu solución. Sin cuenta, sin API key, sin servidor, sin subir nada a ninguna parte. El agente que uses entiende la aplicación en su siguiente pregunta.</p>
+  <p>O sáltate los ficheros y deja que pregunte directamente, por MCP:</p>
+  <pre><code class="language-json">{ "mcpServers": { "xaf": { "command": "dnx", "args": ["XafLogicExplainer.Mcp", "--yes"] } } }</code></pre>
+  <p>Nueve herramientas, en vivo contra tu código. Arrancado desde la carpeta de la solución encuentra el módulo XAF él solo, así que no hay ninguna ruta que configurar.</p>
+  <h2>Lo que no esperaba: dónde se esconde de verdad el comportamiento</h2>
+  <p>Yo daba por hecho que lo interesante serían las entidades y los controladores. No lo era. La extracción valiosa resultó ser todo lo que <strong>no está en las clases de negocio</strong> — y una aplicación XAF guarda una cantidad notable de sí misma fuera de ellas.</p>
+  <p><strong>El Model Editor.</strong> Títulos, visibilidad, orden de columnas, valores por defecto: todo en <code>.xafml</code>, nada en ningún <code>.cs</code>. Un agente leyendo tu C# te describirá una pantalla que no existe. XAF fusiona el <code>Model.DesignedDiffs.xafml</code> del módulo con el <code>Model.xafml</code> del proyecto de plataforma, así que la herramienta los fusiona igual antes de contar nada.</p>
+  <p><strong>Editores de propiedad y de lista propios.</strong> Una propiedad <code>string</code> que se pinta como un lector de códigos de barras no se comporta como una caja de texto, y la clase de negocio no dice ni una palabra al respecto. Peor: el editor vive en el proyecto de <strong>plataforma</strong> — <code>MiApp.Blazor.Server</code>, <code>MiApp.Win</code> — al lado del módulo y no dentro. Quien lea los objetos de negocio no se lo encuentra jamás.</p>
+  <figure><img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png" alt="La sección de editores personalizados de un explainer generado"></figure>
+  <p><em>Leído del proyecto de plataforma. La constante del alias se declara en el módulo, así que la herramienta resuelve constantes en toda la solución: leyendo cualquiera de los dos proyectos por separado no se resuelve nada.</em></p>
+  <p>Aquí hay un matiz que me lo aclaró la documentación de DevExpress, y que cambió el diseño. Registrar un editor con <code>isDefault: true</code> sustituye el editor por defecto de ese tipo <strong>en toda la aplicación</strong>; con <code>false</code> solo queda <em>seleccionable</em> en el Model Editor. Mi primera versión se saltaba la distinción y anunciaba tan contenta que seis entidades «usan el lector de códigos de barras» porque tenían propiedades <code>string</code>. Era sencillamente falso. Ahora solo <code>true</code> vincula un editor a entidades por tipo.</p>
+  <p><strong>El JavaScript sin el que un editor no funciona.</strong> Un mapa, un pad de firma, un escáner: el C# es una cáscara y el comportamiento está en <code>wwwroot/js/</code>. No está ni en C# ni en XML, y es la razón por la que un control se rompe en silencio cuando alguien renombra un fichero. La herramienta registra esos ficheros como parte del editor.</p>
+  <p><strong>Editores integrados reconfigurados en tiempo de ejecución.</strong> Este no tiene ninguna clase propia que encontrar. Un controlador se mete en el modelo de componente de un editor integrado con <code>View.CustomizeViewItemControl&lt;T&gt;()</code> y le cambia el comportamiento. Nada en la entidad lo menciona. Nada en el Model Editor lo menciona. Se descubre leyendo controladores, que es exactamente lo que nadie hace cuando intenta entender un dominio.</p>
+  <p><strong>Migraciones que se ejecutaron una vez.</strong> Esta es mi favorita, porque es la que hace que los agentes inventen historia. Todo equipo XAF tiene un updater lleno de bloques así:</p>
+  <pre><code class="language-csharp">if (CurrentDBVersion &lt; new Version("1.1.0.0") &amp;&amp; CurrentDBVersion &gt; new Version("0.0.0.0")) {
+    BackfillPrescriptionExpiry();
+}</code></pre>
+  <p>Eso se ejecutó <strong>una vez</strong>, en la base de datos de producción de alguien, hace tres años, y nunca más. Leyendo el código que corre hoy no hay forma de recuperar qué hizo. Así que cuando alguien pregunta «¿por qué las filas de 2023 tienen ese valor?», el agente razona desde el código actual y se inventa una causa con total aplomo.</p>
+  <figure><img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-migrations.png" alt="La sección de migraciones, con versión, fase de esquema, condición y el código que se ejecutó"></figure>
+  <p>La herramienta guarda a qué versión se actualizaba, la cota de «solo bases de datos existentes», <strong>en qué fase del esquema corrió</strong> — un bloque que se ejecuta antes de que cambie el esquema no puede tocar las columnas nuevas —, los métodos que llama, el código, y <strong>el comentario que hay encima del bloque</strong>. Ese comentario suele ser el único registro que sobrevive del <em>porqué</em>, y el <em>porqué</em> es justo la pregunta que tiene cualquiera que lee una migración.</p>
+  <p>Los datos semilla se mantienen separados en todo momento. Los datos semilla dicen qué contiene una base de datos nueva; las migraciones dicen qué le pasó a todas las que no lo eran. Mezclarlos falsea las dos cosas.</p>
+  <h2>La decisión sobre la que se sostiene todo lo demás</h2>
+  <p>La extracción es <strong>análisis sintáctico con Roslyn</strong>. La herramienta parsea tu código como texto. Nunca compila tu proyecto y nunca referencia un ensamblado de DevExpress.</p>
+  <p>Suena a limitación. Es la propiedad sobre la que se sostiene el proyecto entero:</p>
+  <ul>
+    <li><strong>Funciona en una rama que no compila</strong> — que es, muchas veces, justo cuando necesitas saber qué hace la aplicación.</li>
+    <li><strong>No hace falta licencia de DevExpress.</strong> Quien quiera contribuir al extractor puede hacerlo sin suscripción, y CI corre gratis en un runner público de Ubuntu. La suite son 176 tests sobre fixtures XAF sintéticos que referencian tipos de DevExpress que no están instalados, porque nunca se compila nada.</li>
+    <li><strong>Es rápido.</strong> Parsear con Roslyn un módulo grande son segundos, no una compilación.</li>
+  </ul>
+  <p>El precio es que las verdades que solo se ven por reflexión no están disponibles. Me pareció un buen intercambio, y tres años de uso en producción no me han hecho cambiar de opinión.</p>
+  <h2>Por qué la mayor parte de la documentación <em>no</em> está en AGENTS.md</h2>
+  <p><code>AGENTS.md</code> se antepone a <strong>todas</strong> las peticiones que hace un agente en ese repositorio. Su tamaño es un impuesto que se paga en cada pregunta, para siempre. Meter ahí 70 KB de detalle de entidades desplazaría a la pregunta real del usuario.</p>
+  <p>Por eso la salida va por niveles: un índice de ~11 KB que se carga siempre, y ~70 KB de detalle en <code>.xaflogic/</code> que solo se abre cuando una pregunta lo necesita.</p>
+  <p>La parte más valiosa es la más pequeña. El índice empieza con <strong>reglas base</strong>: que esta aplicación usa XPO y nunca EF Core, así que esas APIs aquí no existen; que los inventarios son <em>completos</em>, así que lo que no aparece de verdad no existe; y que parte del comportamiento vive en el Model Editor y no en C#. Esos pocos párrafos cortan casi toda la invención confiada.</p>
+  <p>La afirmación de mundo cerrado es la que se gana su sitio. Convierte la ausencia de evidencia en evidencia de ausencia, y es la razón por la que la respuesta útil es esta:</p>
+  <blockquote>No existe ninguna entidad llamada <code>PurchaseOrder</code> en esta aplicación. Esta es la lista completa de las 19 entidades, extraída de todo el árbol de código: …</blockquote>
+  <h2>La misma extracción, para una persona</h2>
+  <p>Los agentes no son los únicos lectores. <code>xaflogic explain</code> escribe una única página HTML autocontenida para quien acaba de heredar una aplicación XAF de diez años, o tiene que entregársela a alguien. Sin servidor, sin compilación, sin una sola petición a la red: se abre desde un adjunto de correo en una máquina sin internet, que es como ocurren los traspasos de verdad.</p>
+  <p>Su pieza central es un mapa de tu modelo de dominio, dibujado a partir de los atributos de asociación repartidos por veinte ficheros. La mayoría de los equipos nunca han visto el suyo. Existe en la cabeza de una persona, que es exactamente el conocimiento que se va cuando esa persona se va.</p>
+  <figure><img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/domain-map.gif" alt="El mapa del modelo de dominio: al pasar sobre una entidad se apaga todo lo que no toca"></figure>
+  <p><em>Pasa el ratón por una entidad y se atenúa todo lo que no toca. El naranja significa que borrar el padre borra al hijo.</em></p>
+  <p>El trazado se calcula al generar la página, no en el navegador, así que el mismo código dibuja siempre el mismo diagrama y regenerarla produce un diff legible.</p>
+  <h2>La herramienta me pilló mintiendo</h2>
+  <p>Esta es la parte que preferiría no escribir, y la razón por la que la escribo.</p>
+  <p>El repositorio incluye una aplicación demo sintética para que los diagramas y las capturas enseñen algo realista que no es de ningún cliente. Haciendo capturas para la web me llamó la atención que las fichas de entidad se veían extrañamente pobres. La demo escribía sus atributos XAF sobre los <strong>campos de respaldo</strong> en lugar de sobre las propiedades — y así no se escribe XPO. Las clases persistentes del propio DevExpress atribuyen la propiedad; el analizador lee la propiedad.</p>
+  <p>La demo llevaba tiempo declarando <strong>12 relaciones cuando declara 24, y 5 reglas cuando tiene 9</strong>. Durante semanas, el mapa, el README y la web mostraron una aplicación con la mitad de riqueza que la del repositorio. Todos los tests pasaban, porque ninguno fijaba la forma de la demo.</p>
+  <p>Poco después, publicando el proyecto en un directorio de MCP, vi la ficha anunciando <strong>v0.9.0, 7 herramientas y 129 tests</strong>. Los números reales eran 0.11.0, 9 y 176. La sección de estado del README se había congelado meses atrás, y NuGet, el registro MCP y todos los directorios que replican un README lo estaban repitiendo.</p>
+  <p>Los dos casos son el mismo fallo, y es justo el que esta herramienta existe para atacar: <strong>una afirmación sobre una base de código que nada obliga a seguir siendo cierta</strong>. Así que ahora un test fija la forma de la demo, y otro deriva del código la versión, el número de herramientas y el de tests, y rompe la compilación cuando el README se desvía. Si un inventario de mundo cerrado merece generarse para tu código, merece exigirse a mi propia documentación.</p>
+  <h2>Dónde está</h2>
+  <p>MIT, en GitHub: <strong><a href="https://github.com/peopleworks/XAFLogicExplainer">peopleworks/XAFLogicExplainer</a></strong>. Tres paquetes en NuGet, un servidor MCP en el registro oficial, y un plugin de Claude Code:</p>
+  <pre><code>/plugin marketplace add peopleworks/XAFLogicExplainer
+/plugin install xaf-logic-explainer@peopleworks-xaf</code></pre>
+  <p>Hay una <a href="https://peopleworks.github.io/XAFLogicExplainer/">página de presentación</a> con los diagramas y salida real.</p>
+  <p>Sigue en <strong>0.x</strong> a propósito. El motor de extracción está probado en producción — corre contra aplicaciones XAF reales —, pero el 1.0.0 se gana cuando el extractor haya leído bases de código que no escribí yo. Y esa es la petición: apúntalo a tu aplicación XAF, y cuando lea mal un patrón que tú usas, abre un issue de <a href="https://github.com/peopleworks/XAFLogicExplainer/issues/new/choose">extraction gap</a>. Un patrón mal leído más un fixture suele ser la corrección entera, y así esa regresión ya no puede volver en silencio.</p>
+  <p>Tu agente ya sabe XAF. Vamos a enseñarle tu aplicación.</p>
+
+  <footer>
+    Built by Pedro Hernández — PeopleWorks, <a href="https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5" target="_blank" rel="noopener">Microsoft MVP for .NET</a>. MIT licensed.<br>
+    <em>Por y para la comunidad educativa.</em> · <a href="https://github.com/peopleworks/SignsofAI">github.com/peopleworks/SignsofAI</a>
+  </footer>
+
+</div>
+</body>
+</html>
