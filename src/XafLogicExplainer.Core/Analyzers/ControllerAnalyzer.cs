@@ -79,6 +79,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
         // Extract referenced entities
         controller.ReferencedEntities.AddRange(ExtractReferencedEntities(classDecl));
+        controller.CustomizedEditors.AddRange(ExtractCustomizedEditors(classDecl));
 
         // Extract comments
         if (options.IncludeComments)
@@ -312,6 +313,38 @@ public class ControllerAnalyzer : IControllerAnalyzer
         }
 
         return methods;
+    }
+
+    /// <summary>
+    /// Finds built-in editors this controller reconfigures at run time.
+    /// </summary>
+    /// <remarks>
+    /// <c>View.CustomizeViewItemControl&lt;DateTimePropertyEditor&gt;(this, e =&gt; …)</c> is what
+    /// DevExpress recommends for small changes to a built-in editor, and it leaves no trace
+    /// anywhere else: no custom editor class, nothing on the entity, nothing in the Model Editor.
+    /// A screen simply behaves differently from what its business class implies.
+    /// </remarks>
+    private static List<string> ExtractCustomizedEditors(ClassDeclarationSyntax classDecl)
+    {
+        var editors = new List<string>();
+
+        var calls = classDecl.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(i => i.Expression is MemberAccessExpressionSyntax
+            {
+                Name: GenericNameSyntax { Identifier.Text: "CustomizeViewItemControl" }
+            });
+
+        foreach (var call in calls)
+        {
+            var generic = (GenericNameSyntax)((MemberAccessExpressionSyntax)call.Expression).Name;
+            var editorType = generic.TypeArgumentList.Arguments.FirstOrDefault()?.ToString();
+
+            if (!string.IsNullOrWhiteSpace(editorType))
+                editors.Add(editorType);
+        }
+
+        return editors.Distinct(StringComparer.Ordinal).ToList();
     }
 
     /// <summary>

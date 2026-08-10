@@ -124,6 +124,41 @@ public class LogicExtractor : ILogicExtractor
             }
         }
 
+        // 2.6. Custom editors. Nearly always in a platform project beside the module, which is
+        //      exactly why nobody reading the business objects ever meets them.
+        var editorAnalyzer = new EditorAnalyzer();
+        var siblingDirs = options.DiscoverPlatformModels
+            ? DiscoverSiblingDirectories(projectPath).ToList()
+            : [];
+
+        // Alias constants are gathered across the whole solution before any editor is read. The
+        // editor lives in the platform project and names a constant declared in the module beside
+        // it, so a project read on its own resolves nothing and reports the expression verbatim.
+        var constants = EditorAnalyzer.CollectStringConstants(projectPath);
+        foreach (var siblingDir in siblingDirs)
+        {
+            foreach (var (key, value) in EditorAnalyzer.CollectStringConstants(siblingDir))
+                constants.TryAdd(key, value);
+        }
+
+        project.Editors.AddRange(Stamp(
+            editorAnalyzer.AnalyzeEditors(projectPath, options, constants),
+            new DirectoryInfo(projectPath).Name));
+
+        foreach (var siblingDir in siblingDirs)
+        {
+            var siblingName = new DirectoryInfo(siblingDir).Name;
+            var known = project.Editors.Select(e => e.ClassName).ToHashSet(StringComparer.Ordinal);
+
+            foreach (var editor in Stamp(editorAnalyzer.AnalyzeEditors(siblingDir, options, constants), siblingName))
+            {
+                if (known.Add(editor.ClassName))
+                    project.Editors.Add(editor);
+            }
+        }
+
+        LinkEditorsToProperties(project);
+
         // 3. Extract seed data from Updater
         project.SeedData = _updaterAnalyzer.AnalyzeUpdater(projectPath, options);
 
@@ -147,6 +182,69 @@ public class LogicExtractor : ILogicExtractor
         Catalog.CatalogEnricher.Enrich(project, catalog);
 
         return project;
+    }
+
+    /// <summary>Records which project each editor came from.</summary>
+    private static List<ExtractedEditor> Stamp(List<ExtractedEditor> editors, string projectName)
+    {
+        foreach (var editor in editors)
+            editor.SourceProject ??= projectName;
+
+        return editors;
+    }
+
+    /// <summary>
+    /// Works out which properties each custom editor actually renders.
+    /// </summary>
+    /// <remarks>
+    /// An editor on its own is a curiosity; an editor attached to a property somebody is about to
+    /// change is a warning. But the second argument of the registration attribute decides which
+    /// of those it is, and getting that backwards is worse than saying nothing.
+    /// <para>
+    /// <c>isDefault: true</c> means XAF uses the editor for every property of that type, so every
+    /// one of them is genuinely affected. <c>false</c> means it is merely <em>selectable</em> in
+    /// the Model Editor — listing every string property in the application as "uses the barcode
+    /// scanner" would be plainly false. Those are linked only where a property asks for the alias
+    /// by name.
+    /// </para>
+    /// <para>
+    /// A registration for <c>typeof(object)</c> claims everything and is never linked: naming
+    /// every property in the application communicates nothing.
+    /// </para>
+    /// </remarks>
+    /// <param name="project">The extracted project, annotated in place.</param>
+    public static void LinkEditorsToProperties(ExtractedProject project)
+    {
+        foreach (var editor in project.Editors)
+        {
+            var target = editor.TargetType;
+            var claimsEverything = target is "object" or "Object";
+            var appliesByType = editor.IsDefault && !claimsEverything && !string.IsNullOrWhiteSpace(target);
+
+            foreach (var entity in project.Entities)
+            {
+                var matches = entity.Properties.Any(p =>
+                    (!string.IsNullOrWhiteSpace(editor.Alias) &&
+                     string.Equals(p.EditorAlias, editor.Alias, StringComparison.Ordinal))
+                    || (appliesByType &&
+                        string.Equals(StripGeneric(p.TypeName), target, StringComparison.Ordinal)));
+
+                if (matches)
+                    editor.UsedBy.Add(entity.ClassName);
+            }
+        }
+    }
+
+    /// <summary>Turns <c>XPCollection&lt;OrderLine&gt;</c> into <c>OrderLine</c>.</summary>
+    private static string StripGeneric(string? typeName)
+    {
+        if (string.IsNullOrWhiteSpace(typeName))
+            return string.Empty;
+
+        var open = typeName.IndexOf('<');
+        var close = typeName.LastIndexOf('>');
+
+        return open >= 0 && close > open ? typeName[(open + 1)..close] : typeName;
     }
 
     /// <summary>

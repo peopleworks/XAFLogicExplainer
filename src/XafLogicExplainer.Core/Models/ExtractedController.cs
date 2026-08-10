@@ -74,6 +74,18 @@ public class ExtractedController
     public string? FrameworkBaseDocumentationUrl { get; set; }
 
     /// <summary>
+    /// Built-in editors this controller reconfigures through
+    /// <c>View.CustomizeViewItemControl&lt;T&gt;()</c>.
+    /// </summary>
+    /// <remarks>
+    /// The other way a screen stops behaving the way its business class implies, and the one
+    /// DevExpress recommends for small changes. There is no custom editor class to find: a
+    /// controller reaches into a built-in editor's component model at run time, so nothing in the
+    /// entity, the editor list or the Model Editor mentions it.
+    /// </remarks>
+    public List<string> CustomizedEditors { get; set; } = [];
+
+    /// <summary>
     /// Source comments associated with the controller declaration.
     /// </summary>
     public List<string> SourceComments { get; set; } = [];

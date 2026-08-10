@@ -28,6 +28,19 @@ internal static class SampleProjects
     /// <summary>Path to the EF Core fixture module.</summary>
     public static string EfCorePath => Path.Combine(FixturesRoot, "EfCoreSolution", "SampleEf.Module");
 
+    /// <summary>Path to the fourteen-entity demo module.</summary>
+    public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
+
+    /// <summary>
+    /// Path to the demo's platform project, where its custom editor lives.
+    /// </summary>
+    /// <remarks>
+    /// A sibling of the module, not a child — which is exactly why nobody reading the business
+    /// objects ever meets the editor.
+    /// </remarks>
+    public static string DemoBlazorPath =>
+        Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Blazor.Server");
+
     /// <summary>
     /// Locates the fixtures in the source tree by walking up from the test assembly.
     /// </summary>
@@ -64,6 +77,7 @@ internal static class SampleProjects
     }
 
     private static readonly Lazy<ExtractedProject> LazyXpo = new(() => Extract(XpoPath));
+    private static readonly Lazy<ExtractedProject> LazyDemo = new(() => Extract(DemoPath));
     private static readonly Lazy<ExtractedProject> LazyEfCore = new(() => Extract(EfCorePath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
@@ -71,6 +85,11 @@ internal static class SampleProjects
 
     /// <summary>The EF Core sample: Product and Category.</summary>
     public static ExtractedProject EfCore => LazyEfCore.Value;
+
+    /// <summary>
+    /// The fourteen-entity demo, with a custom editor in a sibling platform project.
+    /// </summary>
+    public static ExtractedProject Demo => LazyDemo.Value;
 
     /// <summary>Finds one entity by name, failing the test clearly when it is missing.</summary>
     public static ExtractedEntity Entity(this ExtractedProject project, string className) =>

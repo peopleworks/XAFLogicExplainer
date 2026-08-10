@@ -340,6 +340,81 @@ public sealed class XafDetailTools
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Returns the editors that make screens differ from their property types.
+    /// </summary>
+    [McpServerTool(Name = "xaf_editors")]
+    [Description(
+        "Custom property and list editors this application defines, and built-in editors its " +
+        "controllers reconfigure at run time. IMPORTANT — a property rendered by one of these does " +
+        "NOT show the control its type implies, and the business class says nothing about it. " +
+        "Check this before describing or changing how anything appears on screen.")]
+    public async Task<string> EditorsAsync(
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+        var customized = app.Controllers.Where(c => c.CustomizedEditors.Count > 0).ToList();
+
+        if (app.Editors.Count == 0 && customized.Count == 0)
+        {
+            return $"{app.ProjectName} defines no custom editors, and no controller reconfigures a " +
+                   "built-in one. Every property shows the control its type implies.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Custom editors — {app.ProjectName}");
+
+        foreach (var editor in app.Editors.OrderBy(e => e.ClassName, StringComparer.Ordinal))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {editor.ClassName}");
+            sb.AppendLine();
+            sb.AppendLine($"- Kind: {editor.Kind}");
+
+            if (!string.IsNullOrWhiteSpace(editor.TargetType))
+                sb.AppendLine($"- Renders: `{editor.TargetType}`");
+
+            if (editor.IsDefault)
+                sb.AppendLine("- **Replaces the default editor for that type everywhere** — it changes screens nobody edited.");
+            else if (!string.IsNullOrWhiteSpace(editor.Alias))
+                sb.AppendLine($"- Requested with `[EditorAlias(\"{editor.Alias}\")]`, or assigned in the Model Editor.");
+
+            if (!string.IsNullOrWhiteSpace(editor.BaseType))
+                sb.AppendLine($"- Based on `{editor.BaseType}`");
+
+            if (!string.IsNullOrWhiteSpace(editor.SourceProject))
+                sb.AppendLine($"- Defined in `{editor.SourceProject}` — a platform project beside the module, not in it.");
+
+            if (editor.UsedBy.Count > 0)
+                sb.AppendLine($"- Used by: {string.Join(", ", editor.UsedBy)}");
+
+            if (editor.ClientAssets.Count > 0)
+                sb.AppendLine($"- Needs: {string.Join(", ", editor.ClientAssets)} — client-side files, behavior in neither C# nor XML.");
+
+            if (!string.IsNullOrWhiteSpace(editor.Description))
+            {
+                sb.AppendLine();
+                sb.AppendLine(editor.Description);
+            }
+        }
+
+        if (customized.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Built-in editors reconfigured at run time");
+            sb.AppendLine();
+            sb.AppendLine("No custom editor class exists for these. A controller reaches into a built-in editor's");
+            sb.AppendLine("component model, so nothing on the entity or in the Model Editor records it.");
+            sb.AppendLine();
+
+            foreach (var controller in customized.OrderBy(c => c.ClassName, StringComparer.Ordinal))
+                sb.AppendLine($"- `{controller.ClassName}` changes {string.Join(", ", controller.CustomizedEditors)}");
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Writes an entity's validation, appearance and calculation rules.</summary>
     private static void AppendRules(StringBuilder sb, ExtractedEntity entity)
     {

@@ -72,6 +72,7 @@ public sealed class AgentContextGenerator
         WriteOperationsInventory(sb, project);
         WriteNavigation(sb, project);
         WriteCriteriaExamples(sb, conventions);
+        WriteEditors(sb, project);
         WriteConventions(sb, project, conventions);
         WriteRecipes(sb, project, conventions);
         WriteDetailPointers(sb, detailFiles);
@@ -226,6 +227,18 @@ public sealed class AgentContextGenerator
             sb.AppendLine("This application has `.xafml` customizations: captions, list columns, filters and view");
             sb.AppendLine("settings that override what the C# suggests. Before concluding how a screen behaves from");
             sb.AppendLine($"the business classes alone, check the Model Editor detail in `{DetailFolder}/`.");
+            sb.AppendLine();
+        }
+
+        // Rule: custom editors. A property with one does not render the way its type says, and the
+        // editor lives in a platform project the reader may never open.
+        if (project.Editors.Count > 0 || project.Controllers.Any(c => c.CustomizedEditors.Count > 0))
+        {
+            sb.AppendLine($"**{rule++}. Some screens do not follow their property types.**");
+            sb.AppendLine("This application defines custom property or list editors, listed under *Custom editors*");
+            sb.AppendLine("below. A property they render does **not** show the control its type implies, and the");
+            sb.AppendLine("business class says nothing about it — the editor lives in a platform project beside the");
+            sb.AppendLine("module. Check that list before describing or changing how anything appears on screen.");
             sb.AppendLine();
         }
 
@@ -421,6 +434,71 @@ public sealed class AgentContextGenerator
             sb.AppendLine();
         }
     }
+
+    /// <summary>
+    /// Lists the editors that make a screen differ from what its property type implies.
+    /// </summary>
+    /// <remarks>
+    /// Earns its place in the always-loaded tier because it changes answers about the UI, and
+    /// because nothing else in this file hints that the control is not the standard one.
+    /// </remarks>
+    private static void WriteEditors(StringBuilder sb, ExtractedProject project)
+    {
+        var customized = project.Controllers.Where(c => c.CustomizedEditors.Count > 0).ToList();
+
+        if (project.Editors.Count == 0 && customized.Count == 0)
+            return;
+
+        sb.AppendLine("## Custom editors");
+        sb.AppendLine();
+        sb.AppendLine("Properties these render do not show the control their type implies:");
+        sb.AppendLine();
+
+        foreach (var editor in project.Editors.OrderBy(e => e.ClassName, StringComparer.Ordinal))
+        {
+            sb.Append($"- **{editor.ClassName}** ({Describe(editor.Kind)})");
+
+            if (!string.IsNullOrWhiteSpace(editor.TargetType))
+                sb.Append($" for `{editor.TargetType}`");
+
+            if (editor.IsDefault)
+                sb.Append(" — **replaces the default everywhere**");
+            else if (!string.IsNullOrWhiteSpace(editor.Alias))
+                sb.Append($" — requested with `[EditorAlias(\"{editor.Alias}\")]`");
+
+            sb.AppendLine();
+
+            if (editor.UsedBy.Count > 0)
+                sb.AppendLine($"  - used by {string.Join(", ", editor.UsedBy.Select(u => $"`{u}`"))}");
+
+            if (editor.ClientAssets.Count > 0)
+                sb.AppendLine($"  - needs {string.Join(", ", editor.ClientAssets.Select(a => $"`{a}`"))} — behavior in neither C# nor XML");
+
+            if (!string.IsNullOrWhiteSpace(editor.SourceProject))
+                sb.AppendLine($"  - defined in `{editor.SourceProject}`, not in the module");
+        }
+
+        if (customized.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("These controllers reconfigure a **built-in** editor at run time, so there is no custom");
+            sb.AppendLine("editor class to find and nothing on the entity records it:");
+            sb.AppendLine();
+
+            foreach (var controller in customized.OrderBy(c => c.ClassName, StringComparer.Ordinal))
+                sb.AppendLine($"- `{controller.ClassName}` changes {string.Join(", ", controller.CustomizedEditors.Select(e => $"`{e}`"))}");
+        }
+
+        sb.AppendLine();
+    }
+
+    private static string Describe(EditorKind kind) => kind switch
+    {
+        EditorKind.PropertyEditor => "property editor",
+        EditorKind.ListEditor => "list editor",
+        EditorKind.ViewItem => "view item",
+        _ => "editor",
+    };
 
     private static void WriteConventions(
         StringBuilder sb,

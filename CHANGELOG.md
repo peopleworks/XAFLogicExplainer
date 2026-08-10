@@ -9,6 +9,33 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Custom property and list editors.** A property rendered by one does not show the control its
+  type implies, and the business class says nothing about it — the same category of hidden
+  behaviour as the Model Editor. They also live in the platform project (`*.Blazor.Server`,
+  `*.Win`) *beside* the module, so nobody reading the business objects ever meets them.
+  - Detected from `[PropertyEditor]`, `[ListEditor]` and `[ViewItem]`, and from editor base types
+    for the abstract editors a team writes once and never decorates.
+  - **Alias constants are resolved across the solution.** The attribute reads
+    `CustomEditorAliases.BarcodeScannerPropertyEditor`; the reader needs the value XAF matches on,
+    and the constant is declared in the module while the editor sits in the platform project, so a
+    project read on its own resolves nothing.
+  - **Client assets are recorded** — the JavaScript an editor cannot work without. Behaviour in
+    neither C# nor XML, and the reason a control breaks when somebody renames a file.
+  - Also finds **built-in editors reconfigured at run time** through
+    `View.CustomizeViewItemControl<T>()`. There is no custom editor class to find: a controller
+    reaches into a built-in editor's component model, leaving no trace on the entity or in the
+    Model Editor.
+  - Surfaced in `AGENTS.md` as a ground rule, in the explainer, and through a new `xaf_editors`
+    MCP tool.
+  - Registration is read the way the DevExpress documentation defines it: `isDefault: true` means
+    the editor replaces the default for that type **everywhere**, while `false` means it is merely
+    *selectable* in the Model Editor. Only the first is reported as being used by an entity —
+    listing every string property in an application as "uses the barcode scanner" would be plainly
+    false.
+- A **fourteen-entity demo application** (`Fixtures/DemoSolution`) with a platform project, a
+  custom editor and a version-gated updater, so the diagrams and screenshots show a realistic
+  application that belongs to nobody.
+
 - **`xaflogic explain`** — a single self-contained HTML page explaining the application to a
   *person*. The same extraction already serves agents; this is the reader who has just inherited a
   ten-year-old XAF application, or has to hand one over.

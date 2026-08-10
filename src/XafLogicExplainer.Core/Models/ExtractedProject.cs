@@ -71,6 +71,12 @@ public class ExtractedProject
     public ExtractedModelInfo? ModelEditorInfo { get; set; }
 
     /// <summary>
+    /// Property and list editors this team wrote, usually living in a platform project beside the
+    /// module rather than in it.
+    /// </summary>
+    public List<ExtractedEditor> Editors { get; set; } = [];
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>

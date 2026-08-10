@@ -53,6 +53,7 @@ public sealed class HtmlExplainerGenerator
         WriteRules(sb, project);
         WriteCriteria(sb, project);
         WriteModelEditor(sb, project);
+        WriteEditors(sb, project);
         WriteSeedData(sb, project);
         sb.AppendLine("</main>");
 
@@ -131,6 +132,7 @@ public sealed class HtmlExplainerGenerator
         sb.AppendLine("  <li><a href=\"#rules\">Rules</a></li>");
         sb.AppendLine("  <li><a href=\"#criteria\">Criteria</a></li>");
         if (project.ModelEditorInfo is not null) sb.AppendLine("  <li><a href=\"#model\">Model Editor</a></li>");
+        if (project.Editors.Count > 0) sb.AppendLine("  <li><a href=\"#editors\">Custom editors</a></li>");
         if (project.SeedData.Count > 0) sb.AppendLine("  <li><a href=\"#seed\">Seed data</a></li>");
         sb.AppendLine("</ul></div></nav>");
     }
@@ -517,6 +519,100 @@ public sealed class HtmlExplainerGenerator
         sb.AppendLine("  </article>");
         sb.AppendLine("</section>");
     }
+
+    // --------------------------------------------------------- custom editors
+
+    private static void WriteEditors(StringBuilder sb, ExtractedProject project)
+    {
+        var customized = project.Controllers
+            .Where(c => c.CustomizedEditors.Count > 0)
+            .OrderBy(c => c.ClassName, StringComparer.Ordinal)
+            .ToList();
+
+        if (project.Editors.Count == 0 && customized.Count == 0)
+            return;
+
+        sb.AppendLine("<section id=\"editors\">");
+        sb.AppendLine("  <h2>Screens that do not follow their type</h2>");
+        sb.AppendLine("  <p class=\"lede\"><strong>A property with a custom editor does not render the way its type implies</strong>, and the business class says nothing about it. These usually live in a platform project beside the module, so nobody reading the business objects meets them.</p>");
+
+        foreach (var editor in project.Editors)
+        {
+            var haystack = Haystack(editor.ClassName, editor.TargetType, editor.Alias, editor.Description);
+
+            sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
+            sb.AppendLine("    <div class=\"card__head\">");
+            sb.AppendLine($"      <span class=\"card__name\">{E(editor.ClassName)}</span>");
+            sb.AppendLine($"      <span class=\"card__meta\">{E(Describe(editor.Kind))}");
+            if (!string.IsNullOrWhiteSpace(editor.SourceProject))
+                sb.Append($" · in {E(editor.SourceProject)}");
+            sb.AppendLine("</span>");
+
+            // Blast radius, not style. Both of these change screens nobody edited, which is the
+            // one thing a reader needs to know before touching the editor.
+            if (editor.IsDefault)
+                sb.AppendLine("      <span class=\"pill pill--req\">replaces the default everywhere</span>");
+            if (editor.TargetType is "object" or "Object")
+                sb.AppendLine("      <span class=\"pill pill--req\">applies to every property</span>");
+
+            sb.AppendLine("    </div>");
+
+            if (!string.IsNullOrWhiteSpace(editor.Description))
+                sb.AppendLine($"    <p class=\"card__desc\">{E(editor.Description)}</p>");
+
+            sb.AppendLine("    <table><tbody>");
+            if (!string.IsNullOrWhiteSpace(editor.TargetType))
+                sb.AppendLine($"      <tr><th>Renders</th><td class=\"mono\">{E(editor.TargetType)}</td></tr>");
+            if (!string.IsNullOrWhiteSpace(editor.Alias))
+                sb.AppendLine($"      <tr><th>Alias</th><td class=\"mono\">{E(editor.Alias)}</td></tr>");
+            if (!string.IsNullOrWhiteSpace(editor.BaseType))
+                sb.AppendLine($"      <tr><th>Based on</th><td class=\"mono t\">{E(editor.BaseType)}</td></tr>");
+            if (editor.UsedBy.Count > 0)
+            {
+                var links = editor.UsedBy.Select(e => $"<a href=\"#entity-{E(e)}\">{E(e)}</a>");
+                sb.AppendLine($"      <tr><th>Used by</th><td>{string.Join(", ", links)}</td></tr>");
+            }
+            else if (!editor.IsDefault && !string.IsNullOrWhiteSpace(editor.Alias))
+            {
+                // Registered but not applied. Saying so is more useful than an empty row, and far
+                // more useful than guessing at every property of the target type.
+                sb.AppendLine("      <tr><th>Used by</th><td class=\"t\">Nothing requests it by alias. " +
+                              "It is selectable in the Model Editor, which may assign it to a view.</td></tr>");
+            }
+            if (editor.ClientAssets.Count > 0)
+            {
+                sb.AppendLine($"      <tr><th>Needs</th><td class=\"mono\">{E(string.Join(", ", editor.ClientAssets))}" +
+                              "<div class=\"t\">Client-side files it cannot work without — behavior in neither C# nor XML.</div></td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+            sb.AppendLine("  </article>");
+        }
+
+        if (customized.Count > 0)
+        {
+            sb.AppendLine("  <article class=\"card\" data-search=\"customized built-in editors controllers\">");
+            sb.AppendLine("    <div class=\"card__head\"><span class=\"card__name\">Built-in editors reconfigured at run time</span></div>");
+            sb.AppendLine("    <p class=\"card__desc\">No custom editor class exists for these. A controller reaches into a built-in editor's component model, so nothing on the entity or in the Model Editor mentions it.</p>");
+            sb.AppendLine("    <table><thead><tr><th>Controller</th><th>Changes</th></tr></thead><tbody>");
+            foreach (var controller in customized)
+            {
+                sb.AppendLine($"      <tr><td class=\"mono\">{E(controller.ClassName)}</td>" +
+                              $"<td class=\"mono t\">{E(string.Join(", ", controller.CustomizedEditors))}</td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+            sb.AppendLine("  </article>");
+        }
+
+        sb.AppendLine("</section>");
+    }
+
+    private static string Describe(EditorKind kind) => kind switch
+    {
+        EditorKind.PropertyEditor => "property editor",
+        EditorKind.ListEditor => "list editor",
+        EditorKind.ViewItem => "view item",
+        _ => "editor",
+    };
 
     // ------------------------------------------------------------- seed data
 
