@@ -3,25 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tu agente de código sabe XAF. Nunca ha visto tu aplicación. · SignsOfAI</title>
+<title>Tu agente de código sabe XAF. Nunca ha visto tu aplicación. · XAF Logic Explainer</title>
 <meta name="description" content="Un agente de IA puede recitarte la documentación de XAF y aun así equivocarse con total seguridad sobre tu aplicación, porque buena parte de lo que hace una app XAF no está en las clases de negocio. Esto es lo que construí, y los cuatro sitios donde se esconde el comportamiento.">
 <style>
 :root{
   --bg:#0b1020; --bg2:#111a2e; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.10);
-  --ink:#eaf1fb; --muted:#96a8c6; --brand:#6d7cff; --brand2:#db2777;
+  --ink:#eaf1fb; --muted:#96a8c6; --brand:#8b5cf6; --brand2:#ff8a3d;
   --lex:#db2777; --rhet:#f59e0b; --syn:#22b8cf; --stat:#f0556f; --ok:#2fd27a;
   --code-bg:#0a1223;
 }
 :root[data-theme="light"]{
   --bg:#f7f9ff; --bg2:#eef2fb; --card:rgba(10,20,40,.03); --line:rgba(10,20,40,.10);
-  --ink:#141c2e; --muted:#54617a; --brand:#4553d6; --brand2:#be2168;
+  --ink:#141c2e; --muted:#54617a; --brand:#6d28d9; --brand2:#c2410c;
   --lex:#be2168; --rhet:#b7790a; --syn:#0e7490; --stat:#d63a53; --ok:#188a53;
   --code-bg:#0d1526;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
     --bg:#f7f9ff; --bg2:#eef2fb; --card:rgba(10,20,40,.03); --line:rgba(10,20,40,.10);
-    --ink:#141c2e; --muted:#54617a; --brand:#4553d6; --brand2:#be2168;
+    --ink:#141c2e; --muted:#54617a; --brand:#6d28d9; --brand2:#c2410c;
     --lex:#be2168; --rhet:#b7790a; --syn:#0e7490; --stat:#d63a53; --ok:#188a53;
     --code-bg:#0d1526;
   }
@@ -30,8 +30,8 @@
 html,body{margin:0;padding:0}
 body{
   background:
-    radial-gradient(900px 500px at 88% -8%, rgba(219,39,119,.14), transparent 60%),
-    radial-gradient(820px 480px at 8% -6%, rgba(109,124,255,.16), transparent 60%),
+    radial-gradient(900px 500px at 88% -8%, rgba(255,138,61,.14), transparent 60%),
+    radial-gradient(820px 480px at 8% -6%, rgba(139,92,246,.16), transparent 60%),
     linear-gradient(180deg, var(--bg), var(--bg2));
   background-attachment:fixed;
   color:var(--ink);
@@ -42,7 +42,7 @@ body{
 .top{display:flex;align-items:center;gap:12px;padding:26px 0 8px}
 .brand{font-weight:700;letter-spacing:.2px;display:flex;align-items:center;gap:9px}
 .brand .mark{width:26px;height:26px;border-radius:7px;
-  background:conic-gradient(from 210deg,var(--lex),var(--rhet),var(--syn),var(--stat),var(--lex));
+  background:linear-gradient(135deg,var(--brand2),var(--brand));
   display:inline-block;box-shadow:0 0 0 1px var(--line)}
 .tag{margin-left:auto;font-size:12.5px;color:var(--muted);border:1px solid var(--line);
   padding:4px 10px;border-radius:999px;white-space:nowrap}
@@ -90,7 +90,7 @@ td:not(:first-child),th:not(:first-child){text-align:right;white-space:nowrap}
 <div class="wrap">
 
   <div class="top">
-    <span class="brand"><span class="mark"></span> SignsOfAI</span>
+    <span class="brand"><span class="mark"></span> XAF Logic Explainer</span>
     <span class="tag">PeopleWorks · <a href="https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5" target="_blank" rel="noopener">Microsoft MVP for .NET</a></span>
   </div>
 
@@ -99,7 +99,7 @@ td:not(:first-child),th:not(:first-child){text-align:right;white-space:nowrap}
   <p class="lead">Un agente de IA puede recitarte la documentación de XAF y aun así equivocarse con total seguridad sobre tu aplicación, porque buena parte de lo que hace una app XAF no está en las clases de negocio. Esto es lo que construí, y los cuatro sitios donde se esconde el comportamiento.</p>
   <p class="byline">Pedro Hernández (PeopleWorks)</p>
 
-  <a class="cta" href="https://github.com/peopleworks/SignsofAI"><b>▶ Descárgalo o pruébalo</b> — gratis, MIT, web y Windows.</a>
+  <a class="cta" href="https://peopleworks.github.io/XAFLogicExplainer/"><b>▶ Mira cómo funciona</b> — gratis, MIT, sin licencia de DevExpress.</a>
 
   <hr>
 
@@ -177,7 +177,7 @@ xaflogic agents --project "C:\MiSolucion\MiApp.Module"</code></pre>
 
   <footer>
     Built by Pedro Hernández — PeopleWorks, <a href="https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5" target="_blank" rel="noopener">Microsoft MVP for .NET</a>. MIT licensed.<br>
-    <em>Por y para la comunidad educativa.</em> · <a href="https://github.com/peopleworks/SignsofAI">github.com/peopleworks/SignsofAI</a>
+    <em>Para la comunidad XAF.</em> · <a href="https://github.com/peopleworks/XAFLogicExplainer">github.com/peopleworks/XAFLogicExplainer</a>
   </footer>
 
 </div>
