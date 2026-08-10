@@ -33,6 +33,22 @@
 
   --measure: 34rem;
   --gap-section: clamp(6rem, 14vw, 11rem);
+
+  /* ---- diagram palette ----
+     The figures carry the argument, so the colour does too: anything the FRAMEWORK already
+     provides is drawn in graphite, and anything that comes from YOUR application is in colour.
+     A reader who never sees a caption still learns which half is the scarce one. */
+  --fig-bg: #0a0d12;
+  --fig-panel: #10151d;
+  --fig-line: #232b36;
+  --fig-graphite: #46505e;      /* framework knowledge: plentiful, already solved */
+  --fig-graphite-ink: #737f8f;
+  --fig-ink: #e8edf3;
+  --fig-mute: #8794a4;
+  --fig-yours: var(--accent);   /* your application: the part nothing else knows */
+  --fig-yours-soft: rgba(255,138,61,.14);
+  --fig-alt: var(--accent-2);
+  --fig-ok: #4ade80;
 }
 
 :root[data-theme="light"] {
@@ -46,6 +62,18 @@
   --accent: #c2410c;
   --accent-2: #6d28d9;
   --accent-3: #0369a1;
+
+  /* Only reassigned, never re-stated: the two themes cannot drift apart if neither repeats a
+     colour the other already names. */
+  --fig-bg: #ffffff;
+  --fig-panel: #f4f6f9;
+  --fig-line: #d8dee6;
+  --fig-graphite: #b3bcc7;
+  --fig-graphite-ink: #6b7684;
+  --fig-ink: #12171d;
+  --fig-mute: #5b6673;
+  --fig-yours-soft: rgba(194,65,12,.10);
+  --fig-ok: #15803d;
 }
 
 * { box-sizing: border-box; }
@@ -291,6 +319,27 @@ code {
 .term .c-dim { color: #64748b; }
 .term .c-key { color: #7dd3fc; }
 
+/* Lines arrive one at a time. Revealing whole lines rather than typing characters keeps the
+   syntax colouring intact without rewriting innerHTML, and the block still reads normally if the
+   script never runs: nothing is hidden until JavaScript says the animation is on. */
+.term pre .ln { display: block; min-height: 1.75em; }
+.term.is-armed pre .ln { opacity: 0; }
+.term.is-armed.is-running pre .ln {
+  animation: lineIn .26s ease forwards;
+  animation-delay: calc(var(--i) * .13s);
+}
+@keyframes lineIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+.term__cursor {
+  display: inline-block;
+  width: .55em; height: 1.05em;
+  vertical-align: -.18em;
+  background: var(--accent);
+  opacity: 0;
+}
+.term.is-running .term__cursor { animation: blink 1.05s steps(2, start) infinite; animation-delay: 1.9s; }
+@keyframes blink { 0%, 100% { opacity: .85; } 50% { opacity: 0; } }
+
 /* Two-tier weight comparison. */
 .tier { display: grid; gap: .8rem; margin-top: 2.4rem; }
 .tier__row {
@@ -331,6 +380,48 @@ th { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-tra
 td { color: var(--ink-muted); }
 tr.is-us td { color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, transparent); }
 tr.is-us td:first-child { font-weight: 620; }
+
+/* ----------------------------------------------------------------- figures */
+.figure { margin: 3rem 0 0; }
+.figure svg { display: block; width: 100%; height: auto; }
+.figure figcaption {
+  margin-top: .9rem;
+  font-size: .85rem;
+  color: var(--ink-faint);
+  max-width: 46rem;
+}
+.fig-frame {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--fig-bg);
+}
+/* SVG text is set here rather than per-element, so a font change is one edit. */
+.figure text { font-family: var(--sans); }
+.figure .t-mono { font-family: var(--mono); }
+.figure .t-cap {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; fill: var(--fig-mute);
+}
+.figure .t-title { font-size: 15px; font-weight: 640; fill: var(--fig-ink); }
+.figure .t-body  { font-size: 12.5px; fill: var(--fig-mute); }
+.figure .t-yours { fill: var(--fig-yours); font-weight: 640; }
+.figure .t-grey  { fill: var(--fig-graphite-ink); }
+
+/* Draw-on animation for the connecting strokes. Purely decorative: the diagram is complete
+   and legible before a single frame runs, and does not run at all for reduced motion. */
+.figure .draw { stroke-dasharray: 400; stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .figure.is-in .draw { animation: draw 1.1s ease forwards; }
+  .figure .draw { stroke-dashoffset: 400; }
+  .figure .draw--2 { animation-delay: .18s; }
+  .figure .draw--3 { animation-delay: .36s; }
+  .figure.is-in .pop { animation: pop .5s ease backwards; }
+  .figure .pop--2 { animation-delay: .3s; }
+  .figure .pop--3 { animation-delay: .5s; }
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } }
 
 .quote {
   margin: 2.4rem 0 0;
@@ -419,18 +510,78 @@ footer p { max-width: 44rem; }
       for the official reference, and add this for the one thing neither of them can know.
     </p>
 
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr><th>Teaches the agent…</th><th>Tool</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>How XAF works in general</td><td>DevExpress <code>agent-skills</code></td></tr>
-          <tr><td>What the official documentation says</td><td>DevExpress Docs MCP server</td></tr>
-          <tr class="is-us"><td>What YOUR application does</td><td>XAF Logic Explainer</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <figure class="figure reveal" id="fig-gap">
+      <div class="fig-frame">
+        <svg viewBox="0 0 900 372" role="img" aria-labelledby="fig-gap-t fig-gap-d">
+          <title id="fig-gap-t">Three kinds of knowledge an agent needs about an XAF codebase</title>
+          <desc id="fig-gap-d">Two are already solved by DevExpress tooling and drawn in grey. The
+            third — what your own application does — is the gap this project fills, drawn in colour.</desc>
+
+          <rect width="900" height="372" fill="var(--fig-bg)"/>
+          <text class="t-cap" x="450" y="30" text-anchor="middle">Three things an agent needs to know · two are already solved</text>
+
+          <!-- 1. framework knowledge: plentiful, grey -->
+          <g class="pop">
+            <rect x="15" y="52" width="265" height="172" rx="12" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <circle cx="45" cy="86" r="13" fill="none" stroke="var(--fig-graphite)" stroke-width="2"/>
+            <path d="M39,86 l4.5,5 L52,80" fill="none" stroke="var(--fig-graphite)" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <text class="t-title t-grey" x="70" y="91">How XAF works</text>
+            <text class="t-body" x="37" y="126">Controllers, actions, views,</text>
+            <text class="t-body" x="37" y="145">validation, security, the model.</text>
+            <text class="t-body" x="37" y="164">The framework, in general.</text>
+            <text class="t-cap" x="37" y="200">DevExpress agent-skills</text>
+          </g>
+
+          <!-- 2. documentation: plentiful, grey -->
+          <g class="pop pop--2">
+            <rect x="317" y="52" width="265" height="172" rx="12" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <circle cx="347" cy="86" r="13" fill="none" stroke="var(--fig-graphite)" stroke-width="2"/>
+            <path d="M341,86 l4.5,5 L354,80" fill="none" stroke="var(--fig-graphite)" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <text class="t-title t-grey" x="372" y="91">What the docs say</text>
+            <text class="t-body" x="339" y="126">Every published page, exact</text>
+            <text class="t-body" x="339" y="145">API signatures, official</text>
+            <text class="t-body" x="339" y="164">guidance and examples.</text>
+            <text class="t-cap" x="339" y="200">DevExpress Docs MCP</text>
+          </g>
+
+          <!-- 3. YOUR application: the scarce one, in colour -->
+          <g class="pop pop--3">
+            <rect x="619" y="52" width="265" height="172" rx="12"
+                  fill="var(--fig-yours-soft)" stroke="var(--fig-yours)" stroke-width="1.5"/>
+            <circle cx="649" cy="86" r="13" fill="none" stroke="var(--fig-yours)" stroke-width="2"/>
+            <path d="M649,79 v9 M649,93 v.5" stroke="var(--fig-yours)" stroke-width="2.4" stroke-linecap="round"/>
+            <text class="t-title t-yours" x="674" y="91">What YOUR app does</text>
+            <text class="t-body" x="641" y="126">Your 19 entities. The rule that</text>
+            <text class="t-body" x="641" y="145">blocks approval. The columns</text>
+            <text class="t-body" x="641" y="164">hidden in the Model Editor.</text>
+            <text class="t-cap" x="641" y="200" style="fill:var(--fig-yours)">Nothing else can know this</text>
+          </g>
+
+          <!-- the fill -->
+          <path class="draw" d="M751,300 V232" fill="none" stroke="var(--fig-yours)"
+                stroke-width="2" marker-end="url(#fig-arrow)"/>
+          <rect x="592" y="300" width="318" height="52" rx="10" fill="none"
+                stroke="var(--fig-yours)" stroke-width="1.5" stroke-dasharray="0"/>
+          <text class="t-title t-yours" x="751" y="325" text-anchor="middle">XAF Logic Explainer</text>
+          <text class="t-cap" x="751" y="343" text-anchor="middle">reads your source with Roslyn</text>
+
+          <text class="t-body" x="15" y="322">Install all three.</text>
+          <text class="t-body" x="15" y="341">They answer different questions.</text>
+
+          <defs>
+            <marker id="fig-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--fig-yours)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>
+        An agent with the first two writes flawless XAF against entities you do not have.
+      </figcaption>
+    </figure>
 
     <div class="grid grid--3">
       <div class="card">
@@ -453,10 +604,75 @@ footer p { max-width: 44rem; }
       </div>
     </div>
 
-    <p class="footer__note" style="margin-top:2rem">
-      All of it read as <em>syntax</em>. Your project never has to compile, and no DevExpress
-      licence is needed to run any of this.
-    </p>
+    <figure class="figure reveal" id="fig-pipeline">
+      <div class="fig-frame">
+        <svg viewBox="0 0 900 210" role="img" aria-labelledby="fig-pipe-t fig-pipe-d">
+          <title id="fig-pipe-t">How extraction works</title>
+          <desc id="fig-pipe-d">Source files are parsed as syntax by Roslyn, never compiled,
+            producing a model that is rendered to agent files, an MCP server, or Markdown.</desc>
+
+          <rect width="900" height="210" fill="var(--fig-bg)"/>
+          <defs>
+            <marker id="fig-arrow2" viewBox="0 0 10 10" refX="8" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--fig-graphite)"/>
+            </marker>
+          </defs>
+
+          <text class="t-cap" x="20" y="26">Your source is read, never built</text>
+
+          <!-- inputs: yours, so in colour -->
+          <g class="pop">
+            <rect x="20" y="58" width="112" height="34" rx="8" fill="var(--fig-yours-soft)" stroke="var(--fig-yours)"/>
+            <text class="t-mono t-body" x="76" y="80" text-anchor="middle" style="fill:var(--fig-yours)">*.cs</text>
+            <rect x="20" y="108" width="112" height="34" rx="8" fill="var(--fig-yours-soft)" stroke="var(--fig-yours)"/>
+            <text class="t-mono t-body" x="76" y="130" text-anchor="middle" style="fill:var(--fig-yours)">*.xafml</text>
+          </g>
+
+          <path class="draw" d="M140,100 H184" fill="none" stroke="var(--fig-graphite)"
+                stroke-width="1.5" marker-end="url(#fig-arrow2)"/>
+
+          <!-- the mechanism: machinery, so in graphite -->
+          <g class="pop pop--2">
+            <rect x="190" y="56" width="196" height="88" rx="10" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <text class="t-title t-grey" x="288" y="90" text-anchor="middle">Roslyn</text>
+            <text class="t-body" x="288" y="112" text-anchor="middle">syntax trees only</text>
+            <rect x="222" y="122" width="132" height="18" rx="9" fill="none" stroke="var(--fig-ok)" stroke-width="1"/>
+            <text class="t-cap" x="288" y="135" text-anchor="middle" style="fill:var(--fig-ok)">never compiled</text>
+          </g>
+
+          <path class="draw draw--2" d="M394,100 H434" fill="none" stroke="var(--fig-graphite)"
+                stroke-width="1.5" marker-end="url(#fig-arrow2)"/>
+
+          <g class="pop pop--2">
+            <rect x="440" y="56" width="170" height="88" rx="10" fill="var(--fig-panel)" stroke="var(--fig-line)"/>
+            <text class="t-title t-grey" x="525" y="90" text-anchor="middle">Extracted model</text>
+            <text class="t-body" x="525" y="112" text-anchor="middle">entities · actions · rules</text>
+            <text class="t-body" x="525" y="130" text-anchor="middle">navigation · .xafml</text>
+          </g>
+
+          <path class="draw draw--3" d="M618,100 H662" fill="none" stroke="var(--fig-graphite)"
+                stroke-width="1.5" marker-end="url(#fig-arrow2)"/>
+
+          <!-- outputs: what you get, so in colour -->
+          <g class="pop pop--3">
+            <rect x="668" y="50" width="212" height="30" rx="8" fill="var(--fig-yours-soft)" stroke="var(--fig-yours)"/>
+            <text class="t-mono t-body" x="774" y="70" text-anchor="middle" style="fill:var(--fig-yours)">AGENTS.md · CLAUDE.md</text>
+            <rect x="668" y="86" width="212" height="30" rx="8" fill="var(--fig-yours-soft)" stroke="var(--fig-yours)"/>
+            <text class="t-mono t-body" x="774" y="106" text-anchor="middle" style="fill:var(--fig-yours)">MCP server</text>
+            <rect x="668" y="122" width="212" height="30" rx="8" fill="var(--fig-yours-soft)" stroke="var(--fig-yours)"/>
+            <text class="t-mono t-body" x="774" y="142" text-anchor="middle" style="fill:var(--fig-yours)">Markdown · JSON</text>
+          </g>
+
+          <text class="t-body" x="20" y="182">Because nothing is compiled, it works on a branch that does not build —</text>
+          <text class="t-body" x="20" y="199">which is often exactly when you need to know what the application does.</text>
+        </svg>
+      </div>
+      <figcaption>
+        No DevExpress licence is needed to run any of this: the analyzer never references a
+        DevExpress assembly.
+      </figcaption>
+    </figure>
   </section>
 
   <!-- ---------------------------------------------------------- output -->
@@ -470,20 +686,67 @@ footer p { max-width: 44rem; }
     </p>
     <p>So the output is tiered.</p>
 
-    <div class="tier">
-      <div class="tier__row">
-        <span class="tier__name">AGENTS.md</span>
-        <span class="tier__bar" style="--fill:14%"></span>
-        <span class="tier__size">~11 KB</span>
-        <p class="tier__note">Always loaded. Ground rules, complete inventories, conventions inferred from your codebase, and step-by-step recipes.</p>
+    <figure class="figure reveal" id="fig-context">
+      <div class="fig-frame">
+        <svg viewBox="0 0 900 330" role="img" aria-labelledby="fig-ctx-t fig-ctx-d">
+          <title id="fig-ctx-t">What a full dump costs an agent's context on every request</title>
+          <desc id="fig-ctx-d">Putting all documentation in AGENTS.md consumes most of the context
+            window before the user has asked anything. Tiering leaves that room free.</desc>
+
+          <rect width="900" height="330" fill="var(--fig-bg)"/>
+          <defs>
+            <clipPath id="clip-a"><rect x="20" y="66" width="860" height="52" rx="9"/></clipPath>
+            <clipPath id="clip-b"><rect x="20" y="212" width="860" height="52" rx="9"/></clipPath>
+            <marker id="fig-tick" viewBox="0 0 10 10" refX="8" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--fig-yours)"/>
+            </marker>
+          </defs>
+
+          <text class="t-cap" x="20" y="26">Every request the agent answers in your repository</text>
+
+          <!-- A: the naive dump -->
+          <text class="t-title t-grey" x="20" y="52">Everything in AGENTS.md</text>
+          <text class="t-cap" x="838" y="52" text-anchor="middle" style="fill:var(--fig-yours)">the question</text>
+          <g clip-path="url(#clip-a)">
+            <rect x="20" y="66" width="860" height="52" fill="var(--fig-panel)"/>
+            <rect x="20" y="66" width="757" height="52" fill="var(--fig-graphite)" opacity=".55"/>
+            <rect x="777" y="66" width="103" height="52" fill="var(--fig-yours)" opacity=".65"/>
+          </g>
+          <rect x="20" y="66" width="860" height="52" rx="9" fill="none" stroke="var(--fig-line)"/>
+          <text class="t-body" x="398" y="97" text-anchor="middle" style="fill:var(--fig-ink)">
+            application documentation · every entity, every handler
+          </text>
+          <text class="t-body" x="20" y="140">Paid on every request, forever — before anyone has asked anything.</text>
+
+          <!-- B: tiered -->
+          <text class="t-title t-yours" x="20" y="198">Tiered</text>
+          <text class="t-cap" x="80" y="198" style="fill:var(--fig-yours)"> </text>
+          <g clip-path="url(#clip-b)">
+            <rect x="20" y="212" width="860" height="52" fill="var(--fig-panel)"/>
+            <rect x="20" y="212" width="120" height="52" fill="var(--fig-yours)" opacity=".85"/>
+          </g>
+          <rect x="20" y="212" width="860" height="52" rx="9" fill="none" stroke="var(--fig-line)"/>
+          <text class="t-cap" x="80" y="243" text-anchor="middle" style="fill:var(--fig-bg)">index</text>
+          <text class="t-body" x="510" y="243" text-anchor="middle">
+            room for the question, the files being discussed, and the answer
+          </text>
+
+          <!-- detail, fetched on demand -->
+          <path class="draw draw--2" d="M300,296 V268" fill="none" stroke="var(--fig-yours)"
+                stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#fig-tick)"/>
+          <rect x="140" y="296" width="320" height="26" rx="7" fill="none"
+                stroke="var(--fig-line)" stroke-dasharray="5 4"/>
+          <text class="t-cap" x="300" y="313" text-anchor="middle">detail · opened only when a question needs it</text>
+
+          <text class="t-mono t-body" x="880" y="181" text-anchor="end">~11 KB of 72</text>
+        </svg>
       </div>
-      <div class="tier__row">
-        <span class="tier__name">.xaflogic/*.md</span>
-        <span class="tier__bar" style="--fill:100%"></span>
-        <span class="tier__size">~72 KB</span>
-        <p class="tier__note">Opened on demand. Full property lists, action handler code, rule messages, Model Editor settings.</p>
-      </div>
-    </div>
+      <figcaption>
+        Roughly to scale, against a modest context budget. The index is the part that changes an
+        answer; the rest is reference material, and reference material can be looked up.
+      </figcaption>
+    </figure>
 
     <p style="margin-top:2.4rem">
       The most valuable part is the smallest. The index opens with <strong>ground rules</strong> —
@@ -587,17 +850,7 @@ footer p { max-width: 44rem; }
         <span class="term__dot"></span><span class="term__dot"></span><span class="term__dot"></span>
         <span style="margin-left:.5rem">terminal</span>
       </div>
-<pre><span class="c-prompt">$</span> dotnet tool install -g XafLogicExplainer.Cli
-
-<span class="c-dim"># Write the context files at your solution root</span>
-<span class="c-prompt">$</span> xaflogic agents --project <span class="c-key">"C:\MySolution\MyApp.Module"</span>
-
-<span class="c-ok">✓</span> AGENTS.md
-<span class="c-ok">✓</span> CLAUDE.md
-<span class="c-ok">✓</span> .github\copilot-instructions.md
-<span class="c-dim">+ 7 detail files in .xaflogic/</span>
-
-<span class="c-dim"># Ask your agent something only this codebase could answer.</span></pre>
+<pre><span class="ln"><span class="c-prompt">$</span> dotnet tool install -g XafLogicExplainer.Cli</span><span class="ln"> </span><span class="ln"><span class="c-dim"># Write the context files at your solution root</span></span><span class="ln"><span class="c-prompt">$</span> xaflogic agents --project <span class="c-key">"C:\MySolution\MyApp.Module"</span></span><span class="ln"> </span><span class="ln"><span class="c-ok">✓</span> AGENTS.md</span><span class="ln"><span class="c-ok">✓</span> CLAUDE.md</span><span class="ln"><span class="c-ok">✓</span> .github\copilot-instructions.md</span><span class="ln"><span class="c-dim">+ 7 detail files in .xaflogic/</span></span><span class="ln"> </span><span class="ln"><span class="c-dim"># Ask your agent something only this codebase could answer.</span> <span class="term__cursor"></span></span></pre>
     </div>
 
     <p style="margin-top:2.8rem">Prefer the agent to query live? Install the plugin:</p>
@@ -607,12 +860,7 @@ footer p { max-width: 44rem; }
         <span class="term__dot"></span><span class="term__dot"></span><span class="term__dot"></span>
         <span style="margin-left:.5rem">claude code</span>
       </div>
-<pre><span class="c-prompt">/</span>plugin marketplace add peopleworks/XAFLogicExplainer
-<span class="c-prompt">/</span>plugin install xaf-logic-explainer@peopleworks-xaf
-
-<span class="c-dim"># Pair it with the official DevExpress skills:</span>
-<span class="c-prompt">/</span>plugin marketplace add DevExpress/agent-skills
-<span class="c-prompt">/</span>plugin install dx-xaf@DevExpress-agent-skills</pre>
+<pre><span class="ln"><span class="c-prompt">/</span>plugin marketplace add peopleworks/XAFLogicExplainer</span><span class="ln"><span class="c-prompt">/</span>plugin install xaf-logic-explainer@peopleworks-xaf</span><span class="ln"> </span><span class="ln"><span class="c-dim"># Pair it with the official DevExpress skills:</span></span><span class="ln"><span class="c-prompt">/</span>plugin marketplace add DevExpress/agent-skills</span><span class="ln"><span class="c-prompt">/</span>plugin install dx-xaf@DevExpress-agent-skills</span></pre>
     </div>
 
     <div class="buttons">
@@ -662,26 +910,38 @@ footer p { max-width: 44rem; }
   }
 })();
 
-// Reveal on scroll. Everything is visible without JavaScript; this only softens the entrance.
+// Reveal on scroll, and run the terminal line-by-line once it is actually on screen.
+// Everything is legible without any of this: nothing is hidden until the script has confirmed
+// that motion is wanted and that it can observe the element.
 (function () {
-  var targets = document.querySelectorAll('.reveal');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canObserve = 'IntersectionObserver' in window;
+  var revealables = document.querySelectorAll('.reveal');
+  var terminals = document.querySelectorAll('.term');
 
-  if (!('IntersectionObserver' in window) ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    targets.forEach(function (el) { el.classList.add('is-in'); });
+  if (!canObserve || reduced) {
+    revealables.forEach(function (el) { el.classList.add('is-in'); });
     return;
   }
 
+  // Arm the terminals only now, so a reader without JavaScript never meets an empty box.
+  terminals.forEach(function (term) {
+    term.classList.add('is-armed');
+    term.querySelectorAll('.ln').forEach(function (line, index) {
+      line.style.setProperty('--i', index);
+    });
+  });
+
   var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-in');
-        observer.unobserve(entry.target);
-      }
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add(entry.target.classList.contains('term') ? 'is-running' : 'is-in');
+      observer.unobserve(entry.target);
     });
   }, { rootMargin: '0px 0px -12% 0px' });
 
-  targets.forEach(function (el) { observer.observe(el); });
+  revealables.forEach(function (el) { observer.observe(el); });
+  terminals.forEach(function (el) { observer.observe(el); });
 })();
 </script>
 
