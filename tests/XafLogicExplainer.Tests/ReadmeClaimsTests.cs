@@ -32,18 +32,33 @@ public class ReadmeClaimsTests
     {
         var claimed = int.Parse(Claim(@"\*\*MCP server\*\* — (\d+) tools"));
 
-        // Counted from the source rather than from a list kept here, which would be one more thing
-        // to forget.
-        var declared = Directory
-            .EnumerateFiles(Path.Combine(RepositoryRoot, "src", "XafLogicExplainer.Mcp"), "*.cs",
-                SearchOption.AllDirectories)
-            .SelectMany(file => Regex.Matches(File.ReadAllText(file), @"McpServerTool\(Name = ""(\w+)"""))
-            .Select(match => match.Groups[1].Value)
-            .Distinct()
-            .Count();
-
-        Assert.Equal(declared, claimed);
+        Assert.Equal(DeclaredTools.Count, claimed);
     }
+
+    [Fact]
+    public void DescribesEveryToolItShips()
+    {
+        // The count alone was not enough: the table a reader actually consults to decide whether
+        // to install listed seven of nine, and the two it omitted are the ones nothing else
+        // extracts.
+        var readme = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
+        var undocumented = DeclaredTools.Where(tool => !readme.Contains($"`{tool}`")).ToList();
+
+        Assert.True(undocumented.Count == 0,
+            $"The MCP server exposes tools the README never mentions: {string.Join(", ", undocumented)}.");
+    }
+
+    /// <summary>
+    /// The tool names, read from the server's source rather than from a list kept here — which
+    /// would be one more thing to forget.
+    /// </summary>
+    private static IReadOnlyCollection<string> DeclaredTools => Directory
+        .EnumerateFiles(Path.Combine(RepositoryRoot, "src", "XafLogicExplainer.Mcp"), "*.cs",
+            SearchOption.AllDirectories)
+        .SelectMany(file => Regex.Matches(File.ReadAllText(file), @"McpServerTool\(Name = ""(\w+)"""))
+        .Select(match => match.Groups[1].Value)
+        .Distinct()
+        .ToList();
 
     [Fact]
     public void CountsTheTestsThatActuallyExist()
