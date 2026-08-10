@@ -6,7 +6,7 @@
 [![NuGet Core](https://img.shields.io/nuget/v/XafLogicExplainer.Core?logo=nuget&label=Core)](https://www.nuget.org/packages/XafLogicExplainer.Core)
 [![NuGet MCP](https://img.shields.io/nuget/v/XafLogicExplainer.Mcp?logo=nuget&label=MCP%20server)](https://www.nuget.org/packages/XafLogicExplainer.Mcp)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![MCP](https://img.shields.io/badge/MCP-server-000000?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
+[![MCP registry](https://img.shields.io/badge/MCP_registry-io.github.peopleworks%2Fxaf--logic--explainer-000000?logo=modelcontextprotocol&logoColor=white)](https://registry.modelcontextprotocol.io/v0/servers?search=xaf-logic-explainer)
 [![XAF](https://img.shields.io/badge/DevExpress-XAF-FF7200?logo=devexpress&logoColor=white)](https://www.devexpress.com/products/net/application_framework/)
 [![GitHub stars](https://img.shields.io/github/stars/peopleworks/XAFLogicExplainer?style=social)](https://github.com/peopleworks/XAFLogicExplainer/stargazers)
 
