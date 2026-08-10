@@ -304,11 +304,18 @@ code {
   background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
 }
 .tier__name { font-family: var(--mono); font-size: .84rem; color: var(--ink); }
-.tier__bar { height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; }
-/* display:block matters. The bar is a grid item and so is blockified for free, but its child is
-   not, and width and height are ignored on an inline box -- which left both bars looking empty
-   and identical, quietly undoing the one comparison this section exists to make. */
-.tier__fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+/* The fill is painted, not nested.
+   A child element sized with height:100% depends on the parent resolving a definite height, which
+   it does not reliably do as a centred grid item -- both bars drew as empty tracks and the one
+   comparison this section exists to make silently disappeared. A background layer sized by
+   --fill has no such dependency. */
+.tier__bar {
+  height: .5rem;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--accent), var(--accent-2)) left center / var(--fill, 0%) 100% no-repeat,
+    color-mix(in srgb, var(--ink) 12%, transparent);
+}
 .tier__size { font-family: var(--mono); font-size: .8rem; color: var(--ink-faint); white-space: nowrap; }
 .tier__note { font-size: .84rem; color: var(--ink-faint); grid-column: 1 / -1; margin: 0; max-width: none; }
 @media (max-width: 620px) {
@@ -466,13 +473,13 @@ footer p { max-width: 44rem; }
     <div class="tier">
       <div class="tier__row">
         <span class="tier__name">AGENTS.md</span>
-        <span class="tier__bar"><span class="tier__fill" style="width:14%"></span></span>
+        <span class="tier__bar" style="--fill:14%"></span>
         <span class="tier__size">~11 KB</span>
         <p class="tier__note">Always loaded. Ground rules, complete inventories, conventions inferred from your codebase, and step-by-step recipes.</p>
       </div>
       <div class="tier__row">
         <span class="tier__name">.xaflogic/*.md</span>
-        <span class="tier__bar"><span class="tier__fill" style="width:100%"></span></span>
+        <span class="tier__bar" style="--fill:100%"></span>
         <span class="tier__size">~72 KB</span>
         <p class="tier__note">Opened on demand. Full property lists, action handler code, rule messages, Model Editor settings.</p>
       </div>
