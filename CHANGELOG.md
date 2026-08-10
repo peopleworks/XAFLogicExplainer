@@ -27,6 +27,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     regenerating produces byte-identical output when nothing has changed.
 - `IDocumentationSink`, making a publishing target something the caller chooses. PeopleWorks
   Copilot is now one implementation of it rather than the destination the tool is built around.
+- **`xaflogic mcp`** — a Model Context Protocol server (ModelContextProtocol 2.1.0) exposing seven
+  tools: `xaf_overview`, `xaf_search`, `xaf_entity`, `xaf_controller`, `xaf_rules`, `xaf_model`
+  and `xaf_refresh`. Unlike generated files it reads live source, so it cannot go stale.
+  - Asking for something absent returns the complete inventory and states plainly that it does not
+    exist, rather than a bare "not found" that invites an agent to invent it anyway.
+  - Extractions are cached per project and invalidated by a cheap size-and-timestamp fingerprint,
+    so a conversation's worth of questions costs one parse but an edit is still noticed.
+  - Finds the XAF module by itself when started from a solution directory, which is what lets the
+    plugin declare `xaflogic mcp` with no arguments.
+- **Installable Claude Code plugin** at `plugins/xaf-logic-explainer`, carrying the skill and the
+  MCP server: `/plugin marketplace add peopleworks/XAFLogicExplainer`.
+
+### Changed
+
+- Target framework is now **.NET 10**.
+
+### Fixed
+
+- `nameof(...)` in attribute arguments was recorded as the literal text `nameof(Numero)` rather
+  than `Numero`. Attribute values were read with `expression.ToString().Trim('"')`, which is right
+  for a string literal and wrong for everything else — and `[XafDefaultProperty(nameof(X))]` is
+  how current C# is written. The bad value reached generated documentation and MCP responses as
+  though it were a real property name. A shared `SyntaxLiteral` reader now resolves string
+  literals, `nameof`, and concatenated strings across all three analyzers.
 
 ### Fixed
 

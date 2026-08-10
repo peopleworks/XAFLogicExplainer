@@ -11,6 +11,7 @@ using XafLogicExplainer.Core.Diff;
 using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Hashing;
 using XafLogicExplainer.Core.Sinks;
+using XafLogicExplainer.Mcp;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using XafLogicExplainer.Core.Models;
@@ -1457,8 +1458,126 @@ agentsCommand.SetHandler(async (context) =>
 rootCommand.AddCommand(agentsCommand);
 
 // ============================================================
+// COMMAND: mcp
+// ============================================================
+var mcpCommand = new Command(
+    "mcp",
+    "Run as a Model Context Protocol server so any AI agent can query this XAF app live");
+
+mcpCommand.AddOption(projectPathOption);
+mcpCommand.AddOption(languageOption);
+mcpCommand.AddOption(ormOption);
+mcpCommand.AddOption(allOption);
+
+mcpCommand.SetHandler(async (context) =>
+{
+    // Nothing may be written to stdout from here on: it is the JSON-RPC channel, and a single
+    // stray character makes the client fail to parse the stream. That includes the Spectre banner
+    // and every AnsiConsole call, so this handler reports problems on stderr instead.
+    var mcpProjectPath = context.ParseResult.GetValueForOption(projectPathOption);
+    var mcpLanguage = context.ParseResult.GetValueForOption(languageOption);
+    var mcpOrm = context.ParseResult.GetValueForOption(ormOption);
+    var mcpAll = context.ParseResult.GetValueForOption(allOption);
+
+    var mcpConfig = ConfigHelper.Load();
+    var mcpSources = new List<XafProjectSource>();
+
+    if (mcpAll || (mcpProjectPath is null && mcpConfig.Projects.Count > 0))
+    {
+        mcpSources.AddRange(mcpConfig.Projects.Select(p => new XafProjectSource
+        {
+            Name = p.Name,
+            Path = p.ProjectPath,
+            Orm = p.Orm ?? mcpOrm ?? mcpConfig.Orm,
+            Language = p.Language ?? mcpLanguage ?? mcpConfig.Language ?? "en",
+        }));
+    }
+
+    if (mcpSources.Count == 0)
+    {
+        // Falling back to discovery matters for the plugin install path: a marketplace plugin
+        // declares `xaflogic mcp` with no arguments, because it cannot know where anyone's module
+        // lives. Finding it under the working directory is what makes that work with no setup.
+        var resolvedPath = mcpProjectPath ?? mcpConfig.ProjectPath ?? DiscoverXafModule(Directory.GetCurrentDirectory());
+
+        if (string.IsNullOrEmpty(resolvedPath) || !Directory.Exists(resolvedPath))
+        {
+            await Console.Error.WriteLineAsync(
+                "xaflogic mcp: no XAF project found. Pass --project <module path>, " +
+                "set a default with `xaflogic config --project <path>`, " +
+                "or run from a directory containing an XAF module.");
+            context.ExitCode = 1;
+            return;
+        }
+
+        mcpSources.Add(new XafProjectSource
+        {
+            Name = new DirectoryInfo(resolvedPath).Name,
+            Path = resolvedPath,
+            Orm = mcpOrm ?? mcpConfig.Orm,
+            Language = mcpLanguage ?? mcpConfig.Language ?? "en",
+        });
+    }
+
+    await McpServerRunner.RunStdioAsync(mcpSources);
+});
+
+rootCommand.AddCommand(mcpCommand);
+
+// ============================================================
 // HELPERS
 // ============================================================
+
+// Looks for an XAF module directory at or below a starting point, so the MCP server can be
+// launched with no configuration from the root of a solution. Returns null when nothing convincing
+// is found -- guessing wrong is worse than asking, because the server would confidently answer
+// about the wrong application.
+static string? DiscoverXafModule(string startDirectory)
+{
+    if (Directory.Exists(startDirectory) && LooksLikeXafModule(startDirectory))
+        return startDirectory;
+
+    try
+    {
+        // Two levels is enough for the conventional layout (Solution/App.Module) without turning
+        // a launch in a large tree into a full recursive scan.
+        foreach (var child in Directory.EnumerateDirectories(startDirectory))
+        {
+            if (LooksLikeXafModule(child))
+                return child;
+
+            foreach (var grandchild in Directory.EnumerateDirectories(child))
+            {
+                if (LooksLikeXafModule(grandchild))
+                    return grandchild;
+            }
+        }
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+        return null;
+    }
+
+    return null;
+}
+
+// An XAF module is a directory holding a .csproj plus a class deriving from ModuleBase.
+static bool LooksLikeXafModule(string directory)
+{
+    try
+    {
+        if (!Directory.EnumerateFiles(directory, "*.csproj").Any())
+            return false;
+
+        return Directory
+            .EnumerateFiles(directory, "*.cs", SearchOption.TopDirectoryOnly)
+            .Any(f => File.ReadAllText(f).Contains("ModuleBase", StringComparison.Ordinal));
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+        return false;
+    }
+}
 
 // Turns the --only and --output values into sink options.
 static AgentFilesOptions ParseAgentTargets(string? only, string? output)

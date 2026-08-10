@@ -130,7 +130,7 @@ public class UpdaterAnalyzer
                     if (expression is AssignmentExpressionSyntax assignment)
                     {
                         var propName = assignment.Left.ToString();
-                        var propValue = assignment.Right.ToString().Trim('"');
+                        var propValue = SyntaxLiteral.ValueOf(assignment.Right);
                         record.PropertyValues[propName] = propValue;
                     }
                 }
@@ -171,7 +171,7 @@ public class UpdaterAnalyzer
                 {
                     if (assignment.Left is MemberAccessExpressionSyntax mae)
                     {
-                        record.PropertyValues[mae.Name.ToString()] = assignment.Right.ToString().Trim('"');
+                        record.PropertyValues[mae.Name.ToString()] = SyntaxLiteral.ValueOf(assignment.Right);
                     }
                 }
             }

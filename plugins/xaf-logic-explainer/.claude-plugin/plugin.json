@@ -1,0 +1,31 @@
+{
+  "name": "xaf-logic-explainer",
+  "description": "Query a specific DevExpress XAF application: its entities, controllers, actions, business rules and Model Editor customizations, extracted from source with Roslyn.",
+  "version": "0.9.0",
+  "license": "MIT",
+  "author": {
+    "name": "Pedro Hernández (PeopleWorks)",
+    "email": "peopleworks@gmail.com",
+    "url": "https://github.com/peopleworks/XAFLogicExplainer"
+  },
+  "homepage": "https://github.com/peopleworks/XAFLogicExplainer",
+  "repository": "https://github.com/peopleworks/XAFLogicExplainer",
+  "skills": "./skills/",
+  "mcpServers": {
+    "xaf": {
+      "command": "xaflogic",
+      "args": ["mcp"]
+    }
+  },
+  "keywords": [
+    "devexpress",
+    "xaf",
+    "expressappframework",
+    "xpo",
+    "efcore",
+    "dotnet",
+    "roslyn",
+    "mcp",
+    "codebase-knowledge"
+  ]
+}

@@ -160,9 +160,9 @@ public class ControllerAnalyzer : IControllerAnalyzer
             {
                 var args = creation.ArgumentList.Arguments.ToList();
                 if (args.Count >= 2)
-                    actionId = args[1].Expression.ToString().Trim('"');
+                    actionId = SyntaxLiteral.ValueOf(args[1].Expression);
                 if (args.Count >= 3)
-                    category = args[2].Expression.ToString().Trim('"');
+                    category = SyntaxLiteral.ValueOf(args[2].Expression);
             }
 
             // Find or create the action entry
@@ -188,7 +188,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
                     if (expr is AssignmentExpressionSyntax initAssignment)
                     {
                         var propName = initAssignment.Left.ToString();
-                        var value = initAssignment.Right.ToString().Trim('"');
+                        var value = SyntaxLiteral.ValueOf(initAssignment.Right);
 
                         switch (propName)
                         {
@@ -213,7 +213,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
             var objectName = memberAccess.Expression.ToString();
             var propertyName = memberAccess.Name.ToString();
-            var value = assignment.Right.ToString().Trim('"');
+            var value = SyntaxLiteral.ValueOf(assignment.Right);
 
             // Look up by field name or action ID
             var action = fieldNameToAction.GetValueOrDefault(objectName)

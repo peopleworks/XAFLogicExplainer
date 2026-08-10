@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml/badge.svg)](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/peopleworks/XAFLogicExplainer?color=blue)](LICENSE)
-[![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![MCP](https://img.shields.io/badge/MCP-server-000000?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
 [![XAF](https://img.shields.io/badge/DevExpress-XAF-FF7200?logo=devexpress&logoColor=white)](https://www.devexpress.com/products/net/application_framework/)
 [![GitHub stars](https://img.shields.io/github/stars/peopleworks/XAFLogicExplainer?style=social)](https://github.com/peopleworks/XAFLogicExplainer/stargazers)
 
@@ -81,11 +82,54 @@ few paragraphs stop most of the confident invention agents produce about unfamil
 Existing files are never clobbered: generated text lives between markers, anything you wrote by
 hand is preserved, and regenerating is byte-identical when nothing changed.
 
+## Or let the agent ask questions directly
+
+Generated files are a snapshot. The MCP server is a live connection — the agent queries your
+application while you work on it, and cannot go stale.
+
+```
+/plugin marketplace add peopleworks/XAFLogicExplainer
+/plugin install xaf-logic-explainer@peopleworks-xaf
+```
+
+That installs a skill and an MCP server in one step. For any other MCP client, add:
+
+```json
+{
+  "mcpServers": {
+    "xaf": { "command": "xaflogic", "args": ["mcp"] }
+  }
+}
+```
+
+Started from a solution directory it finds the XAF module by itself.
+
+| Tool | Answers |
+| --- | --- |
+| `xaf_overview` | What this application is, and the complete list of everything in it |
+| `xaf_search` | Where a field, concept or business term is defined |
+| `xaf_entity` | Every property, relationship, rule and calculation on one entity |
+| `xaf_controller` | What an action does — including the C# that runs when it fires |
+| `xaf_rules` | What the application validates, computes, hides and disables |
+| `xaf_model` | Model Editor customizations, which exist in no C# file |
+| `xaf_refresh` | Re-read the source (changes are detected automatically) |
+
+Ask for something that isn't there and the answer is the useful one:
+
+> There is no entity called 'PurchaseOrder' in this application.
+> This is the complete list of 19 entities, extracted from the whole source tree: …
+> If the user expects 'PurchaseOrder' to exist, it has not been created yet.
+
+**Pair it with the official DevExpress skills.** `/plugin install dx-xaf@DevExpress-agent-skills`
+teaches how XAF works; this teaches what your application does. An agent with only the first will
+write correct XAF against entities you do not have.
+
 ### Commands
 
 | Command | What it does |
 | --- | --- |
 | `agents` | **Write `AGENTS.md` / `CLAUDE.md` / Copilot instructions for your agent** |
+| `mcp` | **Run as an MCP server so agents can query the app live** |
 | `extract` | Read the project, write Markdown + JSON locally |
 | `diff` | Compare against the previous extraction and report what changed |
 | `status` | Show the change-detection hash and whether a re-extract is needed |
@@ -117,9 +161,10 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Blazor in-app help panel |
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
-| 🚧 | **MCP server** — let any agent query your XAF app live |
-| 🚧 | **Claude Code / Copilot / Cursor skill**, installable from this repo |
+| ✅ | **MCP server** — 7 tools, live against your source |
+| ✅ | **Installable Claude Code plugin** with skill and MCP server |
 | 🚧 | xUnit test suite over a synthetic XAF fixture |
+| 🚧 | Optional DevExpress ground-truth catalog, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the
 destination everything was built around. The outputs that matter most need no server at all.
@@ -129,11 +174,16 @@ destination everything was built around. The outputs that matter most need no se
 ```
 src/
   XafLogicExplainer.Core                 Roslyn extraction engine — no DevExpress reference
+  XafLogicExplainer.Mcp                  MCP server (ModelContextProtocol 2.1)
   XafLogicExplainer.Cli                  the `xaflogic` command
   XafLogicExplainer.CopilotSync          PeopleWorks Copilot target + AI enrichment
   XafLogicExplainer.DescriptionAnnotator generates missing [Description] attributes
   XafLogicExplainer.Blazor               in-app help panel for XAF Blazor apps
+plugins/
+  xaf-logic-explainer                    the installable Claude Code plugin
 ```
+
+Built on **.NET 10**.
 
 Only `XafLogicExplainer.Blazor` references DevExpress packages; it needs the DevExpress NuGet feed
 and a license to build. Everything else builds anywhere, which is why CI can verify it for free.
@@ -155,5 +205,6 @@ An independent community project — not affiliated with, endorsed by, or suppor
 Developer Express Inc. It contains no DevExpress source code and needs no DevExpress license to
 build or run. *DevExpress*, *XAF* and *eXpressApp Framework* are trademarks of Developer Express Inc.
 
-Built by [Pedro Hernández](https://github.com/peopleworks) (PeopleWorks), Microsoft MVP for .NET —
+Built by [Pedro Hernández](https://github.com/peopleworks) (PeopleWorks),
+[Microsoft MVP for .NET](https://mvp.microsoft.com/en-US/mvp/profile/24060a02-dbc6-44ec-bca5-c213ff9835c5) —
 for the DevExpress and XAF community.

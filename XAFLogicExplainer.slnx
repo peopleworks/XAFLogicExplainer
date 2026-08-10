@@ -5,5 +5,6 @@
     <Project Path="src/XafLogicExplainer.CopilotSync/XafLogicExplainer.CopilotSync.csproj" />
     <Project Path="src/XafLogicExplainer.Core/XafLogicExplainer.Core.csproj" />
     <Project Path="src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj" />
+    <Project Path="src/XafLogicExplainer.Mcp/XafLogicExplainer.Mcp.csproj" />
   </Folder>
 </Solution>

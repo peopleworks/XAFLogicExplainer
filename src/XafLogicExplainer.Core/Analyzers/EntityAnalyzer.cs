@@ -302,7 +302,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                     foreach (var arg in args)
                     {
                         var argName = arg.NameEquals?.Name.ToString() ?? $"arg{args.IndexOf(arg)}";
-                        var argValue = arg.Expression.ToString().Trim('"');
+                        var argValue = SyntaxLiteral.ValueOf(arg.Expression);
                         rule.Parameters[argName] = argValue;
 
                         if (argName.Equals("DefaultContexts", StringComparison.OrdinalIgnoreCase)
@@ -343,7 +343,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                         foreach (var arg in attr.ArgumentList.Arguments)
                         {
                             var argName = arg.NameEquals?.Name.ToString() ?? "value";
-                            rule.Parameters[argName] = arg.Expression.ToString().Trim('"');
+                            rule.Parameters[argName] = SyntaxLiteral.ValueOf(arg.Expression);
                         }
                     }
 
@@ -375,12 +375,12 @@ public class EntityAnalyzer : IEntityAnalyzer
 
             // First positional argument is typically the ID
             if (args.Count > 0)
-                rule.Id = args[0].Expression.ToString().Trim('"');
+                rule.Id = SyntaxLiteral.ValueOf(args[0].Expression);
 
             foreach (var arg in args)
             {
                 var name = arg.NameEquals?.Name.ToString();
-                var value = arg.Expression.ToString().Trim('"');
+                var value = SyntaxLiteral.ValueOf(arg.Expression);
 
                 switch (name)
                 {
@@ -470,7 +470,7 @@ public class EntityAnalyzer : IEntityAnalyzer
         if (attr?.ArgumentList == null || attr.ArgumentList.Arguments.Count == 0)
             return null;
 
-        return attr.ArgumentList.Arguments[0].Expression.ToString().Trim('"');
+        return SyntaxLiteral.ValueOf(attr.ArgumentList.Arguments[0].Expression);
     }
 
     private static string? GetModelDefaultValue(PropertyDeclarationSyntax prop, string propertyName)
@@ -483,10 +483,10 @@ public class EntityAnalyzer : IEntityAnalyzer
         {
             if (attr.ArgumentList == null || attr.ArgumentList.Arguments.Count < 2) continue;
 
-            var firstArg = attr.ArgumentList.Arguments[0].Expression.ToString().Trim('"');
+            var firstArg = SyntaxLiteral.ValueOf(attr.ArgumentList.Arguments[0].Expression);
             if (firstArg.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
             {
-                return attr.ArgumentList.Arguments[1].Expression.ToString().Trim('"');
+                return SyntaxLiteral.ValueOf(attr.ArgumentList.Arguments[1].Expression);
             }
         }
 

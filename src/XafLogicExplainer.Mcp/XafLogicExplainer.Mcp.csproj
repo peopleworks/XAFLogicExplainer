@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The MCP server: lets any agent that speaks Model Context Protocol interrogate an XAF
+    application directly, instead of reading a generated file about it.
+
+    A library rather than an executable. The CLI hosts it as `xaflogic mcp`, so users install one
+    tool and configure one project path. Packaging it separately would mean two installs that have
+    to agree about where the code lives.
+  -->
+
+  <PropertyGroup>
+    <PackageId>XafLogicExplainer.Mcp</PackageId>
+    <Description>Model Context Protocol server for DevExpress XAF applications. Exposes an application's entities, controllers, actions, business rules and Model Editor customizations as MCP tools, so any agent can query a specific XAF codebase instead of guessing about it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

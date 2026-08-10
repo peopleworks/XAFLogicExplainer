@@ -1,0 +1,16 @@
+{
+  "name": "peopleworks-xaf",
+  "description": "Give an AI coding agent knowledge of a specific DevExpress XAF application: its entities, controllers, actions, business rules and Model Editor customizations, extracted from source with Roslyn. Complements the official DevExpress agent skills, which teach how XAF works in general.",
+  "owner": {
+    "name": "Pedro Hernández (PeopleWorks)",
+    "email": "peopleworks@gmail.com",
+    "url": "https://github.com/peopleworks"
+  },
+  "plugins": [
+    {
+      "name": "xaf-logic-explainer",
+      "source": "./plugins/xaf-logic-explainer",
+      "description": "MCP server and skill for querying your own XAF application: complete inventories of entities, controllers and actions, business rules, criteria expressions, and .xafml customizations that exist in no C# file."
+    }
+  ]
+}

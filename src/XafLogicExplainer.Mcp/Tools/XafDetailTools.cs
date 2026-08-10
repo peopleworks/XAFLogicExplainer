@@ -1,0 +1,413 @@
+using System.ComponentModel;
+using System.Text;
+using ModelContextProtocol.Server;
+using XafLogicExplainer.Core.Models;
+
+namespace XafLogicExplainer.Mcp.Tools;
+
+/// <summary>
+/// Tools that return the full detail of one part of an application.
+/// </summary>
+/// <remarks>
+/// Called after discovery has established what exists. Each returns everything known about a single
+/// thing, including source code where that is what answers the question.
+/// </remarks>
+[McpServerToolType]
+public sealed class XafDetailTools
+{
+    /// <summary>
+    /// Longest method body reproduced in a response.
+    /// </summary>
+    /// <remarks>
+    /// Long enough for a normal XAF action handler, short enough that one pathological method
+    /// cannot fill an agent's context window.
+    /// </remarks>
+    private const int MaxCodeLength = 6000;
+
+    private readonly XafProjectContext _context;
+
+    /// <summary>Creates the tool set.</summary>
+    public XafDetailTools(XafProjectContext context) => _context = context;
+
+    /// <summary>
+    /// Returns everything known about one entity.
+    /// </summary>
+    [McpServerTool(Name = "xaf_entity")]
+    [Description(
+        "Full detail of one business entity: every property with its type and attributes, " +
+        "relationships to other entities, validation rules, appearance rules, and calculated " +
+        "property expressions. Use before writing or changing any code that touches an entity.")]
+    public async Task<string> EntityAsync(
+        [Description("Entity class name, e.g. 'Invoice'. Case-insensitive.")] string name,
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        var entity = app.Entities.FirstOrDefault(e =>
+            e.ClassName.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (entity is null)
+            return NotFound("entity", name, app.Entities.Select(e => e.ClassName));
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# {entity.ClassName}");
+        sb.AppendLine();
+        sb.AppendLine($"Namespace `{entity.Namespace}`, base class `{entity.BaseType}`.");
+
+        if (!string.IsNullOrWhiteSpace(entity.Description))
+            sb.AppendLine($"\n{entity.Description}");
+
+        if (!string.IsNullOrWhiteSpace(entity.ModelCaption))
+            sb.AppendLine($"\nModel Editor caption: \"{entity.ModelCaption}\".");
+
+        if (!string.IsNullOrWhiteSpace(entity.DefaultProperty))
+            sb.AppendLine($"\nDisplayed by its `{entity.DefaultProperty}` property.");
+
+        sb.AppendLine();
+        sb.AppendLine("## Properties");
+        sb.AppendLine();
+
+        foreach (var property in entity.Properties)
+        {
+            var flags = new List<string>();
+            if (property.IsKey) flags.Add("key");
+            if (property.IsRequired) flags.Add("required");
+            if (property.IsCollection) flags.Add("collection");
+            if (property.Size is > 0) flags.Add($"max {property.Size}");
+            if (property.ImmediatePostData) flags.Add("immediate post");
+
+            sb.Append($"- **{property.Name}** `{property.TypeName}`");
+            if (flags.Count > 0) sb.Append($" ({string.Join(", ", flags)})");
+            sb.AppendLine();
+
+            if (!string.IsNullOrWhiteSpace(property.PersistentAlias))
+                sb.AppendLine($"  - calculated: `{property.PersistentAlias}`");
+            if (!string.IsNullOrWhiteSpace(property.Description))
+                sb.AppendLine($"  - {XafDiscoveryTools.Compact(property.Description)}");
+            if (!string.IsNullOrWhiteSpace(property.DataSourceCriteria))
+                sb.AppendLine($"  - lookup filtered by: `{property.DataSourceCriteria}`");
+            if (!string.IsNullOrWhiteSpace(property.DefaultValue))
+                sb.AppendLine($"  - default: `{property.DefaultValue}`");
+        }
+
+        if (entity.Relationships.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Relationships");
+            sb.AppendLine();
+            foreach (var relationship in entity.Relationships)
+            {
+                var owned = relationship.IsAggregated ? ", aggregated (owns the children)" : "";
+                var association = string.IsNullOrWhiteSpace(relationship.AssociationName)
+                    ? ""
+                    : $", association \"{relationship.AssociationName}\"";
+                sb.AppendLine($"- `{relationship.PropertyName}` → **{relationship.RelatedEntity}** ({relationship.Type}{association}{owned})");
+            }
+        }
+
+        AppendRules(sb, entity);
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Returns one controller, including the code its actions run.
+    /// </summary>
+    [McpServerTool(Name = "xaf_controller")]
+    [Description(
+        "Full detail of one controller: which views it applies to, every action it defines with " +
+        "the actual C# that runs when the action fires, and its helper methods. Use when asked " +
+        "what a button or command actually does.")]
+    public async Task<string> ControllerAsync(
+        [Description("Controller class name, e.g. 'ApproveInvoiceController'. Case-insensitive.")] string name,
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        var controller = app.Controllers.FirstOrDefault(c =>
+            c.ClassName.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (controller is null)
+            return NotFound("controller", name, app.Controllers.Select(c => c.ClassName));
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# {controller.ClassName}");
+        sb.AppendLine();
+        sb.AppendLine($"Base class `{controller.BaseControllerType}`.");
+        sb.AppendLine($"Applies to: {controller.TargetObjectType ?? "any object type"}" +
+                      $"{(string.IsNullOrWhiteSpace(controller.TargetViewType) ? "" : $", {controller.TargetViewType} only")}.");
+
+        if (!string.IsNullOrWhiteSpace(controller.BusinessLogicSummary))
+        {
+            sb.AppendLine();
+            sb.AppendLine("## What it does");
+            sb.AppendLine();
+            sb.AppendLine(controller.BusinessLogicSummary);
+        }
+
+        if (controller.Actions.Count == 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Defines no actions; it customizes behavior through view events or defaults.");
+        }
+
+        foreach (var action in controller.Actions)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Action `{action.ActionId}`");
+            sb.AppendLine();
+            sb.AppendLine($"- Type: {action.ActionType}");
+            if (!string.IsNullOrWhiteSpace(action.Caption)) sb.AppendLine($"- Caption: \"{action.Caption}\"");
+            if (!string.IsNullOrWhiteSpace(action.Category)) sb.AppendLine($"- Category: {action.Category}");
+            if (!string.IsNullOrWhiteSpace(action.ConfirmationMessage)) sb.AppendLine($"- Confirms with: \"{action.ConfirmationMessage}\"");
+            if (!string.IsNullOrWhiteSpace(action.EnabledCriteria)) sb.AppendLine($"- Enabled when: `{action.EnabledCriteria}`");
+
+            if (!string.IsNullOrWhiteSpace(action.BusinessLogicSummary))
+            {
+                sb.AppendLine();
+                sb.AppendLine(action.BusinessLogicSummary);
+            }
+
+            if (!string.IsNullOrWhiteSpace(action.ExecuteMethodBody))
+            {
+                sb.AppendLine();
+                sb.AppendLine("```csharp");
+                sb.AppendLine(Cap(action.ExecuteMethodBody));
+                sb.AppendLine("```");
+            }
+        }
+
+        var helpers = controller.Methods
+            .Where(m => !string.IsNullOrWhiteSpace(m.Body))
+            .ToList();
+
+        if (helpers.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Helper methods");
+
+            foreach (var method in helpers)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"### `{method.ReturnType} {method.Name}({string.Join(", ", method.Parameters)})`");
+                sb.AppendLine();
+                sb.AppendLine("```csharp");
+                sb.AppendLine(Cap(method.Body));
+                sb.AppendLine("```");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Returns the business rules enforced by the application.
+    /// </summary>
+    [McpServerTool(Name = "xaf_rules")]
+    [Description(
+        "The business rules the application enforces: validation rules with their messages and " +
+        "conditions, conditional appearance rules, and calculated properties. Use when asked what " +
+        "the system requires, forbids, or computes. Optionally narrowed to one entity.")]
+    public async Task<string> RulesAsync(
+        [Description("Restrict to one entity. Omit for every rule in the application.")] string? entity = null,
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        var entities = string.IsNullOrWhiteSpace(entity)
+            ? app.Entities
+            : app.Entities.Where(e => e.ClassName.Equals(entity, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (entities.Count == 0)
+            return NotFound("entity", entity!, app.Entities.Select(e => e.ClassName));
+
+        var relevant = entities
+            .Where(e => e.ValidationRules.Count > 0
+                     || e.AppearanceRules.Count > 0
+                     || e.Properties.Any(p => !string.IsNullOrWhiteSpace(p.PersistentAlias)))
+            .ToList();
+
+        if (relevant.Count == 0)
+        {
+            return string.IsNullOrWhiteSpace(entity)
+                ? $"{app.ProjectName} declares no validation rules, appearance rules or calculated properties."
+                : $"`{entity}` declares no validation rules, appearance rules or calculated properties.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Business rules — {app.ProjectName}");
+
+        foreach (var target in relevant)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {target.ClassName}");
+            AppendRules(sb, target);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Returns Model Editor customizations.
+    /// </summary>
+    [McpServerTool(Name = "xaf_model")]
+    [Description(
+        "Model Editor (.xafml) customizations: captions, list and detail view settings, columns, " +
+        "filters and application options. IMPORTANT — this behavior exists only in XML and cannot " +
+        "be inferred from the C# at all, so check it before concluding how a screen behaves.")]
+    public async Task<string> ModelAsync(
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        if (app.ModelEditorInfo is not { } model ||
+            (model.BOModelClasses.Count == 0 && model.Views.Count == 0))
+        {
+            return $"{app.ProjectName} has no Model Editor customizations. Its UI behavior follows from " +
+                   "the business classes and XAF defaults alone.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Model Editor customizations — {app.ProjectName}");
+        sb.AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(model.ApplicationTitle))
+            sb.AppendLine($"Application title: \"{model.ApplicationTitle}\".");
+
+        if (model.SourceFiles.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Merged from {model.SourceFiles.Count} `.xafml` " +
+                          $"{(model.SourceFiles.Count == 1 ? "file" : "files")}.");
+        }
+
+        if (model.BOModelClasses.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Class settings");
+            sb.AppendLine();
+            foreach (var boClass in model.BOModelClasses)
+            {
+                sb.Append($"- **{boClass.ClassName}**");
+                if (!string.IsNullOrWhiteSpace(boClass.Caption)) sb.Append($" — caption \"{boClass.Caption}\"");
+                if (boClass.IsCloneable) sb.Append(" — cloneable");
+                sb.AppendLine();
+
+                foreach (var attribute in boClass.CustomAttributes)
+                    sb.AppendLine($"  - {attribute.Key} = {attribute.Value}");
+            }
+        }
+
+        if (model.Views.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Views");
+            sb.AppendLine();
+            foreach (var view in model.Views)
+                sb.AppendLine($"- **{view.Id}** ({view.ViewType})");
+        }
+
+        if (model.SchemaModules.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Schema modules");
+            sb.AppendLine();
+            foreach (var schema in model.SchemaModules)
+                sb.AppendLine($"- {schema.Name}");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>Writes an entity's validation, appearance and calculation rules.</summary>
+    private static void AppendRules(StringBuilder sb, ExtractedEntity entity)
+    {
+        if (entity.ValidationRules.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Validation");
+            sb.AppendLine();
+            foreach (var rule in entity.ValidationRules)
+            {
+                sb.Append($"- **{rule.RuleType}**");
+                if (!string.IsNullOrWhiteSpace(rule.TargetProperty)) sb.Append($" on `{rule.TargetProperty}`");
+                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(rule.TargetCriteria)) sb.AppendLine($"  - applies when: `{rule.TargetCriteria}`");
+                if (!string.IsNullOrWhiteSpace(rule.MessageTemplate)) sb.AppendLine($"  - message: \"{XafDiscoveryTools.Compact(rule.MessageTemplate)}\"");
+            }
+        }
+
+        if (entity.AppearanceRules.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Conditional appearance");
+            sb.AppendLine();
+            foreach (var rule in entity.AppearanceRules)
+            {
+                sb.AppendLine($"- **{rule.Id}** on {rule.TargetItems ?? "the whole object"}");
+                if (!string.IsNullOrWhiteSpace(rule.Criteria)) sb.AppendLine($"  - when: `{rule.Criteria}`");
+                if (!string.IsNullOrWhiteSpace(rule.Visibility)) sb.AppendLine($"  - visibility: {rule.Visibility}");
+                if (!string.IsNullOrWhiteSpace(rule.Enabled)) sb.AppendLine($"  - enabled: {rule.Enabled}");
+                if (!string.IsNullOrWhiteSpace(rule.BackColor)) sb.AppendLine($"  - back colour: {rule.BackColor}");
+                if (!string.IsNullOrWhiteSpace(rule.FontColor)) sb.AppendLine($"  - font colour: {rule.FontColor}");
+            }
+        }
+
+        var calculated = entity.Properties
+            .Where(p => !string.IsNullOrWhiteSpace(p.PersistentAlias))
+            .ToList();
+
+        if (calculated.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Calculated properties");
+            sb.AppendLine();
+            foreach (var property in calculated)
+                sb.AppendLine($"- `{property.Name}` = `{property.PersistentAlias}`");
+        }
+    }
+
+    /// <summary>
+    /// Explains that something does not exist, and says what does.
+    /// </summary>
+    /// <remarks>
+    /// The wording matters. "Not found" invites an agent to assume it simply looked in the wrong
+    /// place and to invent the thing anyway. Extraction covers the whole tree, so absence is a
+    /// fact worth stating as one.
+    /// </remarks>
+    private static string NotFound(string kind, string requested, IEnumerable<string> available)
+    {
+        var known = available.OrderBy(a => a, StringComparer.Ordinal).ToList();
+
+        // "entity" does not pluralize by adding an s, and "19 entitys" in an answer an agent is
+        // about to quote undermines everything else the response says.
+        var plural = kind switch
+        {
+            "entity" => "entities",
+            _ => kind + "s",
+        };
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"There is no {kind} called '{requested}' in this application.");
+        sb.AppendLine();
+        sb.AppendLine($"This is the complete list of {known.Count} " +
+                      $"{(known.Count == 1 ? kind : plural)}, extracted from the whole source tree:");
+        sb.AppendLine();
+        foreach (var item in known)
+            sb.AppendLine($"- {item}");
+        sb.AppendLine();
+        sb.AppendLine($"If the user expects '{requested}' to exist, it has not been created yet.");
+
+        return sb.ToString();
+    }
+
+    /// <summary>Caps a code block, saying so rather than truncating silently.</summary>
+    private static string Cap(string code) =>
+        code.Length <= MaxCodeLength
+            ? code
+            : code[..MaxCodeLength] + $"\n\n// … truncated at {MaxCodeLength} characters; read the source file for the rest.";
+}

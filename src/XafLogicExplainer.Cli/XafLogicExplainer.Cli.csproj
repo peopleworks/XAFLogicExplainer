@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
     <ProjectReference Include="..\XafLogicExplainer.CopilotSync\XafLogicExplainer.CopilotSync.csproj" />
+    <ProjectReference Include="..\XafLogicExplainer.Mcp\XafLogicExplainer.Mcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
