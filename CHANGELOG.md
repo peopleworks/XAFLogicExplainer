@@ -42,6 +42,20 @@ applications; this is the point where it becomes a community project.
 - Blazor in-app help panel for XAF Blazor applications
 - MSBuild `.targets` for extraction on build
 
+### Fixed
+
+- The packaged MSBuild integration never worked. Three problems, none of which could surface
+  before the package was installed from a feed: the file was named `XafLogicExplainer.targets`
+  when NuGet only auto-imports `build/<PackageId>.targets`; it resolved the CLI through a path
+  into this repository's own `bin/` directory, which cannot exist on a consumer's machine; and
+  it passed a `--config` flag the CLI has never had. It now invokes the installed `xaflogic`
+  tool, and CI verifies packaging on every push.
+- The MSBuild integration defaulted to `sync`, uploading documentation on every Release build.
+  It now defaults to `extract`, which makes no network call, and does nothing at all unless
+  `XafLogicExplainerRunOnBuild` is set. Publishing from a build step should be a decision.
+- `DescriptionAnnotator` defaulted its resource name to a specific client project, so an
+  unconfigured run targeted someone else's resource. The default is removed.
+
 ### Notes
 
 - Versioned 0.9.0 rather than 1.0.0 on purpose: the extraction engine is mature, but the

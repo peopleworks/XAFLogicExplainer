@@ -27,10 +27,11 @@
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
-  <!-- MSBuild integration: dropping this .targets into a consuming XAF project re-extracts
-       documentation on build when the sources actually changed. -->
+  <!-- MSBuild integration for projects that take a PackageReference on this package.
+       NuGet only auto-imports build\<PackageId>.targets, so the file name must track PackageId.
+       Packaging verification in CI fails the build if these ever drift apart. -->
   <ItemGroup>
-    <None Include="build\XafLogicExplainer.targets" Pack="true" PackagePath="build\" />
+    <None Include="build\XafLogicExplainer.Cli.targets" Pack="true" PackagePath="build\" />
   </ItemGroup>
 
 </Project>

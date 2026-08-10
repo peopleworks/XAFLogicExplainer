@@ -1,0 +1,70 @@
+<!--
+  XafLogicExplainer MSBuild integration.
+
+  The file name matters: NuGet only auto-imports build\<PackageId>.targets, so this must stay
+  named after the package. It is imported automatically when a project takes a PackageReference
+  on XafLogicExplainer.Cli. (Installing the global tool does NOT import this; the tool is just
+  `xaflogic` on your PATH.)
+
+  Nothing runs unless you opt in:
+
+    <PropertyGroup>
+      <XafLogicExplainerRunOnBuild>true</XafLogicExplainerRunOnBuild>
+    </PropertyGroup>
+
+  Defaults to `extract`, which is local and makes no network call. Set XafLogicExplainerCommand
+  to `sync` if you also want the results published to your configured remote -- that is opt-in
+  because a build step that uploads your source-derived documentation somewhere should be a
+  decision, not a surprise.
+
+  Available properties:
+
+    XafLogicExplainerRunOnBuild    false (default) | true
+    XafLogicExplainerCommand       extract (default) | sync
+    XafLogicExplainerConfiguration Release (default) -- which configuration triggers it; empty means all
+    XafLogicExplainerArgs          extra arguments appended verbatim, e.g. --lang en
+    XafLogicExplainerToolPath      override the executable; defaults to the `xaflogic` global tool
+-->
+<Project>
+
+  <PropertyGroup>
+    <XafLogicExplainerRunOnBuild Condition="'$(XafLogicExplainerRunOnBuild)' == ''">false</XafLogicExplainerRunOnBuild>
+    <XafLogicExplainerCommand Condition="'$(XafLogicExplainerCommand)' == ''">extract</XafLogicExplainerCommand>
+    <XafLogicExplainerConfiguration Condition="'$(XafLogicExplainerConfiguration)' == ''">Release</XafLogicExplainerConfiguration>
+    <!-- The global tool. Overridable for anyone running a locally built copy. -->
+    <XafLogicExplainerToolPath Condition="'$(XafLogicExplainerToolPath)' == ''">xaflogic</XafLogicExplainerToolPath>
+  </PropertyGroup>
+
+  <Target Name="XafLogicExplainerRun"
+          AfterTargets="Build"
+          Condition="'$(XafLogicExplainerRunOnBuild)' == 'true'
+                     AND ('$(XafLogicExplainerConfiguration)' == ''
+                          OR '$(Configuration)' == '$(XafLogicExplainerConfiguration)')">
+
+    <Message Importance="high"
+             Text="XafLogicExplainer: running '$(XafLogicExplainerCommand)' against $(MSBuildProjectDirectory)" />
+
+    <!-- IgnoreExitCode: documentation extraction failing must never fail someone's build. The
+         exit code is surfaced as a warning instead, so it is visible without being fatal.
+         Change detection means this is usually a no-op anyway. -->
+    <Exec Command="&quot;$(XafLogicExplainerToolPath)&quot; $(XafLogicExplainerCommand) --project &quot;$(MSBuildProjectDirectory)&quot; $(XafLogicExplainerArgs)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          IgnoreExitCode="true"
+          ContinueOnError="true"
+          ConsoleToMsBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_XafLogicExplainerExitCode" />
+    </Exec>
+
+    <Warning Text="XafLogicExplainer: '$(XafLogicExplainerCommand)' exited with code $(_XafLogicExplainerExitCode). Is the tool installed? `dotnet tool install -g XafLogicExplainer.Cli`"
+             Condition="'$(_XafLogicExplainerExitCode)' != '0'" />
+
+  </Target>
+
+  <!-- Invoke explicitly: dotnet build -t:XafLogicExplainerForce -->
+  <Target Name="XafLogicExplainerForce">
+    <Exec Command="&quot;$(XafLogicExplainerToolPath)&quot; $(XafLogicExplainerCommand) --project &quot;$(MSBuildProjectDirectory)&quot; --force $(XafLogicExplainerArgs)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMsBuild="true" />
+  </Target>
+
+</Project>
