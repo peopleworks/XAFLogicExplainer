@@ -257,21 +257,24 @@ project is a no-op. There is an MSBuild `.targets` file if you want it to run on
 
 ## Status
 
-**v0.9.0.** The extraction engine is the mature part: it runs in production against real XAF
+**v0.11.0.** The extraction engine is the mature part: it runs in production against real XAF
 applications. The agent-facing surface is what is landing now, in the open.
 
 | | |
 | --- | --- |
 | ✅ | Roslyn extraction — entities, controllers, rules, updater, navigation, `.xafml` |
 | ✅ | XPO and EF Core, auto-detected |
+| ✅ | **Custom property and list editors**, their client assets, and built-in editors reconfigured at run time |
+| ✅ | **Version-gated data migrations** — what happened to databases that were not fresh |
 | ✅ | Incremental change detection, diff reports, multi-project, watch mode |
 | ✅ | AI enrichment of controllers and actions (`--enrich`) |
 | ✅ | Blazor in-app help panel |
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
+| ✅ | **`xaflogic explain`** — one self-contained HTML page, for a person rather than an agent |
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
-| ✅ | **MCP server** — 7 tools, live against your source |
+| ✅ | **MCP server** — 9 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **129 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **176 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the
