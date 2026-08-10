@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Fixture only. Never built; it is input to the extractor, which reads it as text. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="25.1.5" />
+    <PackageReference Include="DevExpress.ExpressApp.Validation" Version="25.1.5" />
+    <PackageReference Include="DevExpress.ExpressApp.ConditionalAppearance" Version="25.1.5" />
+  </ItemGroup>
+
+</Project>

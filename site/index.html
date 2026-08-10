@@ -591,6 +591,7 @@ footer p { max-width: 44rem; }
   <a href="#gap" class="nav__hideable">The gap</a>
   <a href="#output" class="nav__hideable">Output</a>
   <a href="#mcp" class="nav__hideable">MCP</a>
+  <a href="#explainer" class="nav__hideable">Explainer</a>
   <a href="#install" class="is-cta">Install</a>
 </nav>
 
@@ -971,6 +972,40 @@ footer p { max-width: 44rem; }
     <p style="margin-top:1.6rem">
       A bare “not found” invites an agent to assume it looked in the wrong place and invent the
       type anyway. Extraction reads the whole tree, which is what makes the stronger claim true.
+    </p>
+  </section>
+
+  <!-- ------------------------------------------------------- explainer -->
+  <section id="explainer" class="reveal">
+    <p class="eyebrow">And for the person who inherits it</p>
+    <h2>Most teams have never seen<br>their own domain model.</h2>
+    <p>
+      It exists as association attributes scattered across twenty files, and the map of it lives in
+      one person's head — which is exactly the knowledge that leaves when they do.
+    </p>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/domain-map.gif"
+             alt="The domain model of a sample XAF application. Hovering an entity dims everything it does not touch, leaving only its own relationships lit."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        Real output. Hover an entity and everything it does not touch fades; purple means deleting
+        the parent deletes the child.
+      </figcaption>
+    </figure>
+
+    <p style="margin-top:2.4rem">
+      <code>xaflogic explain</code> writes one self-contained HTML file — no server, no build step,
+      no request to the network. It opens from an email attachment on a machine with no internet,
+      which is how handovers actually happen.
+    </p>
+    <p>
+      Alongside the map: every entity and what each property is, every action with the code it
+      runs, validation with the message the user will actually see, and <strong>an index of every
+      criteria expression in the application</strong> — a dialect that is neither SQL nor C# and is
+      otherwise collected nowhere.
     </p>
   </section>
 

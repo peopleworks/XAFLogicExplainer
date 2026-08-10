@@ -135,9 +135,16 @@ public sealed class EntityGraph
     /// <remarks>
     /// Alphabetical order scatters an association's two ends to opposite sides, and every chord
     /// then crosses the middle — the diagram becomes a ball of string at about eight entities.
-    /// Walking the graph greedily from its most connected node keeps most relationships as short
-    /// arcs near the rim. It is a heuristic, not an optimum; the aim is legibility, not a minimal
-    /// crossing count.
+    /// <para>
+    /// The walk is breadth-first on purpose. Following one neighbour at a time leaves a hub after
+    /// its first spoke and never returns, so its remaining children land halfway around the circle
+    /// and their edges cross everything. Placing a node and then <em>all</em> of its neighbours
+    /// keeps a hub and its spokes together, which is the shape most XAF domain models have: an
+    /// order with its lines, a sale with its payments.
+    /// </para>
+    /// <para>
+    /// A heuristic, not an optimum. The aim is legibility, not a minimal crossing count.
+    /// </para>
     /// </remarks>
     private static List<ExtractedEntity> OrderToReduceCrossings(
         List<ExtractedEntity> entities,
@@ -163,21 +170,31 @@ public sealed class EntityGraph
         {
             // Start each connected group at its busiest entity, so the hub of a cluster anchors it.
             // Ties break alphabetically to keep the layout stable across runs.
-            var current = remaining
+            var seed = remaining
                 .OrderByDescending(n => degrees.GetValueOrDefault(n))
                 .ThenBy(n => n, StringComparer.Ordinal)
                 .First();
 
-            while (current is not null)
-            {
-                order.Add(byName[current]);
-                remaining.Remove(current);
+            var queue = new Queue<string>();
+            queue.Enqueue(seed);
+            remaining.Remove(seed);
 
-                current = neighbours[current]
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                order.Add(byName[current]);
+
+                var children = neighbours[current]
                     .Where(remaining.Contains)
                     .OrderByDescending(n => degrees.GetValueOrDefault(n))
                     .ThenBy(n => n, StringComparer.Ordinal)
-                    .FirstOrDefault();
+                    .ToList();
+
+                foreach (var child in children)
+                {
+                    remaining.Remove(child);
+                    queue.Enqueue(child);
+                }
             }
         }
 

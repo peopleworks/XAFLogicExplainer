@@ -166,10 +166,23 @@ attachment on a machine with no internet, which is how handovers actually happen
 
 It draws **a map of your domain model** from the association attributes scattered across your
 codebase. Most teams have never seen theirs: it exists in one person's head, which is exactly the
-knowledge that leaves when they do. Alongside it: every entity and what each property is, every
-action with the code it runs, validation with the message the user will actually see, the Model
-Editor settings that appear in no C# file, and **an index of every criteria expression in the
-application** — a dialect that is neither SQL nor C# and is otherwise collected nowhere.
+knowledge that leaves when they do.
+
+![The domain model of a sample XAF application. Hovering an entity dims everything it does not touch, leaving only its own relationships lit — purple where deleting the parent deletes the child.](https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/domain-map.gif)
+
+<sub>Real output, from the sample application in this repository. Hover an entity and everything it
+does not touch fades; purple means deleting the parent deletes the child.</sub>
+
+Alongside it: every entity and what each property is, every action with the code it runs,
+validation with the message the user will actually see, the Model Editor settings that appear in no
+C# file, and **an index of every criteria expression in the application** — a dialect that is
+neither SQL nor C# and is otherwise collected nowhere.
+
+Try it on the sample without touching your own code:
+
+```bash
+xaflogic explain --project tests/XafLogicExplainer.Tests/Fixtures/DemoSolution/PharmacyDemo.Module --open
+```
 
 ## Optional: tell your code apart from DevExpress's
 
