@@ -52,7 +52,12 @@ coverage*.xml
 # The DevExpress ground-truth catalog is generated locally by licensees from
 # their own installation (see tools/XafLogicExplainer.DxCatalog). Nothing
 # derived from DevExpress sources is ever committed to this repository.
-catalog/
+#
+# Matched by file extension, NOT by a `catalog/` directory rule. That rule matched
+# any directory of that name at any depth, so it silently swallowed
+# src/XafLogicExplainer.Core/Catalog/ -- three source files were never committed,
+# and every clean checkout failed to compile while the local build sailed on
+# because the files were still sitting on disk.
 *.dxcatalog.json
 
 # Working notes and scratch. One `git add -A` from the root is all it takes to
