@@ -465,7 +465,9 @@ tr.is-us td:first-child { font-weight: 620; }
    survives any resize -- no measuring, nothing to recompute. */
 .demo__link {
   position: absolute;
-  left: calc(var(--col, 24) * 1ch);
+  /* Offset back so the curve leaves from under the sentence and sweeps into the token, rather
+     than dropping straight down beside it. */
+  left: calc(var(--col, 24) * 1ch - 64px);
   bottom: -34px;
   width: 90px; height: 36px;
   overflow: visible;
@@ -656,7 +658,7 @@ footer p { max-width: 44rem; }
         </div>
 
         <svg class="demo__link" style="--col:24" viewBox="0 0 90 36" aria-hidden="true">
-          <path d="M2,2 C2,22 26,16 26,34"/>
+          <path d="M4,0 C4,26 56,6 66,34"/>
         </svg>
       </div>
 

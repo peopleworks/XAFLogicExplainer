@@ -9,6 +9,8 @@
 
 **Teach your AI coding agent what *your* XAF application actually does.**
 
+**[See how it works &rarr;](https://peopleworks.github.io/XAFLogicExplainer/)**
+
 Point it at an XAF module. It reads your entities, controllers, actions, business rules,
 navigation and Model Editor customizations straight from source — and hands the result to
 whatever agent you code with.
