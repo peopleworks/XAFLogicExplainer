@@ -118,7 +118,7 @@ documentation:
 ### Fixed
 
 - `ModuleAnalyzer` reported business entities as required XAF modules. It accepted any invocation
-  whose expression contained `Add`, so `AdditionalExportedTypes.Add(typeof(Cliente))` was read as
+  whose expression contained `Add`, so `AdditionalExportedTypes.Add(typeof(Customer))` was read as
   a module dependency. On a real project this listed nine entities and six framework base types
   among twelve genuine modules. It now matches the target collection, and
   `AdditionalExportedTypes` feeds the registered-types list where it belongs.
