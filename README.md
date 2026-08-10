@@ -152,6 +152,25 @@ Ask for something that isn't there and the answer is the useful one:
 teaches how XAF works; this teaches what your application does. An agent with only the first will
 write correct XAF against entities you do not have.
 
+## The same knowledge, for a person
+
+An agent reads `AGENTS.md` or queries the MCP server. Someone who has just inherited a ten-year-old
+XAF application needs the same facts arranged very differently:
+
+```bash
+xaflogic explain --project "C:\MySolution\MyApp.Module" --open
+```
+
+One HTML file. No server, no build step, no request to the network — it opens from an email
+attachment on a machine with no internet, which is how handovers actually happen.
+
+It draws **a map of your domain model** from the association attributes scattered across your
+codebase. Most teams have never seen theirs: it exists in one person's head, which is exactly the
+knowledge that leaves when they do. Alongside it: every entity and what each property is, every
+action with the code it runs, validation with the message the user will actually see, the Model
+Editor settings that appear in no C# file, and **an index of every criteria expression in the
+application** — a dialect that is neither SQL nor C# and is otherwise collected nowhere.
+
 ## Optional: tell your code apart from DevExpress's
 
 Extraction reads your source without knowing anything about the framework it is written against,
@@ -186,6 +205,7 @@ licensed software. Everything works without it — it only sharpens the output. 
 | --- | --- |
 | `agents` | **Write `AGENTS.md` / `CLAUDE.md` / Copilot instructions for your agent** |
 | `mcp` | **Run as an MCP server so agents can query the app live** |
+| `explain` | **Write a self-contained HTML page explaining the app to a person** |
 | `catalog` | Build the DevExpress ground-truth catalog (`build`, `status`) |
 | `extract` | Read the project, write Markdown + JSON locally |
 | `diff` | Compare against the previous extraction and report what changed |

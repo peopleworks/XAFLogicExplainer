@@ -49,4 +49,13 @@ public class Customer : XPCustomObject
 
     [Association("Customer-Orders")]
     public XPCollection<Order> Orders => GetCollection<Order>(nameof(Orders));
+
+    // The same property seen through an interface. It must not be reported as a second one.
+    object INamedRecord.Name => Name;
+}
+
+/// <summary>Something with a display name, implemented explicitly by <see cref="Customer"/>.</summary>
+public interface INamedRecord
+{
+    object Name { get; }
 }

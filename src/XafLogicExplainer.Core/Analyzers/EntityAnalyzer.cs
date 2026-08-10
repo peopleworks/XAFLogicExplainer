@@ -79,6 +79,13 @@ public class EntityAnalyzer : IEntityAnalyzer
             if (IsInfrastructureProperty(prop.Identifier.Text))
                 continue;
 
+            // `object ISecurityUserLoginInfo.User => User;` is the same property seen through an
+            // interface, not a second one. Listing both puts a duplicate row in every rendering,
+            // with the explicit form typed as `object` — which reads as a modelling mistake the
+            // team did not make.
+            if (prop.ExplicitInterfaceSpecifier is not null)
+                continue;
+
             var extracted = ExtractProperty(prop);
             if (extracted != null)
                 entity.Properties.Add(extracted);

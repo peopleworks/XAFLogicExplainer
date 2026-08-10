@@ -40,6 +40,11 @@ Thumbs.db
 # Test / tooling artifacts
 TestResults/
 *.trx
+.playwright-mcp/
+
+# Generated explainers. `xaflogic explain` writes one next to the project it read, and it is
+# derived output like everything else in .xaflogic-output/.
+*-explainer.html
 coverage*.xml
 *.coverage
 

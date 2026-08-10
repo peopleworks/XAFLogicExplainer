@@ -1460,6 +1460,88 @@ agentsCommand.SetHandler(async (context) =>
 rootCommand.AddCommand(agentsCommand);
 
 // ============================================================
+// COMMAND: explain
+// ============================================================
+var explainCommand = new Command(
+    "explain",
+    "Generate a self-contained HTML page explaining this XAF application to a person");
+
+var explainOutputOption = new Option<string?>(
+    "--output",
+    "File to write (default: <ProjectName>-explainer.html in the project directory)");
+var explainOpenOption = new Option<bool>(
+    "--open",
+    "Open the page in the default browser when it is written");
+
+explainCommand.AddOption(projectPathOption);
+explainCommand.AddOption(languageOption);
+explainCommand.AddOption(ormOption);
+explainCommand.AddOption(enrichOption);
+explainCommand.AddOption(explainOutputOption);
+explainCommand.AddOption(explainOpenOption);
+
+explainCommand.SetHandler(async (explainProject, explainLanguage, explainOrm, explainEnrich, explainOutput, explainOpen) =>
+{
+    var explainConfig = ConfigHelper.Load();
+    var explainPath = explainProject ?? explainConfig.ProjectPath;
+
+    if (string.IsNullOrEmpty(explainPath) || !Directory.Exists(explainPath))
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] --project is required. Set it with: [cyan]xaflogic config --project <path>[/]");
+        return;
+    }
+
+    var explainLang = explainLanguage ?? explainConfig.Language ?? "en";
+
+    ExtractedProject explained = null!;
+    await AnsiConsole.Status().Spinner(Spinner.Known.Dots).StartAsync("Reading the application...", async ctx =>
+    {
+        explained = new LogicExtractor().ExtractFromSourceDirectory(
+            explainPath, BuildExtractionOptions(explainLang, explainOrm ?? explainConfig.Orm));
+        await Task.CompletedTask;
+    });
+
+    if (explainEnrich)
+    {
+        await EnrichWithAi(explained, explainConfig, explainLang);
+    }
+
+    var html = new HtmlExplainerGenerator(ThisAssemblyVersion()).Generate(explained);
+    var explainFile = explainOutput ?? Path.Combine(explainPath, $"{explained.ProjectName}-explainer.html");
+
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(explainFile))!);
+    File.WriteAllText(explainFile, html);
+
+    var explainActions = explained.Controllers.Sum(c => c.Actions.Count);
+    var explainTable = new Table().Border(TableBorder.Rounded).AddColumn("Explains").AddColumn("");
+    explainTable.AddRow("Entities", explained.Entities.Count.ToString());
+    explainTable.AddRow("Controllers", explained.Controllers.Count.ToString());
+    explainTable.AddRow("Actions", explainActions.ToString());
+    explainTable.AddRow("Relationships", explained.Entities.Sum(e => e.Relationships.Count).ToString());
+    explainTable.AddRow("Rules", explained.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count).ToString());
+    AnsiConsole.Write(explainTable);
+
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(Path.GetFullPath(explainFile))}");
+    AnsiConsole.MarkupLine($"[grey]{html.Length / 1024:N0} KB · one file, no dependencies — send it to anyone.[/]");
+
+    if (explainOpen)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(Path.GetFullPath(explainFile)) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Headless, or no handler registered. The path is already printed above.
+            AnsiConsole.MarkupLine("[grey]Could not open a browser; the path is above.[/]");
+        }
+    }
+}, projectPathOption, languageOption, ormOption, enrichOption, explainOutputOption, explainOpenOption);
+
+rootCommand.AddCommand(explainCommand);
+
+// ============================================================
 // COMMAND: mcp
 // ============================================================
 var mcpCommand = new Command(

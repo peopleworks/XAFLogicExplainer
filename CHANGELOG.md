@@ -7,6 +7,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`xaflogic explain`** — a single self-contained HTML page explaining the application to a
+  *person*. The same extraction already serves agents; this is the reader who has just inherited a
+  ten-year-old XAF application, or has to hand one over.
+  - **A map of the domain model**, drawn from the association attributes scattered across the
+    codebase. Most teams have never seen theirs: it exists in one person's head, which is exactly
+    the knowledge that leaves when they do. Hovering an entity isolates what it touches.
+  - Every entity with its properties and what each one is; every action with the code it runs;
+    validation with the message the user will actually see; and the Model Editor settings that
+    exist in no C# file.
+  - **An index of every criteria expression in the application**, gathered from attributes spread
+    across the source. XAF's criteria language is neither SQL nor C#, and it is nowhere collected.
+  - Client-side search across everything, light and dark, and no request to the network — it has
+    to open from an email attachment on a machine with no internet.
+  - The layout is computed at generation time, not in the browser, so the same source always
+    draws the same diagram and a regenerated page produces a readable diff.
+
+### Fixed
+
+- Explicit interface implementations were extracted as separate properties, so
+  `object ISecurityUserLoginInfo.User => User;` put a second `User` row, typed `object`, into
+  every rendering — reading as a modelling mistake the team had not made.
+
 ## [0.10.1] — 2026-08-10
 
 ### Fixed
