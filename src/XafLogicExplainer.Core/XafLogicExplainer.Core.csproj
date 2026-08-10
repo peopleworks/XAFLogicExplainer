@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The extraction engine. Roslyn parses your XAF source as *syntax*, so the project
+    being analyzed never has to compile, and this library never links against
+    DevExpress. That is why it is buildable and testable on any runner, with no
+    DevExpress license and no private NuGet feed.
+  -->
+
+  <PropertyGroup>
+    <PackageId>XafLogicExplainer.Core</PackageId>
+    <Description>Roslyn-based extraction engine for DevExpress XAF projects. Reads entities, controllers, actions, module setup, navigation and Model Editor (.xafml) customizations from source, without compiling the target project or referencing DevExpress assemblies. Supports XPO and EF Core.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+  </ItemGroup>
+
+</Project>

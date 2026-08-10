@@ -1,0 +1,14 @@
+# Normalize line endings: keep LF in the repo, let Git handle the working-copy conversion.
+* text=auto eol=lf
+
+# XAF model files are XML the Model Editor rewrites; keep them text but leave
+# their own encoding alone so a round-trip through the designer stays clean.
+*.xafml text
+
+# Binary assets -- never touch line endings.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pptx binary
+*.nupkg binary

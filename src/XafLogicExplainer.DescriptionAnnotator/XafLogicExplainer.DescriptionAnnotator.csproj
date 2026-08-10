@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Scans an XAF business model for properties with no [Description], asks a model to
+    write one from the surrounding code, and edits the attribute back into the source.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+    <ProjectReference Include="..\XafLogicExplainer.CopilotSync\XafLogicExplainer.CopilotSync.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.2.0-preview.1.26063.2" />
+  </ItemGroup>
+
+</Project>

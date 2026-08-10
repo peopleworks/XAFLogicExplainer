@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The `xaflogic` command. Installed as a global .NET tool:
+        dotnet tool install -g XafLogicExplainer.Cli
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>xaflogic</AssemblyName>
+    <RootNamespace>XafLogicExplainer.Cli</RootNamespace>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>xaflogic</ToolCommandName>
+    <PackageId>XafLogicExplainer.Cli</PackageId>
+    <Description>Command-line tool that extracts functional documentation from DevExpress XAF projects using Roslyn, and makes it available to AI coding agents. Reads entities, controllers, actions, module setup, navigation and Model Editor (.xafml) customizations from source -- no compilation of the target project, no DevExpress reference required. Supports XPO and EF Core, incremental change detection, and multi-project solutions.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+    <ProjectReference Include="..\XafLogicExplainer.CopilotSync\XafLogicExplainer.CopilotSync.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.2.0-preview.1.26063.2" />
+    <PackageReference Include="Spectre.Console" Version="0.52.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <!-- MSBuild integration: dropping this .targets into a consuming XAF project re-extracts
+       documentation on build when the sources actually changed. -->
+  <ItemGroup>
+    <None Include="build\XafLogicExplainer.targets" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>

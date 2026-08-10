@@ -1,0 +1,73 @@
+@using DevExpress.ExpressApp
+@using DevExpress.ExpressApp.Blazor
+@using DevExpress.ExpressApp.Blazor.Components
+@using DevExpress.ExpressApp.Blazor.Templates
+@using Microsoft.JSInterop
+
+@inherits FrameTemplateComponentBase<CopilotWindowTemplate>
+
+<div id="main-window-template-component" class="app h-100 d-flex flex-column">
+    <ComponentModelObserver ComponentModel="@FrameTemplate.NavigateBackActionControl.ButtonModel">
+        <div class="header d-flex flex-row shadow-sm navbar-dark flex-nowrap @DetailViewHeaderClass @NavigateBackActionHeaderClass">
+            <div class="header-left-side d-flex align-items-center ps-2">
+                <button onclick="xaf.toggleSideBar()" class="btn-hamburger p-0 btn btn-secondary btn-header">
+                    <XafImage ImageName="Hamburger" Size="24" Styles="margin: auto;" />
+                </button>
+                <div class="header-logo mx-3"></div>
+            </div>
+            <div class="header-right-side w-100 overflow-hidden d-flex align-items-center ps-4">
+                @FrameTemplate.NavigateBackActionControl.GetComponentContent()
+                <ViewCaptionComponent WindowCaption="@FrameTemplate" />
+                <SizeModeContainer>
+                    @FrameTemplate.HeaderToolbar.GetComponentContent()
+                </SizeModeContainer>
+                <div class="d-flex ms-auto">
+                    @FrameTemplate.AccountComponent.GetComponentContent()
+                    <SettingsComponent />
+                </div>
+            </div>
+        </div>
+    </ComponentModelObserver>
+    <div class="xaf-flex-auto overflow-hidden d-flex">
+        <div class="xaf-sidebar sidebar d-none d-sm-flex flex-column">
+            @FrameTemplate.ShowNavigationItemActionControl.GetComponentContent()
+            <div class="about-info mx-3 mb-4">
+                @((MarkupString)FrameTemplate.AboutInfoString)
+            </div>
+        </div>
+        <div class="sidebar-sm-shadow" onclick="xaf.toggleSideBar()"></div>
+        <div class="main xaf-flex-auto overflow-hidden d-flex flex-column">
+            <SizeModeContainer>
+                @if (!FrameTemplate.IsTabbedMdi && FrameTemplate.Toolbar.ContainsVisibleActionControl())
+                {
+                    <div class="main-toolbar py-3 px-2 px-sm-3">@FrameTemplate.Toolbar.GetComponentContent()</div>
+                }
+                <div class="main-content xaf-flex-auto overflow-auto pb-3 px-2 px-sm-3">
+                    <ViewSiteComponent View="@FrameTemplate.View" />
+                </div>
+            </SizeModeContainer>
+        </div>
+    </div>
+    <!-- PeopleWorks Copilot Panel -->
+    <CopilotPanelComponent />
+</div>
+
+@code {
+    private string? DetailViewHeaderClass => FrameTemplate.View is DetailView ? "xaf-detail-view-header" : null;
+    private string? NavigateBackActionHeaderClass => FrameTemplate.NavigateBackActionControl.Visible ? "xaf-show-navigate-back-action" : null;
+    protected override async Task InvokeAfterViewChangedJS()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("xaf.closeSideBarIfMobile");
+            await base.InvokeAfterViewChangedJS();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    public static RenderFragment Create(CopilotWindowTemplate template) =>
+        @<CopilotWindowTemplateComponent FrameTemplate="@template" />;
+}

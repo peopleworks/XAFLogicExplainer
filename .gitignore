@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# Local agent configuration. THIS LINE IS LOAD-BEARING.
+#
+# .claude/settings.local.json records the exact shell commands that were
+# approved during development, and those commands embed the environment they
+# ran with -- including a live PeopleWorks Copilot API token. It is a local
+# permission cache, never a repository artefact.
+#
+# settings.json (shared, no secrets) is tracked; only the .local. variant is not.
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
+
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+# Local SDK home created when the CLI is exercised from this directory
+.dotnet_cli_home/
+
+# NuGet pack output / local tool install
+nupkg/
+out/
+*.nupkg
+*.snupkg
+
+# Publish output
+publish/
+[Pp]ublish/
+
+# IDE / OS
+.vs/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Test / tooling artifacts
+TestResults/
+*.trx
+coverage*.xml
+*.coverage
+
+# Extraction output. `xaflogic extract` writes .xaflogic-output/ into the project
+# it analyzed, and .xaflogicexplainer holds the change-detection hash -- neither
+# belongs to anyone but the machine that produced it.
+.xaflogic-output/
+.xaflogicexplainer
+
+# The DevExpress ground-truth catalog is generated locally by licensees from
+# their own installation (see tools/XafLogicExplainer.DxCatalog). Nothing
+# derived from DevExpress sources is ever committed to this repository.
+catalog/
+*.dxcatalog.json
+
+# Working notes and scratch. One `git add -A` from the root is all it takes to
+# publish something that was never meant to leave the machine.
+temp/
+scratch/
+
+# ---------------------------------------------------------------------------
+# Pre-0.9 presentation material, held back rather than deleted.
+#
+# Both are in Spanish and describe the original "sync to PeopleWorks Copilot"
+# pitch, which the README no longer makes. Publishing them as-is would be the
+# repository's only long-form documentation contradicting its own front page.
+# Delete these two lines once they have been reworked in English.
+# ---------------------------------------------------------------------------
+docs/XAF_Logic_Explainer_Presentation.pptx
+docs/xaflogic-cli-guide.html

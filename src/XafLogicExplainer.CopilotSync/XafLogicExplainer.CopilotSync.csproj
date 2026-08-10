@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Publishes extracted documentation to PeopleWorks Copilot, and enriches it with
+    AI-generated business-logic summaries.
+
+    This is one output target among several, not the point of the tool. Phase 2 moves
+    it behind IDocumentationSink and renames it to XafLogicExplainer.Sinks.PeopleWorks,
+    because "CopilotSync" reads as *GitHub* Copilot to anyone arriving from outside.
+  -->
+
+  <PropertyGroup>
+    <PackageId>XafLogicExplainer.CopilotSync</PackageId>
+    <Description>PeopleWorks Copilot publishing target for XafLogicExplainer, plus the AI enrichment pipeline that generates business-logic summaries for XAF controllers and actions.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.2.0-preview.1.26063.2" />
+  </ItemGroup>
+
+</Project>

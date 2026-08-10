@@ -1,0 +1,49 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly published rule finds old code without waiting for a commit.
+    - cron: '31 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze C#
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          queries: security-and-quality
+
+      # Manual build for the same reason CI builds project-by-project: the Blazor widget needs the
+      # licensed DevExpress feed and would fail autobuild on a public runner.
+      - name: Build
+        run: |
+          dotnet build src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj -c Release
+          dotnet build src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj -c Release
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:csharp'

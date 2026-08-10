@@ -1,0 +1,74 @@
+<Project>
+
+  <!--
+    Repo-wide build settings, imported before every .csproj (so any project can still
+    override a value by re-declaring it).
+
+    Everything here used to be copy-pasted into XafLogicExplainer.Cli.csproj, which meant
+    the version number lived in exactly one project and the other five shipped as 1.0.0
+    by default. Packaging metadata belongs at the repository level.
+  -->
+
+  <PropertyGroup>
+    <!-- One version for the whole repo. 0.9.x is deliberate: the extraction pipeline is
+         proven in production, but the agent-facing surface (MCP server, AGENTS.md sink)
+         is still landing. 1.0.0 is earned when those ship, not assumed. -->
+    <Version>0.9.0</Version>
+
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- The build is clean today (0 warnings). Failing CI on new ones is what keeps it
+         that way once contributors arrive. -->
+    <TreatWarningsAsErrors Condition="'$(GITHUB_ACTIONS)' == 'true'">true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 = "missing XML comment on public member". Documentation is enforced on the
+         Core model, not on CLI plumbing; turning the whole repo on at once would bury the
+         real warnings under hundreds of these. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package metadata">
+    <Authors>Pedro Hernández</Authors>
+    <Company>PeopleWorks Services</Company>
+    <Copyright>Copyright (c) 2026 PeopleWorks Services</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/peopleworks/XAFLogicExplainer</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>xaf;devexpress;expressapp;roslyn;documentation;mcp;ai-agents;xpo;efcore;xafml</PackageTags>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Reproducible builds and Source Link">
+    <!-- Deterministic is already the SDK default; it is stated here because it is part of
+         the contract, not an accident of the toolchain. ContinuousIntegrationBuild
+         normalizes absolute paths into the PDB, which is what makes two CI builds of the
+         same commit byte-identical. It is deliberately OFF for local builds: normalized
+         paths break step-through debugging in the IDE. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Since the .NET 8 SDK the GitHub Source Link provider ships in-box, so this needs no
+         PackageReference: setting PublishRepositoryUrl is what turns it on.
+         EmbedUntrackedSources covers generated files that are not in git (e.g. the
+         AssemblyInfo the SDK writes), which would otherwise be unresolvable in a debugger. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/peopleworks/XAFLogicExplainer</RepositoryUrl>
+
+    <!-- Symbols, as a .snupkg pushed alongside each .nupkg to the NuGet symbol server.
+         Portable PDBs are the format Source Link annotates. -->
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- The README is packed into every NuGet package, so each one needs it at its own root. -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

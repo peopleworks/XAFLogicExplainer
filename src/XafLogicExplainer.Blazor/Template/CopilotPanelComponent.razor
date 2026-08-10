@@ -1,0 +1,170 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Options
+@inject IOptions<CopilotWidgetOptions> WidgetOptions
+@inject IJSRuntime JSRuntime
+
+<style>
+    /* Floating tab button */
+    .copilot-tab {
+        position: fixed;
+        right: 0;
+        bottom: 20vh;
+        z-index: 10000;
+        transform: rotate(-90deg) translateX(50%);
+        transform-origin: right bottom;
+        cursor: pointer;
+        background: #1872CB;
+        color: white;
+        padding: 8px 20px;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+        font-size: 0.9em;
+        box-shadow: -2px -2px 8px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .copilot-tab:hover {
+        background: #1565B8;
+        padding: 8px 24px;
+    }
+    .copilot-tab.hidden {
+        transform: rotate(-90deg) translateX(50%) translateY(100%);
+    }
+    .copilot-tab .copilot-icon {
+        font-size: 1.1em;
+    }
+
+    /* Sliding panel */
+    .copilot-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 10001;
+        background: #fff;
+        box-shadow: -4px 0 16px rgba(0,0,0,0.15);
+        transform: translateX(100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+    }
+    .copilot-panel.open {
+        transform: translateX(0);
+    }
+
+    /* Panel header */
+    .copilot-panel-header {
+        background: #1872CB;
+        color: white;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+    .copilot-panel-header h3 {
+        margin: 0;
+        font-size: 1em;
+        font-weight: 600;
+    }
+    .copilot-panel-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.4em;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+        opacity: 0.8;
+    }
+    .copilot-panel-close:hover {
+        opacity: 1;
+    }
+
+    /* Iframe container */
+    .copilot-panel-body {
+        flex: 1;
+        overflow: hidden;
+    }
+    .copilot-panel-body iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* Overlay when panel is open (mobile) */
+    .copilot-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.3);
+        z-index: 10000;
+    }
+    .copilot-overlay.open {
+        display: block;
+    }
+</style>
+
+@if (!string.IsNullOrEmpty(_widgetUrl))
+{
+    <!-- Floating Tab Button -->
+    <div class="copilot-tab @(_isOpen ? "hidden" : "")" @onclick="OpenPanel">
+        <span class="copilot-icon">&#x1F4AC;</span>
+        @_options.TabLabel
+    </div>
+
+    <!-- Overlay -->
+    <div class="copilot-overlay @(_isOpen ? "open" : "")" @onclick="ClosePanel"></div>
+
+    <!-- Sliding Panel -->
+    <div class="copilot-panel @(_isOpen ? "open" : "")" style="width: @(_options.PanelWidth)px;">
+        <div class="copilot-panel-header">
+            <h3>@_options.TabLabel</h3>
+            <button class="copilot-panel-close" @onclick="ClosePanel" title="Cerrar">&times;</button>
+        </div>
+        <div class="copilot-panel-body">
+            @if (_isOpen)
+            {
+                <iframe src="@_widgetUrl" title="PeopleWorks Copilot" allow="clipboard-write"></iframe>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Optional: Override the user name for the Copilot session.
+    /// If not set, uses the default from CopilotWidgetOptions.
+    /// </summary>
+    [Parameter]
+    public string? UserName { get; set; }
+
+    private bool _isOpen;
+    private string? _widgetUrl;
+    private CopilotWidgetOptions _options = new();
+
+    protected override void OnInitialized()
+    {
+        _options = WidgetOptions.Value;
+        if (!string.IsNullOrEmpty(_options.WidgetBaseUrl) && !string.IsNullOrEmpty(_options.ApiKey))
+        {
+            _widgetUrl = _options.BuildAssistUrl(UserName);
+        }
+    }
+
+    private void OpenPanel()
+    {
+        _isOpen = true;
+    }
+
+    private void ClosePanel()
+    {
+        _isOpen = false;
+    }
+}

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    The in-app help panel for XAF Blazor applications.
+
+    This is the ONE project in the repository that references DevExpress packages, so it
+    needs the DevExpress NuGet feed and a license to restore. Continuous integration
+    therefore builds every other project and skips this one; see .github/workflows/ci.yml.
+    Nothing else in the repository depends on it.
+  -->
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Restoring this project without the DevExpress feed configured produces an NU1101
+         that says nothing useful about why. Fail with a sentence a human can act on. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="DevExpress.ExpressApp.Blazor" Version="25.1.*" />
+  </ItemGroup>
+
+</Project>

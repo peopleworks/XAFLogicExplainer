@@ -1,0 +1,70 @@
+<!--
+  XafLogicExplainer MSBuild targets
+  Auto-sync documentation to PeopleWorks Copilot after Release builds.
+
+  Usage: Add to your XAF module .csproj:
+
+  <Import Project="path\to\XafLogicExplainer.targets" />
+
+  Or if using the CLI as a dotnet tool:
+
+  <Target Name="XafLogicSync" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="dotnet xaflogic sync" WorkingDirectory="$(ProjectDir)" />
+  </Target>
+
+  Requirements:
+  - xaflogic.json must exist in the project directory (or parent)
+  - copilot.token must be configured in xaflogic.json
+-->
+<Project>
+
+  <!-- Only run after successful Release builds -->
+  <Target Name="XafLogicExplainerSync"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' AND '$(XafLogicExplainerSync)' != 'false'">
+
+    <!-- Find the CLI executable -->
+    <PropertyGroup>
+      <XafLogicCliPath Condition="'$(XafLogicCliPath)' == ''">$(MSBuildThisFileDirectory)..\XafLogicExplainer.Cli\bin\$(Configuration)\net9.0\xaflogic.dll</XafLogicCliPath>
+    </PropertyGroup>
+
+    <!-- Check if xaflogic.json exists -->
+    <PropertyGroup>
+      <_XafLogicConfigPath>$(ProjectDir)xaflogic.json</_XafLogicConfigPath>
+      <_XafLogicConfigExists Condition="Exists('$(_XafLogicConfigPath)')">true</_XafLogicConfigExists>
+    </PropertyGroup>
+
+    <!-- Run sync if config exists -->
+    <Message Importance="high"
+             Text="XafLogicExplainer: Syncing documentation to PeopleWorks Copilot..."
+             Condition="'$(_XafLogicConfigExists)' == 'true'" />
+
+    <Exec Command="dotnet &quot;$(XafLogicCliPath)&quot; sync --config &quot;$(_XafLogicConfigPath)&quot;"
+          Condition="'$(_XafLogicConfigExists)' == 'true'"
+          IgnoreExitCode="true"
+          ConsoleToMsBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_XafLogicExitCode" />
+    </Exec>
+
+    <Message Importance="high"
+             Text="XafLogicExplainer: Sync completed (exit code: $(_XafLogicExitCode))"
+             Condition="'$(_XafLogicConfigExists)' == 'true'" />
+
+    <Message Importance="normal"
+             Text="XafLogicExplainer: Skipped - no xaflogic.json found in $(ProjectDir)"
+             Condition="'$(_XafLogicConfigExists)' != 'true'" />
+
+  </Target>
+
+  <!-- Target to force sync regardless of change detection -->
+  <Target Name="XafLogicExplainerForceSync">
+    <PropertyGroup>
+      <XafLogicCliPath Condition="'$(XafLogicCliPath)' == ''">$(MSBuildThisFileDirectory)..\XafLogicExplainer.Cli\bin\$(Configuration)\net9.0\xaflogic.dll</XafLogicCliPath>
+      <_XafLogicConfigPath>$(ProjectDir)xaflogic.json</_XafLogicConfigPath>
+    </PropertyGroup>
+
+    <Exec Command="dotnet &quot;$(XafLogicCliPath)&quot; sync --config &quot;$(_XafLogicConfigPath)&quot; --force"
+          ConsoleToMsBuild="true" />
+  </Target>
+
+</Project>

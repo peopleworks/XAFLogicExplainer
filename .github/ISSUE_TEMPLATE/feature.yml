@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest something the tool should be able to do
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve
+      description: >
+        Describe the situation you're in, not just the feature. Knowing what you were trying to do
+        with your XAF project usually changes the shape of the answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Extraction (understanding more XAF)
+        - Output format (Markdown, JSON, AGENTS.md, ...)
+        - Agent integration (MCP, skills)
+        - CLI ergonomics
+        - AI enrichment
+        - Blazor widget
+        - Something else
+    validations:
+      required: true

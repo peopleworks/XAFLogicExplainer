@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # Everything except the Blazor widget is built here.
+      #
+      # src/XafLogicExplainer.Blazor references DevExpress.ExpressApp.Blazor, which lives on the
+      # licensed DevExpress NuGet feed and cannot be restored on a public runner. Nothing else in
+      # the repository depends on it, so excluding it costs no coverage of the extraction engine.
+      #
+      # Building the CLI pulls in Core and CopilotSync transitively; the annotator is the only
+      # other leaf.
+      - name: Restore
+        run: |
+          dotnet restore src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj
+          dotnet restore src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj
+
+      - name: Build
+        run: |
+          dotnet build src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj --no-restore -c Release
+          dotnet build src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj --no-restore -c Release
+
+      # TreatWarningsAsErrors is on under GITHUB_ACTIONS (see Directory.Build.props), so a warning
+      # already fails the step above. This proves the tool actually runs on the built output.
+      - name: Smoke test the CLI
+        run: dotnet run --project src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj -c Release --no-build -- --help
+
+  pack:
+    name: Verify packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # A tool that cannot be packed cannot be installed, and that breaks silently between
+      # releases. Catch it on every push instead of at publish time.
+      - name: Pack
+        run: dotnet pack src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj -c Release -o ./artifacts
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ./artifacts/*.nupkg
+          retention-days: 7

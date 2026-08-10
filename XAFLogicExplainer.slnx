@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/XafLogicExplainer.Blazor/XafLogicExplainer.Blazor.csproj" />
+    <Project Path="src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj" />
+    <Project Path="src/XafLogicExplainer.CopilotSync/XafLogicExplainer.CopilotSync.csproj" />
+    <Project Path="src/XafLogicExplainer.Core/XafLogicExplainer.Core.csproj" />
+    <Project Path="src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj" />
+  </Folder>
+</Solution>

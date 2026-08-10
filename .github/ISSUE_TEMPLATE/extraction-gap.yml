@@ -1,0 +1,88 @@
+name: Extraction gap
+description: An XAF pattern your project uses that the extractor missed or got wrong
+title: "[gap] "
+labels: ["extraction-gap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most useful issue you can open here.
+
+        XAF is enormous and every codebase uses a different slice of it. A well-reduced snippet of a
+        pattern the extractor didn't understand becomes a test case, and after that it stays fixed.
+
+        **Please don't paste proprietary code.** Rename `Comision` to `Invoice`, strip the business
+        rules down to their shape, and the report is exactly as useful.
+
+  - type: textarea
+    id: pattern
+    attributes:
+      label: The XAF pattern
+      description: A minimal snippet — C# or `.xafml` — reduced to something you can publish.
+      render: csharp
+      placeholder: |
+        [Association("Order-Lines"), Aggregated]
+        public XPCollection<OrderLine> Lines => GetCollection<OrderLine>(nameof(Lines));
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the tool produced
+      description: The relevant part of the generated Markdown or JSON — or "nothing at all".
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should have produced
+      description: Doesn't need to be exact wording. Describing the missing fact is enough.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of extraction
+      options:
+        - Entities and properties
+        - Associations and relationships
+        - Attributes (validation, appearance, model defaults)
+        - Controllers and actions
+        - Business rules
+        - ModuleUpdater / seed data
+        - Navigation
+        - Model Editor (.xafml)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: orm
+    attributes:
+      label: ORM
+      options:
+        - XPO
+        - EF Core
+        - Both
+        - Not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `xaflogic --version`, or the commit you built from.
+    validations:
+      required: true
+
+  - type: input
+    id: xaf-version
+    attributes:
+      label: DevExpress XAF version
+      placeholder: "26.1.3"
+    validations:
+      required: false
