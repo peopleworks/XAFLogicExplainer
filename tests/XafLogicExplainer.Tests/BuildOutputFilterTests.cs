@@ -30,15 +30,28 @@ public class BuildOutputFilterTests
     public void KeepsSourceWhoseNameMerelyContainsThoseLetters(string path) =>
         Assert.False(BuildOutputFilter.IsBuildOutput(path));
 
-    [Fact]
-    public void KeepsProjectsThatLiveUnderADirectoryNamedBin()
+    [Theory]
+    // Both separator styles, on whichever platform the tests happen to run: analyzing a Windows
+    // project from a Linux container or CI runner is ordinary, and the answer must not change.
+    [InlineData(@"C:\bin\Sales\App.Module", @"C:\bin\Sales\App.Module\BusinessObjects\Invoice.cs", @"C:\bin\Sales\App.Module\bin\Debug\App.dll")]
+    [InlineData("/srv/bin/sales/App.Module", "/srv/bin/sales/App.Module/BusinessObjects/Invoice.cs", "/srv/bin/sales/App.Module/obj/Debug/App.g.cs")]
+    public void KeepsProjectsThatLiveUnderADirectoryNamedBin(string root, string source, string output)
     {
         // Build output is always below the project root. A "bin" above it is somebody's folder
         // name, and skipping those files would report an application with nothing in it.
-        const string root = @"C:\bin\Sales\App.Module";
+        Assert.False(BuildOutputFilter.IsBuildOutput(source, root));
+        Assert.True(BuildOutputFilter.IsBuildOutput(output, root));
+    }
 
-        Assert.False(BuildOutputFilter.IsBuildOutput($@"{root}\BusinessObjects\Invoice.cs", root));
-        Assert.True(BuildOutputFilter.IsBuildOutput($@"{root}\bin\Debug\net10.0\App.dll", root));
+    [Fact]
+    public void DoesNotMistakeASiblingDirectoryForTheRoot()
+    {
+        const string root = @"C:\Solution\App.Module";
+
+        // "App.Module2" starts with the root's text but is not inside it, so the whole path is
+        // examined rather than a bogus relative remainder.
+        Assert.False(BuildOutputFilter.IsBuildOutput(@"C:\Solution\App.Module2\Order.cs", root));
+        Assert.True(BuildOutputFilter.IsBuildOutput(@"C:\Solution\App.Module2\bin\Order.cs", root));
     }
 
     [Fact]

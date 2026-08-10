@@ -58,23 +58,33 @@ public static class BuildOutputFilter
     /// Reduces a path to the part below the analyzed root, or leaves it alone when that cannot be
     /// established.
     /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="Path.GetRelativePath"/>. That method honours only the running
+    /// platform's separator, so on Linux a Windows-style path is one long segment containing no
+    /// directories at all — and analyzing a Windows project from a container or a CI runner is an
+    /// ordinary thing to do. Comparing normalized prefixes gives the same answer everywhere.
+    /// </remarks>
     private static string Relativize(string path, string? rootDirectory)
     {
         if (string.IsNullOrWhiteSpace(rootDirectory))
             return path;
 
-        try
-        {
-            var relative = Path.GetRelativePath(rootDirectory, path);
+        var normalizedPath = Normalize(path);
+        var normalizedRoot = Normalize(rootDirectory);
 
-            // A path outside the root comes back with a leading "..", which tells us nothing about
-            // build output; fall back to examining the whole path in that case.
-            return relative.StartsWith("..", StringComparison.Ordinal) ? path : relative;
-        }
-        catch (ArgumentException)
-        {
-            // Different drive roots, or an unusable path. Examine what we were given.
+        if (normalizedRoot.Length == 0 || normalizedPath.Length <= normalizedRoot.Length)
             return path;
-        }
+
+        if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            return path;
+
+        // Require a separator at the boundary so that a root of "App.Module" does not swallow a
+        // sibling directory named "App.Module2".
+        return normalizedPath[normalizedRoot.Length] == '/'
+            ? normalizedPath[(normalizedRoot.Length + 1)..]
+            : path;
     }
+
+    private static string Normalize(string path) =>
+        path.Replace('\\', '/').TrimEnd('/');
 }
