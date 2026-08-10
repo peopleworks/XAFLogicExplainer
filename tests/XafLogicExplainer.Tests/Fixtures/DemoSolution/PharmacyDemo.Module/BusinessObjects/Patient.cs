@@ -16,21 +16,21 @@ public class Patient : XPCustomObject
 {
     public Patient(Session session) : base(session) { }
 
+    private string _fullName;
     [Size(140)]
     [RuleRequiredField("Patient_Name", DefaultContexts.Save, CustomMessageTemplate = "A patient must have a name.")]
-    private string _fullName;
     public string FullName { get => _fullName; set => SetPropertyValue(nameof(FullName), ref _fullName, value); }
 
     private DateTime _dateOfBirth;
     public DateTime DateOfBirth { get => _dateOfBirth; set => SetPropertyValue(nameof(DateOfBirth), ref _dateOfBirth, value); }
 
+    private string _allergies;
     [Size(400)]
     [Description("Checked before dispensing.")]
-    private string _allergies;
     public string Allergies { get => _allergies; set => SetPropertyValue(nameof(Allergies), ref _allergies, value); }
 
-    [Association("Plan-Patients")]
     private InsurancePlan _plan;
+    [Association("Plan-Patients")]
     public InsurancePlan Plan { get => _plan; set => SetPropertyValue(nameof(Plan), ref _plan, value); }
 
     [Association("Patient-Prescriptions")]

@@ -16,8 +16,8 @@ public class ProductCategory : XPCustomObject
 {
     public ProductCategory(Session session) : base(session) { }
 
-    [Size(80)]
     private string _name;
+    [Size(80)]
     public string Name { get => _name; set => SetPropertyValue(nameof(Name), ref _name, value); }
 
     [Association("Category-Products")]

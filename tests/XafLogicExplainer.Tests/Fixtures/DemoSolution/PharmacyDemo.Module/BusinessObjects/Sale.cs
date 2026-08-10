@@ -18,9 +18,9 @@ public class Sale : XPCustomObject
 {
     public Sale(Session session) : base(session) { }
 
+    private string _number;
     [Size(30)]
     [RuleRequiredField("Sale_Number", DefaultContexts.Save, CustomMessageTemplate = "Every sale needs a number.")]
-    private string _number;
     public string Number { get => _number; set => SetPropertyValue(nameof(Number), ref _number, value); }
 
     private DateTime _soldOn;
@@ -29,13 +29,13 @@ public class Sale : XPCustomObject
     private bool _isVoided;
     public bool IsVoided { get => _isVoided; set => SetPropertyValue(nameof(IsVoided), ref _isVoided, value); }
 
-    [Association("Patient-Sales")]
     private Patient _patient;
+    [Association("Patient-Sales")]
     public Patient Patient { get => _patient; set => SetPropertyValue(nameof(Patient), ref _patient, value); }
 
+    private Pharmacist _pharmacist;
     [Association("Pharmacist-Sales")]
     [DataSourceCriteria("IsOnDuty = True")]
-    private Pharmacist _pharmacist;
     public Pharmacist Pharmacist { get => _pharmacist; set => SetPropertyValue(nameof(Pharmacist), ref _pharmacist, value); }
 
     [Association("Sale-Lines"), Aggregated]

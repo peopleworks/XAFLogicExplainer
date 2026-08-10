@@ -17,30 +17,30 @@ public class Product : XPCustomObject
 {
     public Product(Session session) : base(session) { }
 
+    private string _name;
     [Size(160)]
     [RuleRequiredField("Product_Name", DefaultContexts.Save, CustomMessageTemplate = "A product must have a name.")]
-    private string _name;
     public string Name { get => _name; set => SetPropertyValue(nameof(Name), ref _name, value); }
 
+    private string _barcode;
     [Size(32)]
     [Indexed(Unique = true)]
-    private string _barcode;
     public string Barcode { get => _barcode; set => SetPropertyValue(nameof(Barcode), ref _barcode, value); }
 
     private decimal _unitPrice;
     public decimal UnitPrice { get => _unitPrice; set => SetPropertyValue(nameof(UnitPrice), ref _unitPrice, value); }
 
-    [Description("Cannot be dispensed without a prescription on file.")]
     private bool _requiresPrescription;
+    [Description("Cannot be dispensed without a prescription on file.")]
     public bool RequiresPrescription { get => _requiresPrescription; set => SetPropertyValue(nameof(RequiresPrescription), ref _requiresPrescription, value); }
 
-    [Association("Category-Products")]
     private ProductCategory _category;
+    [Association("Category-Products")]
     public ProductCategory Category { get => _category; set => SetPropertyValue(nameof(Category), ref _category, value); }
 
+    private Supplier _supplier;
     [Association("Supplier-Products")]
     [DataSourceCriteria("IsPreferred = True")]
-    private Supplier _supplier;
     public Supplier Supplier { get => _supplier; set => SetPropertyValue(nameof(Supplier), ref _supplier, value); }
 
     [Association("Product-Batches"), Aggregated]

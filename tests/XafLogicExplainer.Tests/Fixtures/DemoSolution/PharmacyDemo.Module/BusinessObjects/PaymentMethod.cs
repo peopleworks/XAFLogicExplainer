@@ -16,8 +16,8 @@ public class PaymentMethod : XPCustomObject
 {
     public PaymentMethod(Session session) : base(session) { }
 
-    [Size(60)]
     private string _name;
+    [Size(60)]
     public string Name { get => _name; set => SetPropertyValue(nameof(Name), ref _name, value); }
 
     private bool _requiresAuthorization;

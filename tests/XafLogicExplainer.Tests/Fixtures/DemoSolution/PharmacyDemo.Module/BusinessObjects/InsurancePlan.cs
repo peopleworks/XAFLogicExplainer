@@ -16,12 +16,12 @@ public class InsurancePlan : XPCustomObject
 {
     public InsurancePlan(Session session) : base(session) { }
 
-    [Size(120)]
     private string _name;
+    [Size(120)]
     public string Name { get => _name; set => SetPropertyValue(nameof(Name), ref _name, value); }
 
-    [Description("Share of the price the insurer pays.")]
     private decimal _coveragePercent;
+    [Description("Share of the price the insurer pays.")]
     public decimal CoveragePercent { get => _coveragePercent; set => SetPropertyValue(nameof(CoveragePercent), ref _coveragePercent, value); }
 
     [Association("Plan-Patients")]

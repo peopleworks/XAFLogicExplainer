@@ -188,4 +188,36 @@ public class ExtractionTests
         // Change detection depends on this being deterministic across runs of the same source.
         Assert.False(string.IsNullOrWhiteSpace(SampleProjects.Xpo.SourceHash));
     }
+
+    // -------------------------------------------------- attributes on the property
+
+    [Fact]
+    public void ReadsAttributesFromThePropertyTheyDescribe()
+    {
+        // XPO maps properties; the backing field is an implementation detail. Every constraint an
+        // XAF developer writes therefore sits on the property, and reading anywhere else silently
+        // reports an application as having no rules and no relationships.
+        var sale = SampleProjects.Demo.Entities.Single(e => e.ClassName == "Sale");
+
+        var number = sale.Properties.Single(p => p.Name == "Number");
+        Assert.Equal(30, number.Size);
+
+        var pharmacist = sale.Properties.Single(p => p.Name == "Pharmacist");
+        Assert.Equal("IsOnDuty = True", pharmacist.DataSourceCriteria);
+
+        Assert.Contains(sale.Relationships, r => r.RelatedEntity == "Patient");
+    }
+
+    [Fact]
+    public void TheDemoApplicationKeepsItsShape()
+    {
+        // The demo is the published showcase: the map, the site screenshots and the README all
+        // render it. It once lost half its relationships to a fixture edit and every test still
+        // passed, so its shape is pinned here rather than left to be noticed by eye.
+        var demo = SampleProjects.Demo;
+
+        Assert.Equal(14, demo.Entities.Count);
+        Assert.Equal(24, demo.Entities.Sum(e => e.Relationships.Count));
+        Assert.Equal(9, demo.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count));
+    }
 }

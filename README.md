@@ -66,6 +66,18 @@ tool never links against DevExpress assemblies:
 - **Navigation** — the groups and items your users actually see.
 - **Model Editor (`.xafml`)** — the customizations that exist *only* in XML and are invisible to
   anyone reading your C#. Module and platform files are merged the way XAF merges them.
+- **Custom property and list editors** — including the JavaScript they cannot work without, and
+  built-in editors reconfigured at run time through `View.CustomizeViewItemControl<T>()`. These
+  live in the platform project *beside* the module, so nobody reading the business objects meets
+  them.
+- **Version-gated migrations** — the `CurrentDBVersion < new Version(…)` blocks in your updater.
+  Each ran once, on somebody's production database, and is the only explanation for data the
+  current code cannot account for.
+
+The last two are the reason an agent that has read every business class can still be confidently
+wrong about the application:
+
+<img alt="The custom editors section of a generated explainer: a barcode scanner property editor with what it renders, the alias XAF matches on, its base type and the JavaScript file it depends on, followed by built-in editors a controller reconfigures at run time." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png">
 
 ## Quick start
 
@@ -174,9 +186,15 @@ knowledge that leaves when they do.
 does not touch fades; purple means deleting the parent deletes the child.</sub>
 
 Alongside it: every entity and what each property is, every action with the code it runs,
-validation with the message the user will actually see, the Model Editor settings that appear in no
-C# file, and **an index of every criteria expression in the application** — a dialect that is
-neither SQL nor C# and is otherwise collected nowhere.
+validation with the message the user will actually see, and the Model Editor settings that appear
+in no C# file.
+
+<img alt="An entity card from a generated explainer: every property with its type, the calculated ones marked with the expression behind each, and the relationships whose parent owns the child marked as owned." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-entity.png">
+
+And **an index of every criteria expression in the application** — a dialect that is neither SQL
+nor C#, gathered from attributes spread across the source and otherwise collected nowhere:
+
+<img alt="The criteria index of a generated explainer: appearance rules, validation and lookup filters in one table, each with the entity and attribute it came from." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-criteria.png">
 
 Try it on the sample without touching your own code:
 

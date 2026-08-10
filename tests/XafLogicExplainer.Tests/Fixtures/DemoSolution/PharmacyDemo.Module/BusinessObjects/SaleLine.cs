@@ -24,8 +24,8 @@ public class SaleLine : XPCustomObject
     private decimal _unitPrice;
     public decimal UnitPrice { get => _unitPrice; set => SetPropertyValue(nameof(UnitPrice), ref _unitPrice, value); }
 
-    [Association("Sale-Lines")]
     private Sale _sale;
+    [Association("Sale-Lines")]
     public Sale Sale { get => _sale; set => SetPropertyValue(nameof(Sale), ref _sale, value); }
 
     [PersistentAlias("Quantity * UnitPrice")]

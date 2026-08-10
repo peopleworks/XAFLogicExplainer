@@ -115,6 +115,8 @@ internal static class HtmlExplainerStyles
         }
         .card__head { display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; }
         .card__name { font-family: var(--mono); font-size: 1.02rem; font-weight: 650; color: var(--yours); }
+        /* A few cards are titled by a sentence rather than by a symbol from the codebase. */
+        .card__name--prose { font-family: var(--sans); font-size: 1.06rem; }
         .card__meta { font-size: .82rem; color: var(--faint); }
         .card__desc { margin: .5rem 0 0; color: var(--mute); font-size: .92rem; }
 
@@ -133,7 +135,12 @@ internal static class HtmlExplainerStyles
         th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
         th { font-family: var(--mono); font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
         td.mono, .mono { font-family: var(--mono); }
-        td .t { color: var(--mute); }
+        /* A cross-reference points at another card on this page, so it is named in the colour that
+           card is titled in. The browser default is a blue the rest of the page never uses. */
+        td a { color: var(--yours); text-decoration: none; border-bottom: 1px solid transparent; }
+        td a:hover { border-bottom-color: currentColor; }
+        /* A note explaining a cell is prose, even when the cell it explains is an identifier. */
+        td .t { color: var(--mute); font-family: var(--sans); }
 
         details { margin-top: .9rem; }
         summary { cursor: pointer; font-size: .86rem; color: var(--mute); }

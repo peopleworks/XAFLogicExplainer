@@ -74,6 +74,16 @@ Everything that lives *outside* the business classes.
 - Explicit interface implementations were extracted as separate properties, so
   `object ISecurityUserLoginInfo.User => User;` put a second `User` row, typed `object`, into
   every rendering — reading as a modelling mistake the team had not made.
+- Code shown in the explainer kept the indentation it had in its source file. Roslyn hands back
+  text starting where the node starts, so a method body opened flush left and then jumped eight
+  columns.
+- The demo application attributed its backing fields rather than its properties, which is not how
+  XPO is written — DevExpress's own persistent classes attribute the property. Half its
+  relationships and rules were therefore invisible, and the map, the README and the site all
+  rendered an application simpler than the one in the fixture. Its shape is now pinned by a test,
+  since the previous suite passed either way.
+- Cross-references between entities in the explainer were rendered in the browser's default link
+  blue, a colour the rest of the page never uses.
 
 ## [0.10.1] — 2026-08-10
 

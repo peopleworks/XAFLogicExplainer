@@ -277,6 +277,11 @@ code {
 .grid { display: grid; gap: 1rem; margin-top: 2.6rem; }
 .grid--3 { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .grid--2 { grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }
+/* Four cards pack as 3 + 1 at this measure, and the orphan reads as a mistake. Wider tracks
+   force them to pair. */
+/* min() so the track can still shrink below 24rem on a phone; a bare minmax floor cannot, and
+   pushes the whole page sideways. */
+.grid--pairs { grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr)); }
 
 .card p { margin: 0; font-size: .95rem; max-width: none; }
 .card__tag {
@@ -589,6 +594,7 @@ footer p { max-width: 44rem; }
 <nav class="nav" aria-label="Main">
   <span class="nav__brand"><span class="nav__mark"></span>XAF Logic Explainer</span>
   <a href="#gap" class="nav__hideable">The gap</a>
+  <a href="#hidden" class="nav__hideable">Hidden behaviour</a>
   <a href="#output" class="nav__hideable">Output</a>
   <a href="#mcp" class="nav__hideable">MCP</a>
   <a href="#explainer" class="nav__hideable">Explainer</a>
@@ -846,6 +852,66 @@ footer p { max-width: 44rem; }
     </figure>
   </section>
 
+  <!-- ---------------------------------------------------------- hidden -->
+  <section id="hidden" class="reveal">
+    <p class="eyebrow">The part nobody reads</p>
+    <h2>An XAF application keeps<br>its secrets outside the classes.</h2>
+    <p>
+      Read every business object in an XAF solution and you will still be wrong about it. Some of
+      what the application does is not in C# at all, and the rest is in files nobody opens when
+      they are trying to understand a domain.
+    </p>
+
+    <div class="grid grid--pairs">
+      <div class="card card--lit">
+        <h3>Screens that ignore their type</h3>
+        <p>A <code>string</code> that renders as a barcode scanner. The custom editor lives in the
+           platform project, beside the module — so nobody reading the business objects ever meets
+           it, and neither does an agent.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>Behaviour in JavaScript</h3>
+        <p>The file the editor cannot work without, in neither C# nor XML. It is why a control
+           breaks when somebody renames an asset, and why nothing in the codebase explains it.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>Editors changed at run time</h3>
+        <p>There is no custom class to find: a controller reaches into a built-in editor's
+           component model. Nothing on the entity, and nothing in the Model Editor, mentions it.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>Migrations that ran once</h3>
+        <p>A block guarded by <code>CurrentDBVersion</code> ran on somebody's production database
+           and never again. Reading today's code cannot recover it — so an agent asked why a column
+           holds what it holds will invent a reason.</p>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png"
+             alt="The custom editors section: a barcode scanner property editor, what it renders, the alias XAF matches on, its base type, and the JavaScript file it depends on — followed by a table of built-in editors reconfigured at run time by a controller."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        Read from the platform project. The alias constant is declared in the module and resolved
+        across the solution, because reading either project alone resolves nothing.
+      </figcaption>
+    </figure>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-migrations.png"
+             alt="The migrations section: two version-gated updater blocks, each with the version it upgrades to, the schema phase it ran in, the condition, the methods it calls and the code itself."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        Including <strong>the comment above the block</strong> — usually the only surviving record
+        of why, and the question anyone reading a migration actually has.
+      </figcaption>
+    </figure>
+  </section>
+
   <!-- ---------------------------------------------------------- output -->
   <section id="output" class="reveal">
     <p class="eyebrow">The output</p>
@@ -1007,6 +1073,30 @@ footer p { max-width: 44rem; }
       criteria expression in the application</strong> — a dialect that is neither SQL nor C# and is
       otherwise collected nowhere.
     </p>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-entity.png"
+             alt="An entity card: every property with its type, which ones are calculated and the expression behind each, and the relationships with the ones whose parent owns the child marked as owned."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        Purple is anything computed rather than stored — the properties that have no column and
+        cannot be searched for in the database.
+      </figcaption>
+    </figure>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-criteria.png"
+             alt="The criteria index: every criteria expression in the application in one table, each with the attribute and entity it came from."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        Appearance rules, validation and lookup filters, collected from attributes spread across
+        the source — the working examples an agent needs to write a criteria string that parses.
+      </figcaption>
+    </figure>
   </section>
 
   <!-- --------------------------------------------------------- catalog -->

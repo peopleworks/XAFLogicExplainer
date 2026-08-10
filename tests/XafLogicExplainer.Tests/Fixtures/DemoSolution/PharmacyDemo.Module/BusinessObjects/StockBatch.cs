@@ -16,8 +16,8 @@ public class StockBatch : XPCustomObject
 {
     public StockBatch(Session session) : base(session) { }
 
-    [Size(40)]
     private string _lotNumber;
+    [Size(40)]
     public string LotNumber { get => _lotNumber; set => SetPropertyValue(nameof(LotNumber), ref _lotNumber, value); }
 
     private DateTime _expiresOn;
@@ -26,7 +26,7 @@ public class StockBatch : XPCustomObject
     private int _remainingUnits;
     public int RemainingUnits { get => _remainingUnits; set => SetPropertyValue(nameof(RemainingUnits), ref _remainingUnits, value); }
 
-    [Association("Product-Batches")]
     private Product _product;
+    [Association("Product-Batches")]
     public Product Product { get => _product; set => SetPropertyValue(nameof(Product), ref _product, value); }
 }

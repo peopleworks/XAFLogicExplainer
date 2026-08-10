@@ -17,8 +17,8 @@ public class Prescription : XPCustomObject
 {
     public Prescription(Session session) : base(session) { }
 
-    [Size(30)]
     private string _reference;
+    [Size(30)]
     public string Reference { get => _reference; set => SetPropertyValue(nameof(Reference), ref _reference, value); }
 
     private DateTime _issuedOn;
@@ -30,12 +30,12 @@ public class Prescription : XPCustomObject
     private bool _isDispensed;
     public bool IsDispensed { get => _isDispensed; set => SetPropertyValue(nameof(IsDispensed), ref _isDispensed, value); }
 
-    [Association("Patient-Prescriptions")]
     private Patient _patient;
+    [Association("Patient-Prescriptions")]
     public Patient Patient { get => _patient; set => SetPropertyValue(nameof(Patient), ref _patient, value); }
 
-    [Association("Prescriber-Prescriptions")]
     private Prescriber _prescriber;
+    [Association("Prescriber-Prescriptions")]
     public Prescriber Prescriber { get => _prescriber; set => SetPropertyValue(nameof(Prescriber), ref _prescriber, value); }
 
     [Association("Prescription-Lines"), Aggregated]

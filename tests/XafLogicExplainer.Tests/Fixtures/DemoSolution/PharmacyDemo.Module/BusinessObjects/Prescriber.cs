@@ -16,12 +16,12 @@ public class Prescriber : XPCustomObject
 {
     public Prescriber(Session session) : base(session) { }
 
-    [Size(140)]
     private string _fullName;
+    [Size(140)]
     public string FullName { get => _fullName; set => SetPropertyValue(nameof(FullName), ref _fullName, value); }
 
-    [Size(40)]
     private string _licenceNumber;
+    [Size(40)]
     public string LicenceNumber { get => _licenceNumber; set => SetPropertyValue(nameof(LicenceNumber), ref _licenceNumber, value); }
 
     [Association("Prescriber-Prescriptions")]

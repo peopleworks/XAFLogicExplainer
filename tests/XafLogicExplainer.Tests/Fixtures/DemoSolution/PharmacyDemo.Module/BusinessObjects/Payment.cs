@@ -15,18 +15,18 @@ public class Payment : XPCustomObject
 {
     public Payment(Session session) : base(session) { }
 
-    [Size(40)]
     private string _reference;
+    [Size(40)]
     public string Reference { get => _reference; set => SetPropertyValue(nameof(Reference), ref _reference, value); }
 
     private decimal _amount;
     public decimal Amount { get => _amount; set => SetPropertyValue(nameof(Amount), ref _amount, value); }
 
-    [Association("Method-Payments")]
     private PaymentMethod _method;
+    [Association("Method-Payments")]
     public PaymentMethod Method { get => _method; set => SetPropertyValue(nameof(Method), ref _method, value); }
 
-    [Association("Sale-Payments")]
     private Sale _sale;
+    [Association("Sale-Payments")]
     public Sale Sale { get => _sale; set => SetPropertyValue(nameof(Sale), ref _sale, value); }
 }

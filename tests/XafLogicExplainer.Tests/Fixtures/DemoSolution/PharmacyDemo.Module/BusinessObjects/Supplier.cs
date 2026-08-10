@@ -16,17 +16,17 @@ public class Supplier : XPCustomObject
 {
     public Supplier(Session session) : base(session) { }
 
+    private string _name;
     [Size(140)]
     [RuleRequiredField("Supplier_Name", DefaultContexts.Save, CustomMessageTemplate = "A supplier must have a name.")]
-    private string _name;
     public string Name { get => _name; set => SetPropertyValue(nameof(Name), ref _name, value); }
 
-    [Size(20)]
     private string _taxId;
+    [Size(20)]
     public string TaxId { get => _taxId; set => SetPropertyValue(nameof(TaxId), ref _taxId, value); }
 
-    [Description("Preferred suppliers are offered first when restocking.")]
     private bool _isPreferred;
+    [Description("Preferred suppliers are offered first when restocking.")]
     public bool IsPreferred { get => _isPreferred; set => SetPropertyValue(nameof(IsPreferred), ref _isPreferred, value); }
 
     [Association("Supplier-Products")]

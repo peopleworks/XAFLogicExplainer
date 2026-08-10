@@ -346,7 +346,7 @@ public sealed class HtmlExplainerGenerator
 
                 if (!string.IsNullOrWhiteSpace(action.ExecuteMethodBody))
                 {
-                    sb.AppendLine($"    <details><summary>What it runs</summary><pre><code>{E(Cap(action.ExecuteMethodBody))}</code></pre></details>");
+                    sb.AppendLine($"    <details><summary>What it runs</summary><pre><code>{E(Snippet(action.ExecuteMethodBody))}</code></pre></details>");
                 }
             }
 
@@ -356,7 +356,7 @@ public sealed class HtmlExplainerGenerator
                 sb.AppendLine($"    <details><summary>Helper methods ({helpers.Count})</summary>");
                 foreach (var method in helpers)
                 {
-                    sb.AppendLine($"      <pre><code>{E(method.ReturnType)} {E(method.Name)}({E(string.Join(", ", method.Parameters))})\n{E(Cap(method.Body))}</code></pre>");
+                    sb.AppendLine($"      <pre><code>{E(method.ReturnType)} {E(method.Name)}({E(string.Join(", ", method.Parameters))})\n{E(Snippet(method.Body))}</code></pre>");
                 }
                 sb.AppendLine("    </details>");
             }
@@ -593,7 +593,7 @@ public sealed class HtmlExplainerGenerator
         if (customized.Count > 0)
         {
             sb.AppendLine("  <article class=\"card\" data-search=\"customized built-in editors controllers\">");
-            sb.AppendLine("    <div class=\"card__head\"><span class=\"card__name\">Built-in editors reconfigured at run time</span></div>");
+            sb.AppendLine("    <div class=\"card__head\"><span class=\"card__name card__name--prose\">Built-in editors reconfigured at run time</span></div>");
             sb.AppendLine("    <p class=\"card__desc\">No custom editor class exists for these. A controller reaches into a built-in editor's component model, so nothing on the entity or in the Model Editor mentions it.</p>");
             sb.AppendLine("    <table><thead><tr><th>Controller</th><th>Changes</th></tr></thead><tbody>");
             foreach (var controller in customized)
@@ -697,7 +697,7 @@ public sealed class HtmlExplainerGenerator
             sb.AppendLine("    </tbody></table>");
 
             if (!string.IsNullOrWhiteSpace(migration.Code))
-                sb.AppendLine($"    <details><summary>What it did</summary><pre><code>{E(Cap(migration.Code))}</code></pre></details>");
+                sb.AppendLine($"    <details><summary>What it did</summary><pre><code>{E(Snippet(migration.Code))}</code></pre></details>");
 
             sb.AppendLine("  </article>");
         }
@@ -747,6 +747,47 @@ public sealed class HtmlExplainerGenerator
         code.Length <= MaxCodeLength
             ? code
             : code[..MaxCodeLength] + "\n\n// … truncated; read the source file for the rest.";
+
+    /// <summary>
+    /// Removes the indentation the snippet had in its source file.
+    /// </summary>
+    /// <remarks>
+    /// Roslyn hands back the node's text, which starts where the node starts — so the first line
+    /// carries no indentation while every line under it still carries the file's. Rendered as-is,
+    /// a two-line method body opens flush left and then jumps eight columns.
+    /// <para>
+    /// The first line is therefore excluded from the measurement when it is already flush left:
+    /// including it would pin the common indent at zero and dedent nothing.
+    /// </para>
+    /// </remarks>
+    private static string Dedent(string code)
+    {
+        var lines = code.Replace("\r\n", "\n").Split('\n');
+        if (lines.Length < 2)
+        {
+            return code.Trim();
+        }
+
+        var measured = lines.Skip(lines[0].Length > 0 && !char.IsWhiteSpace(lines[0][0]) ? 1 : 0)
+                            .Where(line => line.Trim().Length > 0)
+                            .ToList();
+        if (measured.Count == 0)
+        {
+            return code.Trim();
+        }
+
+        var common = measured.Min(line => line.Length - line.TrimStart().Length);
+
+        return string.Join('\n', lines.Select(line =>
+            line.Length >= common && line[..common].Trim().Length == 0
+                ? line[common..].TrimEnd()
+                : line.TrimEnd())).Trim('\n');
+    }
+
+    /// <summary>
+    /// Prepares a source snippet for display: source indentation removed, length capped.
+    /// </summary>
+    private static string Snippet(string code) => Cap(Dedent(code));
 
     /// <summary>
     /// Escapes text for HTML.

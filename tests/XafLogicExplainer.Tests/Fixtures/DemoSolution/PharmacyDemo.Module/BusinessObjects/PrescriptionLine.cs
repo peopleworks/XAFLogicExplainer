@@ -15,14 +15,14 @@ public class PrescriptionLine : XPCustomObject
 {
     public PrescriptionLine(Session session) : base(session) { }
 
-    [DataSourceCriteria("RequiresPrescription = True")]
     private Product _product;
+    [DataSourceCriteria("RequiresPrescription = True")]
     public Product Product { get => _product; set => SetPropertyValue(nameof(Product), ref _product, value); }
 
     private int _quantity;
     public int Quantity { get => _quantity; set => SetPropertyValue(nameof(Quantity), ref _quantity, value); }
 
-    [Association("Prescription-Lines")]
     private Prescription _prescription;
+    [Association("Prescription-Lines")]
     public Prescription Prescription { get => _prescription; set => SetPropertyValue(nameof(Prescription), ref _prescription, value); }
 }
