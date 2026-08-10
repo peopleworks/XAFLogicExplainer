@@ -381,6 +381,123 @@ td { color: var(--ink-muted); }
 tr.is-us td { color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, transparent); }
 tr.is-us td:first-child { font-weight: 620; }
 
+/* -------------------------------------------------- the explanation demo */
+.demo {
+  margin-top: 3rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, #000 34%, var(--bg-soft));
+}
+:root[data-theme="light"] .demo { background: #0d1117; border-color: #222831; }
+
+.demo__chrome {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid #1e242e;
+  font-family: var(--mono); font-size: .8rem;
+}
+.demo__tab {
+  padding: .75rem 1.1rem;
+  color: #e2e8f0;
+  border-bottom: 2px solid var(--accent-3);
+  background: rgba(255,255,255,.03);
+}
+.demo__path { padding: .75rem 1.1rem; color: #4b5563; }
+.demo__path b { color: #6b7684; font-weight: 400; }
+
+.demo__code {
+  margin: 0; padding: .9rem 0 1.1rem;
+  font-family: var(--mono); font-size: clamp(.72rem, 1.55vw, .85rem);
+  line-height: 2;
+  color: #cbd5e1;
+  overflow-x: auto;
+}
+.demo__ln { display: block; padding: 0 1.1rem 0 3.4rem; position: relative; white-space: pre; }
+.demo__ln::before {
+  content: attr(data-n);
+  position: absolute; left: 0; width: 2.6rem;
+  text-align: right; color: #3f4855;
+}
+.demo__ln.is-active {
+  background: rgba(56,189,248,.07);
+  box-shadow: inset 2px 0 0 var(--accent-3);
+}
+
+/* Syntax. Deliberately few colours: this is a diagram of an idea, not a theme showcase. */
+.k  { color: #c084fc; }              /* keyword */
+.a  { color: #7dd3fc; }              /* attribute */
+.s  { color: #fbbf24; }              /* string */
+.ty { color: #5eead4; }              /* type */
+.cm { color: #4b5563; font-style: italic; }
+.demo__target {
+  color: #fbbf24;
+  background: rgba(56,189,248,.16);
+  box-shadow: 0 0 0 1px rgba(56,189,248,.45);
+  border-radius: 3px;
+}
+
+/* The card sits in the flow, parting the lines, rather than floating over them: no absolute
+   positioning to keep in sync, and it cannot cover the code it is explaining. */
+.demo__card {
+  margin: .5rem 1.1rem .1rem 3.4rem;
+  padding: 1rem 1.1rem .9rem;
+  border: 1px solid #232b36;
+  border-radius: 10px;
+  background: rgba(148,163,184,.07);
+  backdrop-filter: blur(6px);
+  max-width: 34rem;
+  position: relative;
+  font-family: var(--sans);
+  font-size: .88rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+.demo__card p { margin: 0; color: inherit; max-width: none; }
+.demo__card p + p { margin-top: .5rem; }
+.demo__card code {
+  background: rgba(56,189,248,.14); color: #7dd3fc;
+  padding: .08em .34em; border-radius: 3px; font-size: .92em;
+}
+.demo__card .warn { color: #fca5a5; }
+.demo__card .warn code { background: rgba(248,113,113,.14); color: #fca5a5; }
+
+/* The connector. Anchored by a monospace column count, which is exact in a fixed-width font and
+   survives any resize -- no measuring, nothing to recompute. */
+.demo__link {
+  position: absolute;
+  left: calc(var(--col, 24) * 1ch);
+  bottom: -34px;
+  width: 90px; height: 36px;
+  overflow: visible;
+  pointer-events: none;
+}
+.demo__link path {
+  fill: none; stroke: var(--accent-3); stroke-width: 1.5; stroke-linecap: round;
+  stroke-dasharray: 120; stroke-dashoffset: 120;
+}
+.demo.is-in .demo__link path { animation: draw .8s ease .25s forwards; }
+@media (prefers-reduced-motion: reduce) { .demo__link path { stroke-dashoffset: 0; animation: none; } }
+
+.demo__toggle { display: flex; gap: .4rem; margin-top: .9rem; }
+.demo__toggle button {
+  font-family: var(--mono); font-size: .74rem;
+  padding: .3rem .8rem;
+  border-radius: 999px;
+  border: 1px solid #2b3441;
+  background: transparent;
+  color: #6b7684;
+  cursor: pointer;
+  transition: color .16s, border-color .16s, background .16s;
+}
+.demo__toggle button:hover { color: #cbd5e1; }
+.demo__toggle button[aria-pressed="true"] {
+  color: var(--accent-3);
+  border-color: rgba(56,189,248,.5);
+  background: rgba(56,189,248,.1);
+}
+.demo[data-mode="guess"] .demo__with,
+.demo[data-mode="known"] .demo__guess { display: none; }
+
 /* ----------------------------------------------------------------- figures */
 .figure { margin: 3rem 0 0; }
 .figure svg { display: block; width: 100%; height: auto; }
@@ -499,6 +616,57 @@ footer p { max-width: 44rem; }
       <a class="btn btn--primary" href="#install">Get started</a>
       <a class="btn" href="https://github.com/peopleworks/XAFLogicExplainer">View on GitHub&nbsp;↗</a>
     </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ demo -->
+  <section id="demo" class="reveal">
+    <p class="eyebrow">The difference, in one line</p>
+    <h2>Same code.<br>Two very different answers.</h2>
+    <p>
+      A real attribute from a real XAF entity. Ask an agent what it does with and without the
+      extraction, and the gap stops being abstract.
+    </p>
+
+    <div class="demo reveal" data-mode="guess">
+      <div class="demo__chrome">
+        <span class="demo__tab">Order.cs</span>
+        <span class="demo__path">MyApp.Module <b>/</b> BusinessObjects <b>/</b> Order.cs</span>
+      </div>
+
+      <pre class="demo__code"><span class="demo__ln" data-n="12"><span class="a">[DefaultClassOptions]</span></span><span class="demo__ln" data-n="13"><span class="k">public class</span> <span class="ty">Order</span> : <span class="ty">XPCustomObject</span></span><span class="demo__ln" data-n="14">{</span><span class="demo__ln" data-n="15">    <span class="a">[Association</span>(<span class="s">"Customer-Orders"</span>)<span class="a">]</span></span></pre>
+
+      <div class="demo__card">
+        <div class="demo__guess">
+          <p class="warn"><strong>Without the extraction</strong></p>
+          <p>“It filters the customer lookup. <code>Customer</code> probably has an active flag,
+             so I'll write <code>IsActive = True</code>.”</p>
+          <p class="warn">Confident. Fluent XAF. Wrong — that property does not exist.</p>
+        </div>
+        <div class="demo__with">
+          <p><strong style="color:var(--accent-3)">With the extraction</strong></p>
+          <p>“Filters the <code>Customer</code> lookup to unblocked customers.
+             <code>IsBlocked</code> is a <code>bool</code> on <code>Customer</code>, and this is
+             XAF criteria syntax — neither SQL nor a C# lambda — evaluated by the database.”</p>
+          <p>Read from your source: the property, its type, and the entity it belongs to.</p>
+        </div>
+
+        <div class="demo__toggle" role="group" aria-label="Explanation source">
+          <button type="button" data-mode="guess" aria-pressed="true">guessed</button>
+          <button type="button" data-mode="known" aria-pressed="false">extracted</button>
+        </div>
+
+        <svg class="demo__link" style="--col:24" viewBox="0 0 90 36" aria-hidden="true">
+          <path d="M2,2 C2,22 26,16 26,34"/>
+        </svg>
+      </div>
+
+      <pre class="demo__code" style="padding-top:0"><span class="demo__ln is-active" data-n="16">    <span class="a">[DataSourceCriteria</span>(<span class="demo__target">"IsBlocked = False"</span>)<span class="a">]</span></span><span class="demo__ln" data-n="17">    <span class="k">public</span> <span class="ty">Customer</span> Customer { <span class="k">get</span>; <span class="k">set</span>; }</span><span class="demo__ln" data-n="18"> </span><span class="demo__ln" data-n="19">    <span class="a">[PersistentAlias</span>(<span class="s">"Lines.Sum(LineTotal)"</span>)<span class="a">]</span></span><span class="demo__ln" data-n="20">    <span class="k">public decimal</span> Total => <span class="cm">/* calculated in the database */</span></span><span class="demo__ln" data-n="21">}</span></pre>
+    </div>
+
+    <p style="margin-top:1.6rem" class="footer__note">
+      The extractor never runs your code and never asks a model to guess. It reads the attribute,
+      resolves what the property is, and reports only that.
+    </p>
   </section>
 
   <!-- ------------------------------------------------------------- gap -->
@@ -942,6 +1110,24 @@ footer p { max-width: 44rem; }
 
   revealables.forEach(function (el) { observer.observe(el); });
   terminals.forEach(function (el) { observer.observe(el); });
+})();
+
+// The guessed / extracted toggle. Both explanations are in the markup, so the panel still says
+// something useful with the script disabled -- the CSS only ever hides one of them once a mode
+// is set, and "guess" is the mode the page ships with.
+(function () {
+  document.querySelectorAll('.demo').forEach(function (demo) {
+    var buttons = demo.querySelectorAll('.demo__toggle button');
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        demo.dataset.mode = button.dataset.mode;
+        buttons.forEach(function (other) {
+          other.setAttribute('aria-pressed', String(other === button));
+        });
+      });
+    });
+  });
 })();
 </script>
 
