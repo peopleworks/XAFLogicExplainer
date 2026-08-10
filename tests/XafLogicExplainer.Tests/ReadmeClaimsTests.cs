@@ -18,14 +18,33 @@ namespace XafLogicExplainer.Tests;
 public class ReadmeClaimsTests
 {
     [Fact]
-    public void StatesTheVersionTheBuildActuallyIs()
+    public void StatesTheSameVersionEverywhereItIsWritten()
     {
-        var claimed = Claim(@"\*\*v(\d+\.\d+\.\d+)\.\*\*");
-        var actual = typeof(Core.Analyzers.LogicExtractor).Assembly
-            .GetName().Version!;
+        var assembly = typeof(Core.Analyzers.LogicExtractor).Assembly.GetName().Version!;
+        var actual = $"{assembly.Major}.{assembly.Minor}.{assembly.Build}";
 
-        Assert.Equal($"{actual.Major}.{actual.Minor}.{actual.Build}", claimed);
+        Assert.Equal(actual, Claim(@"\*\*v(\d+\.\d+\.\d+)\.\*\*"));
+
+        // The plugin manifest and the skill carry their own version, and neither is built, packed
+        // or released — nothing has ever forced them to move. Both sat at 0.9.0 through two
+        // releases, telling anyone who installed the plugin they had a version that no longer
+        // existed.
+        foreach (var (file, pattern) in Manifests)
+        {
+            var text = File.ReadAllText(Path.Combine(RepositoryRoot, file));
+            var match = Regex.Match(text, pattern);
+
+            Assert.True(match.Success, $"No version found in {file}.");
+            Assert.Equal(actual, match.Groups[1].Value);
+        }
     }
+
+    private static (string File, string Pattern)[] Manifests =>
+    [
+        ("plugins/xaf-logic-explainer/.claude-plugin/plugin.json", @"""version"": ""(\d+\.\d+\.\d+)"""),
+        ("plugins/xaf-logic-explainer/skills/xaf-application-knowledge/SKILL.md", @"version: ""(\d+\.\d+\.\d+)"""),
+        ("src/XafLogicExplainer.Mcp/.mcp/server.json", @"""version"": ""(\d+\.\d+\.\d+)"""),
+    ];
 
     [Fact]
     public void CountsTheToolsTheMcpServerExposes()
