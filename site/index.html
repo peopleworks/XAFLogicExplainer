@@ -160,6 +160,10 @@ body::after {
 section { padding-block: var(--gap-section); }
 section:first-of-type { padding-top: clamp(7rem, 18vh, 12rem); }
 
+/* The navigation floats over the page, so an anchor jump would otherwise land a heading
+   underneath it. */
+section[id] { scroll-margin-top: 6rem; }
+
 .eyebrow {
   display: flex; align-items: center; gap: .6rem;
   font-family: var(--mono);
@@ -300,8 +304,11 @@ code {
   background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
 }
 .tier__name { font-family: var(--mono); font-size: .84rem; color: var(--ink); }
-.tier__bar { height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--ink) 9%, transparent); overflow: hidden; }
-.tier__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.tier__bar { height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; }
+/* display:block matters. The bar is a grid item and so is blockified for free, but its child is
+   not, and width and height are ignored on an inline box -- which left both bars looking empty
+   and identical, quietly undoing the one comparison this section exists to make. */
+.tier__fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
 .tier__size { font-family: var(--mono); font-size: .8rem; color: var(--ink-faint); white-space: nowrap; }
 .tier__note { font-size: .84rem; color: var(--ink-faint); grid-column: 1 / -1; margin: 0; max-width: none; }
 @media (max-width: 620px) {
