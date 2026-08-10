@@ -1,0 +1,73 @@
+# Publish the MCP server to the official Model Context Protocol registry.
+#
+# No secret and no browser: `login github-oidc` proves ownership of the io.github.peopleworks/*
+# namespace from this workflow's OIDC token, which is why `id-token: write` below is required
+# rather than tidy.
+#
+# The registry additionally verifies that whoever publishes owns the NuGet package, by reading
+# `mcp-name: io.github.peopleworks/xaf-logic-explainer` out of the README inside the published
+# package. That line lives in src/XafLogicExplainer.Mcp/README.md and must not be reworded.
+name: Publish MCP registry
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for github-oidc login
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # This job and the NuGet one both start from `release: published`, so they run in parallel —
+      # and the registry rejects a server whose package it cannot download yet. NuGet's indexes
+      # also lag its API by minutes: a push that returns "Created" is not immediately fetchable.
+      # So wait for the artifact itself rather than assuming the sibling job's success is enough.
+      - name: Wait for the package to be downloadable from NuGet
+        run: |
+          version=$(jq -r '.packages[0].version' src/XafLogicExplainer.Mcp/.mcp/server.json)
+          url="https://api.nuget.org/v3-flatcontainer/xaflogicexplainer.mcp/$version/xaflogicexplainer.mcp.$version.nupkg"
+          echo "Waiting for $url"
+
+          for attempt in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+            if [ "$code" = "200" ]; then
+              echo "Available after $attempt attempt(s)."
+              exit 0
+            fi
+            echo "  attempt $attempt: HTTP $code"
+            sleep 30
+          done
+
+          echo "::error::XafLogicExplainer.Mcp $version never became downloadable from NuGet."
+          echo "The registry validates ownership by reading the package, so publishing would fail."
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          tag=$(curl -s https://api.github.com/repos/modelcontextprotocol/registry/releases/latest | jq -r .tag_name)
+          echo "mcp-publisher $tag"
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/download/$tag/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          ./mcp-publisher --version || true
+
+      - name: Log in with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      # `publish` reads server.json from the working directory.
+      - name: Publish
+        working-directory: src/XafLogicExplainer.Mcp/.mcp
+        run: $GITHUB_WORKSPACE/mcp-publisher publish
+
+      - name: Confirm the listing
+        run: |
+          name="io.github.peopleworks/xaf-logic-explainer"
+          curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=$name" \
+            | jq -r '.servers[]? | "\(.name)  \(.version)"' || true
