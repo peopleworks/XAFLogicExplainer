@@ -124,12 +124,41 @@ Ask for something that isn't there and the answer is the useful one:
 teaches how XAF works; this teaches what your application does. An agent with only the first will
 write correct XAF against entities you do not have.
 
+## Optional: tell your code apart from DevExpress's
+
+Extraction reads your source without knowing anything about the framework it is written against,
+which leaves one question unanswerable: is `DeleteObjectsViewController` something your team wrote,
+or something DevExpress ships? Without an answer, generated documentation presents framework
+behavior and your own logic as the same thing.
+
+If you have a DevExpress licence:
+
+```bash
+xaflogic catalog build
+```
+
+That reads **your own installation** and records what XAF itself provides — attributes, controllers,
+model interfaces and modules, with the official summaries and documentation links DevExpress ships.
+On DevExpress 26.1 that is around 850 framework types.
+
+Extraction then picks it up automatically and can say things it otherwise could not:
+
+- *"`ArchiveController` extends the built-in `DeleteObjectsViewController`"* — you are changing how
+  deletion works application-wide, not adding a feature beside it.
+- *"`[AuditedByFinance]` is not an XAF or .NET attribute"* — your team invented it, so its meaning
+  lives in this codebase and in no documentation anywhere.
+
+The catalog is written to `~/.xaflogic/catalog/`, **never into your repository**: it is derived from
+licensed software. Everything works without it — it only sharpens the output. See
+[NOTICE.md](NOTICE.md).
+
 ### Commands
 
 | Command | What it does |
 | --- | --- |
 | `agents` | **Write `AGENTS.md` / `CLAUDE.md` / Copilot instructions for your agent** |
 | `mcp` | **Run as an MCP server so agents can query the app live** |
+| `catalog` | Build the DevExpress ground-truth catalog (`build`, `status`) |
 | `extract` | Read the project, write Markdown + JSON locally |
 | `diff` | Compare against the previous extraction and report what changed |
 | `status` | Show the change-detection hash and whether a re-extract is needed |
@@ -163,8 +192,8 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 7 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **107 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
-| 🚧 | Optional DevExpress ground-truth catalog, generated locally by licensees |
+| ✅ | **129 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the
 destination everything was built around. The outputs that matter most need no server at all.

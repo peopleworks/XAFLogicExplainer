@@ -20,6 +20,9 @@
     <ProjectReference Include="..\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
     <ProjectReference Include="..\XafLogicExplainer.CopilotSync\XafLogicExplainer.CopilotSync.csproj" />
     <ProjectReference Include="..\XafLogicExplainer.Mcp\XafLogicExplainer.Mcp.csproj" />
+    <!-- So `xaflogic catalog build` works without installing a second tool. The standalone
+         xafcatalog executable remains available for scripting. -->
+    <ProjectReference Include="..\..\tools\XafLogicExplainer.DxCatalog\XafLogicExplainer.DxCatalog.csproj" />
   </ItemGroup>
 
   <ItemGroup>

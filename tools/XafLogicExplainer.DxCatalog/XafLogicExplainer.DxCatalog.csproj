@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Generates the XAF ground-truth catalog from a DevExpress installation the user already
+    licenses. It reads assembly metadata and the XML documentation DevExpress ships; it never
+    executes DevExpress code, and its output is written outside this repository.
+
+    Nothing here depends on DevExpress at build time, so it compiles and ships like any other
+    project. What it needs is a DevExpress installation at *run* time, on the machine of someone
+    entitled to one.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>xafcatalog</AssemblyName>
+    <RootNamespace>XafLogicExplainer.DxCatalog</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reads type metadata without loading assemblies into the running process, so a version
+         mismatch or a missing transitive dependency cannot crash the generator. -->
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.10" />
+  </ItemGroup>
+
+</Project>

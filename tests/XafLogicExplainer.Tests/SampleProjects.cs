@@ -102,6 +102,10 @@ internal static class SampleProjects
             IncludeMethodBodies = true,
             IncludeComments = true,
             LanguageCode = "en",
+            // Off on purpose. The catalog is generated from whatever DevExpress happens to be
+            // installed, so leaving it on would make results differ between a developer's machine
+            // and a CI runner. Catalog behavior has its own tests, against a synthetic catalog.
+            UseCatalog = false,
         };
 
         return new LogicExtractor().ExtractFromSourceDirectory(path, options);

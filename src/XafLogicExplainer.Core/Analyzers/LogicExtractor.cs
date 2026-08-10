@@ -141,6 +141,11 @@ public class LogicExtractor : ILogicExtractor
         if (modelInfo != null)
             EnrichEntitiesFromModel(project.Entities, modelInfo.BOModelClasses);
 
+        // 8. Annotate with the DevExpress ground-truth catalog, if this machine has one.
+        //    Optional by design: no catalog means this step does nothing at all.
+        var catalog = options.Catalog ?? (options.UseCatalog ? Catalog.XafCatalogStore.LoadLatest() : null);
+        Catalog.CatalogEnricher.Enrich(project, catalog);
+
         return project;
     }
 

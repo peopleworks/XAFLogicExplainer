@@ -69,6 +69,22 @@ public class ExtractedProject
     /// Optional model editor customization data extracted from xafml files.
     /// </summary>
     public ExtractedModelInfo? ModelEditorInfo { get; set; }
+
+    /// <summary>
+    /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
+    /// none was available.
+    /// </summary>
+    public string? CatalogVersion { get; set; }
+
+    /// <summary>
+    /// Attributes used in this application that XAF does not define, and that are not part of
+    /// .NET either — so they are the team's own. Populated only when a catalog is present.
+    /// </summary>
+    /// <remarks>
+    /// Worth surfacing: a custom attribute usually marks a convention this team invented, which
+    /// cannot be looked up in any documentation.
+    /// </remarks>
+    public List<string> CustomAttributes { get; set; } = [];
 }
 
 /// <summary>

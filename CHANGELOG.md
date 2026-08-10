@@ -39,7 +39,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Installable Claude Code plugin** at `plugins/xaf-logic-explainer`, carrying the skill and the
   MCP server: `/plugin marketplace add peopleworks/XAFLogicExplainer`.
 
-- **Test suite** (`tests/XafLogicExplainer.Tests`, xUnit v3): 107 tests over synthetic XAF fixtures
+- **DevExpress ground-truth catalog** (`xaflogic catalog build`, or the standalone `xafcatalog`).
+  Reads a locally licensed DevExpress installation and records what the framework itself provides:
+  attributes, controllers, model interfaces and modules, with the official summaries and
+  documentation links DevExpress ships. On 26.1 that is ~850 types across 50 assemblies.
+  - Extraction can then distinguish *your* logic from the framework's: a controller extending
+    `DeleteObjectsViewController` is changing how deletion works application-wide, and an
+    attribute in neither XAF nor .NET is one your team invented — its meaning exists in your
+    codebase and in no documentation.
+  - Read with `MetadataLoadContext`, so DevExpress code is never executed. The catalog is written
+    to `~/.xaflogic/catalog/`, **never into a repository**, because it is derived from licensed
+    software. Extraction behaves exactly as before when no catalog is present.
+  - Generic bases every controller shares (`ViewController`, `ObjectViewController`,
+    `WindowController`) are deliberately not reported: listing them annotated the entire
+    application with "A View Controller" and buried the one case worth noticing.
+- **Test suite** (`tests/XafLogicExplainer.Tests`, xUnit v3): 129 tests over synthetic XAF fixtures
   in both XPO and EF Core. The fixtures are XAF source that is never compiled — extraction parses
   it as text — so the suite needs no DevExpress licence and no private feed, and CI verifies the
   whole engine on a public runner. It runs in under a second.

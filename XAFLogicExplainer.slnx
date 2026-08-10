@@ -10,4 +10,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/XafLogicExplainer.Tests/XafLogicExplainer.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/XafLogicExplainer.DxCatalog/XafLogicExplainer.DxCatalog.csproj" />
+  </Folder>
 </Solution>

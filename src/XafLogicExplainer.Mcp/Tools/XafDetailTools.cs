@@ -139,6 +139,23 @@ public sealed class XafDetailTools
         sb.AppendLine($"Applies to: {controller.TargetObjectType ?? "any object type"}" +
                       $"{(string.IsNullOrWhiteSpace(controller.TargetViewType) ? "" : $", {controller.TargetViewType} only")}.");
 
+        // Present only when a ground-truth catalog identified the base as a DevExpress type. It
+        // changes the reading of everything below: this controller is modifying shipped behavior,
+        // not adding something alongside it.
+        if (!string.IsNullOrWhiteSpace(controller.FrameworkBaseType))
+        {
+            sb.AppendLine();
+            sb.Append($"**Extends the built-in `{controller.FrameworkBaseType}`**");
+
+            if (!string.IsNullOrWhiteSpace(controller.FrameworkBaseSummary))
+                sb.Append($" — {controller.FrameworkBaseSummary}");
+
+            sb.AppendLine();
+
+            if (!string.IsNullOrWhiteSpace(controller.FrameworkBaseDocumentationUrl))
+                sb.AppendLine($"Official documentation: {controller.FrameworkBaseDocumentationUrl}");
+        }
+
         if (!string.IsNullOrWhiteSpace(controller.BusinessLogicSummary))
         {
             sb.AppendLine();

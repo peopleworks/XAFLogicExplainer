@@ -110,4 +110,20 @@ public class ExtractionOptions
     /// </summary>
     [JsonIgnore]
     public OrmType ResolvedOrm { get; set; } = OrmType.Xpo;
+
+    /// <summary>
+    /// Whether to load the locally generated DevExpress ground-truth catalog, when one exists.
+    /// </summary>
+    /// <remarks>
+    /// On by default so that anyone who has run <c>xaflogic catalog build</c> benefits without
+    /// asking. Turn it off for reproducible output that must not vary with what happens to be
+    /// installed on the machine.
+    /// </remarks>
+    public bool UseCatalog { get; set; } = true;
+
+    /// <summary>
+    /// An explicit catalog, overriding the one that would be loaded from disk.
+    /// </summary>
+    [JsonIgnore]
+    public Catalog.XafCatalog? Catalog { get; set; }
 }

@@ -61,6 +61,19 @@ public class ExtractedController
     public List<ExtractedMethod> Methods { get; set; } = [];
 
     /// <summary>
+    /// The XAF framework controller this one derives from, when the ground-truth catalog
+    /// identified one. Null means the base type is defined by this application, or that no
+    /// catalog was available.
+    /// </summary>
+    public string? FrameworkBaseType { get; set; }
+
+    /// <summary>Official description of <see cref="FrameworkBaseType"/>.</summary>
+    public string? FrameworkBaseSummary { get; set; }
+
+    /// <summary>Official documentation page for <see cref="FrameworkBaseType"/>.</summary>
+    public string? FrameworkBaseDocumentationUrl { get; set; }
+
+    /// <summary>
     /// Source comments associated with the controller declaration.
     /// </summary>
     public List<string> SourceComments { get; set; } = [];

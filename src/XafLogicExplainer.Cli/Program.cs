@@ -12,6 +12,8 @@ using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Hashing;
 using XafLogicExplainer.Core.Sinks;
 using XafLogicExplainer.Mcp;
+using XafLogicExplainer.Core.Catalog;
+using XafLogicExplainer.DxCatalog;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using XafLogicExplainer.Core.Models;
@@ -1523,6 +1525,88 @@ mcpCommand.SetHandler(async (context) =>
 });
 
 rootCommand.AddCommand(mcpCommand);
+
+// ============================================================
+// COMMAND: catalog
+// ============================================================
+var catalogCommand = new Command(
+    "catalog",
+    "Manage the DevExpress ground-truth catalog, which tells your logic apart from the framework's");
+
+var catalogBuildCommand = new Command(
+    "build",
+    "Read your licensed DevExpress installation and generate the catalog");
+var catalogPathOption = new Option<string?>(
+    "--dx-path",
+    "DevExpress installation directory. Searched for automatically if omitted.");
+catalogBuildCommand.AddOption(catalogPathOption);
+
+catalogBuildCommand.SetHandler((dxPath) =>
+{
+    var installation = DevExpressInstallation.Locate(dxPath);
+
+    if (installation is null)
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] No DevExpress installation found.");
+        AnsiConsole.MarkupLine("[grey]Pass [/][cyan]--dx-path <directory>[/][grey], or the folder containing DevExpress.ExpressApp*.dll[/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[grey]The catalog needs a licensed DevExpress installation. Everything else in[/]");
+        AnsiConsole.MarkupLine("[grey]this tool works without one; the catalog only sharpens the output.[/]");
+        return;
+    }
+
+    AnsiConsole.MarkupLine($"[blue]DevExpress:[/] {installation.Version}");
+    AnsiConsole.MarkupLine($"[grey]{Markup.Escape(installation.AssemblyDirectory)}[/]");
+    AnsiConsole.MarkupLine($"[grey]{installation.XafAssemblies.Count} XAF assemblies[/]");
+    AnsiConsole.WriteLine();
+
+    XafCatalog builtCatalog = null!;
+    AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Reading framework metadata...", ctx =>
+    {
+        builtCatalog = new CatalogBuilder().Build(installation);
+    });
+
+    var savedPath = XafCatalogStore.Save(builtCatalog);
+
+    var catalogTable = new Table().Border(TableBorder.Rounded).AddColumn("Framework types").AddColumn("");
+    catalogTable.AddRow("Attributes", builtCatalog.Attributes.Count.ToString());
+    catalogTable.AddRow("Controllers", builtCatalog.Controllers.Count.ToString());
+    catalogTable.AddRow("Model interfaces", builtCatalog.ModelInterfaces.Count.ToString());
+    catalogTable.AddRow("Modules", builtCatalog.Modules.Count.ToString());
+    AnsiConsole.Write(catalogTable);
+
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(savedPath)}");
+    AnsiConsole.MarkupLine("[grey]Kept outside your repository: it is derived from licensed software.[/]");
+    AnsiConsole.MarkupLine("[grey]Extraction picks it up automatically from now on.[/]");
+}, catalogPathOption);
+
+var catalogStatusCommand = new Command("status", "Show which catalog is in use");
+
+catalogStatusCommand.SetHandler(() =>
+{
+    var existing = XafCatalogStore.LoadLatest();
+
+    if (existing is null)
+    {
+        AnsiConsole.MarkupLine("[yellow]⊘[/] No catalog. Extraction works without one, but cannot tell");
+        AnsiConsole.MarkupLine("   framework controllers and attributes from the ones you wrote.");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("   Build one with: [cyan]xaflogic catalog build[/]");
+        return;
+    }
+
+    AnsiConsole.MarkupLine($"[green]✓[/] DevExpress {existing.DevExpressVersion} — {existing.TypeCount} framework types");
+    AnsiConsole.MarkupLine($"[grey]  generated {existing.GeneratedAt}[/]");
+    AnsiConsole.MarkupLine($"[grey]  {XafCatalogStore.DefaultDirectory}[/]");
+
+    foreach (var file in XafCatalogStore.List())
+        AnsiConsole.MarkupLine($"[grey]  · {Markup.Escape(Path.GetFileName(file))}[/]");
+});
+
+catalogCommand.AddCommand(catalogBuildCommand);
+catalogCommand.AddCommand(catalogStatusCommand);
+rootCommand.AddCommand(catalogCommand);
 
 // ============================================================
 // HELPERS
