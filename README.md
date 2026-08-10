@@ -128,7 +128,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports, docs and translations are e
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE). See [NOTICE.md](NOTICE.md) for the relationship to DevExpress.
 
 An independent community project — not affiliated with, endorsed by, or supported by
 Developer Express Inc. It contains no DevExpress source code and needs no DevExpress license to

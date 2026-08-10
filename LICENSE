@@ -19,22 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This project analyzes source code written against DevExpress eXpressApp
-Framework (XAF). It is an independent community project: it is not affiliated
-with, endorsed by, or supported by Developer Express Inc.
-
-XAFLogicExplainer contains no DevExpress source code and requires no DevExpress
-license to build or run. It reads the C# and .xafml files in *your* project as
-text, using Roslyn's syntax analysis, and never links against DevExpress
-assemblies.
-
-The optional ground-truth catalog generator (tools/XafLogicExplainer.DxCatalog)
-reads a local DevExpress installation that you already license, and writes its
-output outside this repository. No catalog derived from DevExpress sources is
-distributed here.
-
-"DevExpress", "XAF" and "eXpressApp Framework" are trademarks of
-Developer Express Inc.
