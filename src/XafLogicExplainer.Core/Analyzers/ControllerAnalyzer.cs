@@ -29,7 +29,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
         }
 
         var csFiles = Directory.GetFiles(controllerDir, "*.cs", SearchOption.AllDirectories)
-            .Where(f => !f.Contains("obj") && !f.Contains("bin"));
+            .Where(f => BuildOutputFilter.IsAnalyzable(f, controllerDir));
 
         foreach (var file in csFiles)
         {
@@ -319,21 +319,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// </summary>
     private static string? ExtractTargetObjectType(ClassDeclarationSyntax classDecl)
     {
-        // From generic base type: ObjectViewController<DetailView, PeriodoComision>
-        var baseType = classDecl.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? "";
-        if (baseType.Contains('<'))
-        {
-            var genericArgs = baseType[(baseType.IndexOf('<') + 1)..baseType.LastIndexOf('>')];
-            var parts = genericArgs.Split(',').Select(p => p.Trim()).ToArray();
-            // ObjectViewController<TView, TObject> - second arg is the object type
-            if (parts.Length >= 2)
-                return parts[1];
-            // ViewController<TObject> - first arg is the object type
-            if (parts.Length == 1)
-                return parts[0];
-        }
-
-        // From constructor: TargetObjectType = typeof(PeriodoComision)
+        // An explicit assignment states the intent outright, so it wins over anything inferred
+        // from the base type. It was previously checked last and never reached.
         var ctor = classDecl.Members.OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
         if (ctor?.Body != null)
         {
@@ -341,13 +328,25 @@ public class ControllerAnalyzer : IControllerAnalyzer
                 .OfType<AssignmentExpressionSyntax>()
                 .FirstOrDefault(a => a.Left.ToString() == "TargetObjectType");
 
-            if (assignment != null)
-            {
-                var value = assignment.Right.ToString();
-                // typeof(PeriodoComision) -> PeriodoComision
-                if (value.StartsWith("typeof(") && value.EndsWith(")"))
-                    return value[7..^1];
-            }
+            if (assignment?.Right is TypeOfExpressionSyntax typeOf)
+                return typeOf.Type.ToString();
+        }
+
+        // ObjectViewController<TView, TObject>: the second argument is the business type.
+        //
+        // ViewController<TView> is NOT the same shape. Its single argument constrains the *view*
+        // (DetailView, ListView), not the object, so reading it as a business type reported
+        // "targets DetailView" for a controller that targets Order -- a statement about the
+        // application that is simply false.
+        var baseType = classDecl.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? "";
+
+        if (baseType.Contains('<'))
+        {
+            var genericArgs = baseType[(baseType.IndexOf('<') + 1)..baseType.LastIndexOf('>')];
+            var parts = genericArgs.Split(',').Select(p => p.Trim()).ToArray();
+
+            if (parts.Length >= 2)
+                return parts[1];
         }
 
         return null;

@@ -39,14 +39,20 @@ jobs:
         run: |
           dotnet restore src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj
           dotnet restore src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj
+          dotnet restore tests/XafLogicExplainer.Tests/XafLogicExplainer.Tests.csproj
 
       - name: Build
         run: |
           dotnet build src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj --no-restore -c Release
           dotnet build src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj --no-restore -c Release
 
+      # The suite runs against synthetic XAF fixtures parsed as text, so it needs no DevExpress
+      # licence and no private feed -- the whole engine is verified on a public runner, for free.
+      - name: Test
+        run: dotnet test tests/XafLogicExplainer.Tests/XafLogicExplainer.Tests.csproj --no-restore -c Release
+
       # TreatWarningsAsErrors is on under GITHUB_ACTIONS (see Directory.Build.props), so a warning
-      # already fails the step above. This proves the tool actually runs on the built output.
+      # already fails the steps above. This proves the tool actually runs on the built output.
       - name: Smoke test the CLI
         run: dotnet run --project src/XafLogicExplainer.Cli/XafLogicExplainer.Cli.csproj -c Release --no-build -- --help
 

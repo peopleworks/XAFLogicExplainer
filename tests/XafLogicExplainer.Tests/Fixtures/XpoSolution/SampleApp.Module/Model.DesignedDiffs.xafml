@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application Title="Sample Sales">
+  <BOModel>
+    <Class Name="SampleApp.Module.BusinessObjects.Customer" Caption="Client" IsCloneable="True" />
+    <Class Name="SampleApp.Module.BusinessObjects.Order" Caption="Sales Order" />
+  </BOModel>
+  <Views>
+    <ListView Id="Order_ListView" AllowDelete="False" MasterDetailMode="ListViewAndDetailView">
+      <Columns>
+        <ColumnInfo Id="Number" Index="0" />
+        <ColumnInfo Id="Customer" Index="1" />
+        <ColumnInfo Id="Total" Index="2" />
+        <ColumnInfo Id="OrderDate" Index="-1" />
+      </Columns>
+    </ListView>
+    <DetailView Id="Customer_DetailView" AllowDelete="False" />
+  </Views>
+  <SchemaModules>
+    <SchemaModule Name="SystemModule" Version="25.1.5.0" IsNewNode="True" />
+    <SchemaModule Name="ValidationModule" Version="25.1.5.0" IsNewNode="True" />
+  </SchemaModules>
+</Application>

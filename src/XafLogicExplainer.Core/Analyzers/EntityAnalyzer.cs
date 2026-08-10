@@ -296,28 +296,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                     RuleType = name,
                 };
 
-                if (attr.ArgumentList != null)
-                {
-                    var args = attr.ArgumentList.Arguments.ToList();
-                    foreach (var arg in args)
-                    {
-                        var argName = arg.NameEquals?.Name.ToString() ?? $"arg{args.IndexOf(arg)}";
-                        var argValue = SyntaxLiteral.ValueOf(arg.Expression);
-                        rule.Parameters[argName] = argValue;
-
-                        if (argName.Equals("DefaultContexts", StringComparison.OrdinalIgnoreCase)
-                            || argName.Equals("TargetCriteria", StringComparison.OrdinalIgnoreCase))
-                            rule.TargetCriteria = argValue;
-
-                        if (argName.Equals("MessageTemplateMustNotBeEmpty", StringComparison.OrdinalIgnoreCase)
-                            || argName.Contains("Message"))
-                            rule.MessageTemplate = argValue;
-
-                        if (argName.Equals("TargetPropertyName", StringComparison.OrdinalIgnoreCase))
-                            rule.TargetProperty = argValue;
-                    }
-                }
-
+                ApplyRuleArguments(rule, attr);
                 rules.Add(rule);
             }
         }
@@ -338,21 +317,53 @@ public class EntityAnalyzer : IEntityAnalyzer
                         TargetProperty = prop.Identifier.Text,
                     };
 
-                    if (attr.ArgumentList != null)
-                    {
-                        foreach (var arg in attr.ArgumentList.Arguments)
-                        {
-                            var argName = arg.NameEquals?.Name.ToString() ?? "value";
-                            rule.Parameters[argName] = SyntaxLiteral.ValueOf(arg.Expression);
-                        }
-                    }
-
+                    ApplyRuleArguments(rule, attr);
                     rules.Add(rule);
                 }
             }
         }
 
         return rules;
+    }
+
+    /// <summary>
+    /// Reads a validation attribute's arguments into a rule.
+    /// </summary>
+    /// <remarks>
+    /// Shared by the class-level and property-level paths, which had drifted apart: the
+    /// property-level one recorded arguments into <see cref="ExtractedValidationRule.Parameters"/>
+    /// but never set <see cref="ExtractedValidationRule.MessageTemplate"/>. Property-level rules
+    /// are the ordinary way to write XAF validation, and the message is the most useful part of a
+    /// rule — it is what the user is told when the rule fires — so it was missing from exactly the
+    /// rules people write most.
+    /// <para>
+    /// Positional arguments are recorded as <c>arg0</c>, <c>arg1</c>, … rather than under one
+    /// shared key, which previously let each overwrite the last.
+    /// </para>
+    /// </remarks>
+    private static void ApplyRuleArguments(ExtractedValidationRule rule, AttributeSyntax attr)
+    {
+        if (attr.ArgumentList is null)
+            return;
+
+        var args = attr.ArgumentList.Arguments;
+
+        for (var index = 0; index < args.Count; index++)
+        {
+            var arg = args[index];
+            var argName = arg.NameEquals?.Name.ToString() ?? $"arg{index}";
+            var argValue = SyntaxLiteral.ValueOf(arg.Expression);
+
+            rule.Parameters[argName] = argValue;
+
+            if (argName.Contains("Message", StringComparison.OrdinalIgnoreCase))
+                rule.MessageTemplate = argValue;
+            else if (argName.Equals("TargetCriteria", StringComparison.OrdinalIgnoreCase)
+                     || argName.Equals("Criteria", StringComparison.OrdinalIgnoreCase))
+                rule.TargetCriteria = argValue;
+            else if (argName.Equals("TargetPropertyName", StringComparison.OrdinalIgnoreCase))
+                rule.TargetProperty = argValue;
+        }
     }
 
     /// <summary>
@@ -591,9 +602,9 @@ public class EntityAnalyzer : IEntityAnalyzer
             {
                 foreach (var file in Directory.GetFiles(dir, searchPattern, SearchOption.AllDirectories))
                 {
-                    // HACK: Exclusion currently uses coarse obj/bin substring filtering and does not apply
-                    // the configured glob-like exclude patterns. Kept for compatibility with existing behavior.
-                    if (!excludePatterns.Any(ep => file.Contains("obj") || file.Contains("bin")))
+                    // NOTE: the configured glob-like exclude patterns are still not evaluated;
+                    // only build output is filtered. Applying them properly is tracked separately.
+                    if (BuildOutputFilter.IsAnalyzable(file, dir))
                         allFiles.Add(file);
                 }
             }

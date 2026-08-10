@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests run with no DevExpress installed and no licence, on any operating system.
+
+    That is possible because extraction is Roslyn *syntax* analysis: the fixtures under Fixtures/
+    are XAF source that is never compiled, only parsed. They reference DevExpress types that are
+    not present, which is exactly the situation the extractor is built for.
+  -->
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Test methods are self-documenting by name; requiring XML comments on them adds noise. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+    <ProjectReference Include="..\..\src\XafLogicExplainer.Mcp\XafLogicExplainer.Mcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <!--
+    The fixtures are input data, not code.
+
+    They MUST be removed from compilation: the SDK's default glob would otherwise pull XAF source
+    referencing absent DevExpress assemblies into this assembly, and nothing would build.
+
+    They are deliberately NOT copied to the output directory. Extraction skips anything under a
+    bin or obj directory, so a copy in bin/Debug/net10.0/Fixtures would be correctly ignored and
+    every extraction test would see an empty project. Tests read them from the source tree, which
+    is also how the tool is used for real.
+  -->
+  <ItemGroup>
+    <Compile Remove="Fixtures\**\*.cs" />
+    <None Include="Fixtures\**\*" />
+  </ItemGroup>
+
+</Project>

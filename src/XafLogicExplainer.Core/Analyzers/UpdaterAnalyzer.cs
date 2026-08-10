@@ -55,7 +55,7 @@ public class UpdaterAnalyzer
             {
                 var seed = ExtractSeedFromMethod(method, options);
                 if (seed != null && seed.Records.Count > 0)
-                    seedData.Add(seed);
+                    AddSeed(seedData, seed);
             }
         }
 
@@ -84,9 +84,27 @@ public class UpdaterAnalyzer
             {
                 var seed = ExtractSeedFromMethod(targetMethod, options);
                 if (seed != null && seed.Records.Count > 0)
-                    seedData.Add(seed);
+                    AddSeed(seedData, seed);
             }
         }
+    }
+
+    /// <summary>
+    /// Adds a seed method unless it has already been recorded.
+    /// </summary>
+    /// <remarks>
+    /// A seed method is reached twice: once by following the calls out of
+    /// <c>UpdateDatabaseAfterUpdateSchema</c>, and once by the sweep over every method in the
+    /// class. Without this guard each one is reported twice, so documentation claims an
+    /// application seeds twice as many things as it does — and the duplicate is a perfect copy,
+    /// which makes it read like two genuinely separate operations.
+    /// </remarks>
+    private static void AddSeed(List<ExtractedSeedData> seedData, ExtractedSeedData seed)
+    {
+        if (seedData.Any(existing => existing.MethodName == seed.MethodName))
+            return;
+
+        seedData.Add(seed);
     }
 
     /// <summary>
@@ -177,15 +195,80 @@ public class UpdaterAnalyzer
             }
         }
 
+        ExtractObjectSpaceCreations(method.Body, seed);
+
         return seed;
     }
 
     /// <summary>
-    /// Checks whether a method body contains object creation expressions.
+    /// Reads seed records created through <c>ObjectSpace.CreateObject&lt;T&gt;()</c>.
+    /// </summary>
+    /// <remarks>
+    /// The scan above only recognizes <c>new Customer(session)</c>. That is the older
+    /// Session-based style; a modern updater works against <c>IObjectSpace</c> and writes
+    /// <c>ObjectSpace.CreateObject&lt;Customer&gt;()</c>, which is an invocation rather than an
+    /// object creation and so was invisible. Such an application was reported as having no seed
+    /// data at all — the tool describing the absence of something plainly present in the source.
+    /// </remarks>
+    private static void ExtractObjectSpaceCreations(BlockSyntax body, ExtractedSeedData seed)
+    {
+        var creations = body.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(i => i.Expression is MemberAccessExpressionSyntax
+            {
+                Name: GenericNameSyntax { Identifier.Text: "CreateObject" }
+            });
+
+        foreach (var creation in creations)
+        {
+            var generic = (GenericNameSyntax)((MemberAccessExpressionSyntax)creation.Expression).Name;
+            var typeName = generic.TypeArgumentList.Arguments.FirstOrDefault()?.ToString();
+
+            if (string.IsNullOrWhiteSpace(typeName))
+                continue;
+
+            seed.EntityType = typeName;
+
+            // The result is either declared (var x = ...) or assigned to an existing local
+            // (x = ...), and both forms appear in the same updater when a method checks for an
+            // existing record before creating one.
+            var variableName =
+                creation.Ancestors().OfType<VariableDeclaratorSyntax>().FirstOrDefault()?.Identifier.Text
+                ?? (creation.Ancestors().OfType<AssignmentExpressionSyntax>().FirstOrDefault()?.Left.ToString());
+
+            if (string.IsNullOrWhiteSpace(variableName))
+                continue;
+
+            var record = new SeedRecord();
+
+            foreach (var assignment in body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+            {
+                if (assignment.Left is MemberAccessExpressionSyntax member
+                    && member.Expression.ToString() == variableName)
+                {
+                    record.PropertyValues[member.Name.ToString()] = SyntaxLiteral.ValueOf(assignment.Right);
+                }
+            }
+
+            if (record.PropertyValues.Count > 0)
+                seed.Records.Add(record);
+        }
+    }
+
+    /// <summary>
+    /// Checks whether a method body creates persistent objects, in either supported style.
     /// </summary>
     private static bool HasObjectCreation(BlockSyntax body)
     {
-        return body.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().Any();
+        if (body.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().Any())
+            return true;
+
+        return body.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Any(i => i.Expression is MemberAccessExpressionSyntax
+            {
+                Name: GenericNameSyntax { Identifier.Text: "CreateObject" }
+            });
     }
 
     /// <summary>
@@ -199,11 +282,18 @@ public class UpdaterAnalyzer
     }
 
     /// <summary>
-    /// Locates the updater file in common XAF locations.
+    /// Locates the module updater.
     /// </summary>
+    /// <remarks>
+    /// The XAF project template produces <c>DatabaseUpdate/Updater.cs</c>, so that is checked
+    /// first and costs nothing. Searching only for that file name was the whole strategy, though,
+    /// which meant a class named anything else — <c>SeedDataUpdater</c>, <c>DemoDataUpdater</c>,
+    /// or an updater split per area — made the tool report an application with no seed data at
+    /// all, silently. The final fallback looks for what actually matters: a class deriving from
+    /// <c>ModuleUpdater</c>.
+    /// </remarks>
     private static string? FindUpdaterFile(string sourceDirectory, ExtractionOptions options)
     {
-        // Search for Updater.cs in DatabaseUpdate folder or project root
         var candidates = new[]
         {
             Path.Combine(sourceDirectory, "DatabaseUpdate", "Updater.cs"),
@@ -216,8 +306,48 @@ public class UpdaterAnalyzer
                 return candidate;
         }
 
-        // Fallback: search all directories
-        return Directory.GetFiles(sourceDirectory, "Updater.cs", SearchOption.AllDirectories)
-            .FirstOrDefault(f => !f.Contains("obj") && !f.Contains("bin"));
+        var byName = Directory.GetFiles(sourceDirectory, "Updater.cs", SearchOption.AllDirectories)
+            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory));
+
+        if (byName != null)
+            return byName;
+
+        // Read files rather than trusting their names. Bounded by the project directory, and only
+        // reached when the conventional locations came up empty.
+        //
+        // The check parses for a class that actually derives from ModuleUpdater. Searching the
+        // text for "ModuleUpdater" instead picks the module itself, because every module declares
+        // `IEnumerable<ModuleUpdater> GetModuleUpdaters(...)` -- and the module has no updater
+        // class in it, so the search would end on a file guaranteed to yield nothing.
+        foreach (var file in Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories))
+        {
+            if (!BuildOutputFilter.IsAnalyzable(file, sourceDirectory))
+                continue;
+
+            try
+            {
+                var source = File.ReadAllText(file);
+
+                // Cheap gate before parsing: a file without the word cannot declare the class.
+                if (!source.Contains("ModuleUpdater", StringComparison.Ordinal))
+                    continue;
+
+                var declaresUpdater = CSharpSyntaxTree.ParseText(source)
+                    .GetRoot()
+                    .DescendantNodes()
+                    .OfType<ClassDeclarationSyntax>()
+                    .Any(c => c.BaseList?.Types.Any(t =>
+                        t.Type.ToString().EndsWith("ModuleUpdater", StringComparison.Ordinal)) == true);
+
+                if (declaresUpdater)
+                    return file;
+            }
+            catch (IOException)
+            {
+                // An unreadable file is not a reason to abandon the search.
+            }
+        }
+
+        return null;
     }
 }

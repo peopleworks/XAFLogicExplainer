@@ -39,6 +39,20 @@ The one exception is `src/XafLogicExplainer.Blazor` (the in-app help panel), whi
 on it, and CI skips it. If your restore fails only there, that's why — build the other projects and
 carry on.
 
+### Running the tests
+
+```bash
+dotnet test tests/XafLogicExplainer.Tests
+```
+
+107 tests, under a second, **no DevExpress required**. They run against synthetic XAF applications
+in `tests/XafLogicExplainer.Tests/Fixtures/` — one XPO, one EF Core — which are XAF source the
+suite never compiles, only parses.
+
+That makes the fixtures the natural home for a bug report. If the extractor misreads a pattern,
+adding it to a fixture and asserting the expected result is usually the entire fix, and the
+regression can never come back quietly.
+
 ### Trying a change
 
 ```bash

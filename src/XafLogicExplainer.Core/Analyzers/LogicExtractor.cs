@@ -234,7 +234,7 @@ public class LogicExtractor : ILogicExtractor
             try
             {
                 if (Directory.GetFiles(siblingDir, "*.cs", SearchOption.AllDirectories)
-                    .Any(f => !f.Contains("obj") && !f.Contains("bin")))
+                    .Any(f => BuildOutputFilter.IsAnalyzable(f, siblingDir)))
                 {
                     siblings.Add(siblingDir);
                 }

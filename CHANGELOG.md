@@ -39,9 +39,45 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Installable Claude Code plugin** at `plugins/xaf-logic-explainer`, carrying the skill and the
   MCP server: `/plugin marketplace add peopleworks/XAFLogicExplainer`.
 
+- **Test suite** (`tests/XafLogicExplainer.Tests`, xUnit v3): 107 tests over synthetic XAF fixtures
+  in both XPO and EF Core. The fixtures are XAF source that is never compiled — extraction parses
+  it as text — so the suite needs no DevExpress licence and no private feed, and CI verifies the
+  whole engine on a public runner. It runs in under a second.
+
 ### Changed
 
 - Target framework is now **.NET 10**.
+
+### Fixed by the new tests
+
+Writing the suite surfaced six extraction bugs, all of which had been producing confidently wrong
+documentation:
+
+- **A project living under a directory named `bin` extracted as empty.** Five analyzers tested
+  `path.Contains("bin")`, matching the substring anywhere in an absolute path — so `C:\bin\Sales\`,
+  or any folder whose name merely contains those letters, had every source file silently skipped.
+  Matching is now on whole path segments, and only below the directory being analyzed, since build
+  output is always beneath the project root.
+- **Property-level validation rules lost their message.** Class-level and property-level rules were
+  read by two code paths that had drifted apart; only the class-level one populated
+  `MessageTemplate`. Property-level rules are the ordinary way to write XAF validation, and the
+  message is the most useful part of a rule, so it was missing from exactly the rules people write
+  most. Both paths now share one reader.
+- **`ViewController<DetailView>` was reported as targeting `DetailView`.** The single generic
+  argument of `ViewController<T>` constrains the *view*, not the business type; only
+  `ObjectViewController<TView, TObject>` names an object. An explicit
+  `TargetObjectType = typeof(X)` in the constructor is now read first, since it states the intent
+  outright and was previously unreachable.
+- **Seed data was only found in a file named `Updater.cs`.** Any other name — `SeedDataUpdater`,
+  `DemoDataUpdater`, an updater split per area — meant the application was reported as having no
+  seed data at all, silently. The fallback now looks for a class that actually derives from
+  `ModuleUpdater`.
+- **`ObjectSpace.CreateObject<T>()` seed records were invisible.** Only `new Customer(session)` was
+  recognized, which is the older Session-based style; a modern updater works against
+  `IObjectSpace`. On a real 19-entity application this raised the seed methods found from 4 to 9.
+- **Seed methods were counted twice.** Each one is reached both by following calls out of
+  `UpdateDatabaseAfterUpdateSchema` and by the sweep over every method in the class, and the
+  duplicate was a perfect copy — so it read as two genuinely separate operations.
 
 ### Fixed
 

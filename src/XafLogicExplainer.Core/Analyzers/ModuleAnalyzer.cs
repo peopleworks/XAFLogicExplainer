@@ -159,6 +159,6 @@ public class ModuleAnalyzer
         if (File.Exists(candidate)) return candidate;
 
         return Directory.GetFiles(sourceDirectory, "Module.cs", SearchOption.AllDirectories)
-            .FirstOrDefault(f => !f.Contains("obj") && !f.Contains("bin"));
+            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory));
     }
 }

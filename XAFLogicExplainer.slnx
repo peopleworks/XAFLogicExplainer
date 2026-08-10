@@ -7,4 +7,7 @@
     <Project Path="src/XafLogicExplainer.DescriptionAnnotator/XafLogicExplainer.DescriptionAnnotator.csproj" />
     <Project Path="src/XafLogicExplainer.Mcp/XafLogicExplainer.Mcp.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/XafLogicExplainer.Tests/XafLogicExplainer.Tests.csproj" />
+  </Folder>
 </Solution>
