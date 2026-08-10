@@ -124,6 +124,11 @@ public class ExtractionOptions
     /// <summary>
     /// An explicit catalog, overriding the one that would be loaded from disk.
     /// </summary>
+    /// <remarks>
+    /// Written with the namespace spelled out. The property is called <c>Catalog</c>, so inside
+    /// this class the simple name binds to the member rather than to the namespace of the same
+    /// name, and <c>Catalog.XafCatalog</c> does not compile.
+    /// </remarks>
     [JsonIgnore]
-    public Catalog.XafCatalog? Catalog { get; set; }
+    public XafLogicExplainer.Core.Catalog.XafCatalog? Catalog { get; set; }
 }
