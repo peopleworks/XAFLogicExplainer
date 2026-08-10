@@ -26,8 +26,8 @@ DevExpress has done excellent work making AI agents fluent in XAF. Two pieces al
 and this is the third:
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-fits-dark.svg">
-  <img alt="Three kinds of knowledge an agent needs about an XAF codebase. Two are already solved by DevExpress tooling; the third — what your own application does — is the gap this project fills." src="docs/assets/how-it-fits-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/how-it-fits-dark.svg">
+  <img alt="Three kinds of knowledge an agent needs about an XAF codebase. Two are already solved by DevExpress tooling; the third — what your own application does — is the gap this project fills." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/how-it-fits-light.svg">
 </picture>
 
 | Teaches the agent… | Tool |
@@ -36,10 +36,10 @@ and this is the third:
 | What the official documentation says | [DevExpress Docs MCP Server](https://docs.devexpress.com/) |
 | **What YOUR application does** | **XAF Logic Explainer** ← *you are here* |
 
-An agent that has read every page of the XAF documentation still does not know that your
-`Comision` entity is calculated from `PorcentajeBase`, that your `ApproveController` blocks
-approval when the period is closed, or that your `ListView` was customized in the Model Editor
-to hide three columns. It will confidently invent all three.
+An agent that has read every page of the XAF documentation still does not know that your `Invoice`
+total is calculated from its lines, that `ApproveController` refuses to run when the period is
+closed, or that three columns were hidden in the Model Editor and appear in no C# file at all. It
+will confidently invent all three.
 
 That gap is not solvable by better prompting. It is solvable by extraction.
 
@@ -49,8 +49,8 @@ for the official reference, and use this for your own codebase. None of them rep
 ## What it extracts
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/extraction-pipeline-dark.svg">
-  <img alt="Source files are parsed as syntax by Roslyn, never compiled, producing a model rendered to agent files, an MCP server, or Markdown and JSON." src="docs/assets/extraction-pipeline-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/extraction-pipeline-dark.svg">
+  <img alt="Source files are parsed as syntax by Roslyn, never compiled, producing a model rendered to agent files, an MCP server, or Markdown and JSON." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/extraction-pipeline-light.svg">
 </picture>
 
 Everything below is read as **syntax**, using Roslyn. Your project never has to compile, and this
@@ -85,8 +85,8 @@ forever. Dumping 70 KB of entity detail there would crowd out the actual questio
 tiered:
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/two-tier-context-dark.svg">
-  <img alt="What a full documentation dump costs an agent's context on every request, against the tiered output that leaves that room free." src="docs/assets/two-tier-context-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/two-tier-context-dark.svg">
+  <img alt="What a full documentation dump costs an agent's context on every request, against the tiered output that leaves that room free." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/two-tier-context-light.svg">
 </picture>
 
 
