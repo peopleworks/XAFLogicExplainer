@@ -50,6 +50,7 @@ public sealed class HtmlExplainerGenerator
         WriteMap(sb, graph);
         WriteEntities(sb, project);
         WriteOperations(sb, project);
+        WriteScreens(sb, project);
         WriteRules(sb, project);
         WriteCriteria(sb, project);
         WriteModelEditor(sb, project);
@@ -130,6 +131,7 @@ public sealed class HtmlExplainerGenerator
         sb.AppendLine("  <li><a href=\"#map\">Map</a></li>");
         sb.AppendLine("  <li><a href=\"#entities\">Entities</a></li>");
         sb.AppendLine("  <li><a href=\"#operations\">Operations</a></li>");
+        if (project.Views.Count > 0) sb.AppendLine("  <li><a href=\"#screens\">Screens</a></li>");
         sb.AppendLine("  <li><a href=\"#rules\">Rules</a></li>");
         sb.AppendLine("  <li><a href=\"#criteria\">Criteria</a></li>");
         if (project.ModelEditorInfo is not null) sb.AppendLine("  <li><a href=\"#model\">Model Editor</a></li>");
@@ -365,6 +367,150 @@ public sealed class HtmlExplainerGenerator
         }
 
         sb.AppendLine("</section>");
+    }
+
+    // --------------------------------------------------------------- screens
+
+    /// <summary>
+    /// Writes the screen inventory: every view, and the logic loaded onto it.
+    /// </summary>
+    /// <remarks>
+    /// The section nobody can produce by reading the repository. XAF generates a list, detail and
+    /// lookup view for every business class and a list view for every collection, so the screens
+    /// exist in no file; and a controller's activation is four conditions the framework ands
+    /// together, evaluated at run time against a view nobody wrote down.
+    /// </remarks>
+    private static void WriteScreens(StringBuilder sb, ExtractedProject project)
+    {
+        if (project.Views.Count == 0)
+            return;
+
+        var generated = project.Views.Count(v => v.Origin == ViewOrigin.Generated);
+        var everywhere = project.Controllers.Count(c => c.Targeting.IsUnrestricted);
+
+        sb.AppendLine("<section id=\"screens\">");
+        sb.AppendLine($"  <h2>Screens <span class=\"card__meta\">{project.Views.Count}</span></h2>");
+        sb.AppendLine("  <p class=\"lede\">Every view this application has, and what XAF loads onto each one. " +
+                      $"{generated} of them exist in no file — the framework generates them from the business classes at startup.</p>");
+
+        if (everywhere > 0)
+        {
+            sb.AppendLine($"  <p class=\"note\">{everywhere} controller{(everywhere == 1 ? "" : "s")} " +
+                          $"restrict{(everywhere == 1 ? "s" : "")} nothing, so {(everywhere == 1 ? "it runs" : "they run")} " +
+                          "on every screen below.</p>");
+        }
+
+        foreach (var group in project.Views
+                     .GroupBy(v => v.ObjectType ?? "Other")
+                     .OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            sb.AppendLine($"  <article class=\"card\" data-search=\"{Haystack(group.Key, string.Join(" ", group.Select(v => v.Id)))}\">");
+            sb.AppendLine("    <div class=\"card__head\">");
+            sb.AppendLine($"      <span class=\"card__name\">{E(group.Key)}</span>");
+            sb.AppendLine($"      <span class=\"card__meta\">{group.Count()} views</span>");
+            sb.AppendLine("    </div>");
+
+            foreach (var view in group.OrderBy(v => v.Id, StringComparer.Ordinal))
+            {
+                sb.AppendLine("    <table><tbody>");
+                sb.Append($"      <tr><th class=\"mono\">{E(view.Id)}</th><td>");
+                sb.Append(E(ScreenKind(view)));
+
+                if (view.InNavigation)
+                    sb.Append(" <span class=\"pill\">in navigation</span>");
+
+                if (view.Origin != ViewOrigin.Generated)
+                {
+                    sb.Append(view.Origin == ViewOrigin.Customized
+                        ? " <span class=\"pill pill--fw\">customized in the Model Editor</span>"
+                        : " <span class=\"pill pill--fw\">defined in the Model Editor</span>");
+                }
+
+                sb.AppendLine("</td></tr>");
+
+                if (view.OwnerProperty is { } ownerProperty)
+                {
+                    sb.AppendLine("      <tr><th>Shown by</th><td class=\"mono\">" +
+                                  $"<a href=\"#entity-{E(view.OwnerEntity)}\">{E(view.OwnerEntity)}</a>.{E(ownerProperty)}</td></tr>");
+                }
+
+                if (view.Activates.Count == 0)
+                {
+                    sb.AppendLine("      <tr><th>Runs here</th><td class=\"t\">None of this application's controllers. " +
+                                  "XAF's own still do.</td></tr>");
+                }
+                else
+                {
+                    foreach (var activation in view.Activates)
+                    {
+                        sb.Append($"      <tr><th>Runs here</th><td class=\"mono\">{E(activation.Controller)}</td></tr>");
+                        sb.AppendLine();
+                        sb.Append("      <tr><th></th><td class=\"t\">");
+                        sb.Append(activation.Reasons.Count == 0
+                            ? "restricts nothing, so it runs on every view"
+                            : E(string.Join(", and ", activation.Reasons.Select(ActivationReasonText.English))));
+
+                        if (activation.Actions.Count > 0)
+                            sb.Append($" — {E(string.Join(", ", activation.Actions))}");
+
+                        sb.AppendLine("</td></tr>");
+                    }
+                }
+
+                sb.AppendLine("    </tbody></table>");
+            }
+
+            sb.AppendLine("  </article>");
+        }
+
+        var undetermined = Analyzers.ViewActivationResolver.Undetermined(project.Controllers).ToList();
+
+        if (undetermined.Count > 0)
+        {
+            sb.AppendLine("  <article class=\"card\">");
+            sb.AppendLine("    <div class=\"card__head\">");
+            sb.AppendLine("      <span class=\"card__name card__name--prose\">Restricted to a view that could not be named</span>");
+            sb.AppendLine("    </div>");
+            sb.AppendLine("    <p class=\"card__desc\">These target a view id built from something other than a literal, " +
+                          "so they appear against no screen above. They are restricted all the same.</p>");
+            sb.AppendLine("    <table><tbody>");
+
+            foreach (var controller in undetermined)
+            {
+                sb.AppendLine($"      <tr><th class=\"mono\">{E(controller.ClassName)}</th>" +
+                              $"<td><code class=\"crit\">{E(controller.Targeting.UnresolvedViewId)}</code></td></tr>");
+            }
+
+            sb.AppendLine("    </tbody></table>");
+            sb.AppendLine("  </article>");
+        }
+
+        sb.AppendLine("  <p class=\"note\">A controller listed here can still switch itself off at run time " +
+                      "through <code>Active[\"reason\"]</code>, which depends on the data and the user. " +
+                      "This is what XAF loads onto a screen, not what will necessarily do something.</p>");
+        sb.AppendLine("</section>");
+    }
+
+    /// <summary>One phrase naming what kind of view this is and where it appears.</summary>
+    private static string ScreenKind(ExtractedView view)
+    {
+        var kind = view.ViewType switch
+        {
+            ModelViewType.ListView when view.Id.EndsWith("_LookupListView", StringComparison.Ordinal) =>
+                "lookup list",
+            ModelViewType.ListView => "list",
+            ModelViewType.DetailView => "detail",
+            _ => "dashboard",
+        };
+
+        var where = view.Nesting switch
+        {
+            ViewNesting.Root => "root",
+            ViewNesting.Nested => "nested",
+            _ => "root or nested",
+        };
+
+        return $"{kind} view, {where}";
     }
 
     // ----------------------------------------------------------------- rules

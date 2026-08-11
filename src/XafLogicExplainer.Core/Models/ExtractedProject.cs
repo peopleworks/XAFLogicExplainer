@@ -56,6 +56,15 @@ public class ExtractedProject
     public List<ExtractedNavigationItem> Navigation { get; set; } = [];
 
     /// <summary>
+    /// Every screen the application has, with the controllers XAF activates on each.
+    /// </summary>
+    /// <remarks>
+    /// Most of these exist in no file: XAF generates them from the business classes at startup, and
+    /// the Model Editor stores only the ones somebody changed.
+    /// </remarks>
+    public List<ExtractedView> Views { get; set; } = [];
+
+    /// <summary>
     /// Seed data blocks extracted from updater classes.
     /// </summary>
     public List<ExtractedSeedData> SeedData { get; set; } = [];

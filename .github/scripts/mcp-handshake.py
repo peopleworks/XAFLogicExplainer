@@ -19,7 +19,7 @@ TIMEOUT_SECONDS = 120
 
 EXPECTED_TOOLS = {
     "xaf_overview", "xaf_search", "xaf_entity", "xaf_controller", "xaf_rules",
-    "xaf_model", "xaf_editors", "xaf_migrations", "xaf_refresh",
+    "xaf_model", "xaf_editors", "xaf_migrations", "xaf_view", "xaf_refresh",
 }
 
 

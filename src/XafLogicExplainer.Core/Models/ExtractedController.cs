@@ -165,6 +165,16 @@ public class ExtractedAction
     public string? EnabledCriteria { get; set; }
 
     /// <summary>
+    /// Where this action appears, within the views its controller is already active on.
+    /// </summary>
+    /// <remarks>
+    /// An action carries its own copy of the controller's four conditions, and XAF evaluates them
+    /// with the same <c>IsFitToView</c>. It can only narrow: an action is never shown on a view
+    /// where its controller is inactive.
+    /// </remarks>
+    public ControllerTargeting Targeting { get; set; } = new();
+
+    /// <summary>
     /// AI-generated plain-language explanation of what this action does in business terms.
     /// </summary>
     public string? BusinessLogicSummary { get; set; }

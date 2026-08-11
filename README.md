@@ -156,6 +156,7 @@ Started from a solution directory it finds the XAF module by itself, so neither 
 | `xaf_model` | Model Editor customizations, which exist in no C# file |
 | `xaf_editors` | Custom editors, the JavaScript they need, and built-in editors changed at run time |
 | `xaf_migrations` | What ran once against a live database, and the comment explaining why |
+| `xaf_view` | Everything loaded onto one screen — which controllers activate, and why |
 | `xaf_refresh` | Re-read the source (changes are detected automatically) |
 
 Ask for something that isn't there and the answer is the useful one:
@@ -281,9 +282,9 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
 | ✅ | **`xaflogic explain`** — one self-contained HTML page, for a person rather than an agent |
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
-| ✅ | **MCP server** — 9 tools, live against your source |
+| ✅ | **MCP server** — 10 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **203 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **217 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

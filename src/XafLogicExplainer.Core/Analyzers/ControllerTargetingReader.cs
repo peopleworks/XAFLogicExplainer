@@ -145,45 +145,68 @@ public static class ControllerTargetingReader
             if (ctor.Body is null)
                 continue;
 
-            var parameters = TypeParameters(classDecl);
-
             foreach (var assignment in ctor.Body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
             {
-                if (PropertyAssignedOnThis(assignment.Left) is not { } property)
-                    continue;
-
-                switch (property)
-                {
-                    // ViewController<T>'s own constructor assigns typeof(T). It restricts whatever
-                    // closes the generic, and nothing at all by itself.
-                    case "TargetObjectType" when assignment.Right is TypeOfExpressionSyntax objectType
-                                                 && !parameters.Contains(objectType.Type.ToString()):
-                        targeting.TargetObjectType = LastSegment(objectType.Type.ToString());
-                        targeting.Declared.Add(nameof(ControllerTargeting.TargetObjectType));
-                        break;
-
-                    case "TypeOfView" when assignment.Right is TypeOfExpressionSyntax viewType
-                                           && !parameters.Contains(viewType.Type.ToString()):
-                        targeting.TypeOfView = NormalizeViewType(viewType.Type.ToString());
-                        targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
-                        break;
-
-                    case "TargetViewType":
-                        targeting.TypeOfView = NormalizeViewType(assignment.Right.ToString());
-                        targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
-                        break;
-
-                    case "TargetViewNesting":
-                        targeting.Nesting = NormalizeNesting(assignment.Right.ToString());
-                        targeting.Declared.Add(nameof(ControllerTargeting.Nesting));
-                        break;
-
-                    case "TargetViewId":
-                        ReadViewId(classDecl, assignment.Right, targeting);
-                        targeting.Declared.Add(ViewIdCondition);
-                        break;
-                }
+                if (PropertyAssignedOnThis(assignment.Left) is { } property)
+                    Apply(targeting, property, assignment.Right, classDecl);
             }
+        }
+    }
+
+    /// <summary>
+    /// Applies one <c>Target…</c> assignment, whoever it was written on.
+    /// </summary>
+    /// <remarks>
+    /// Public because an action carries its own copy of the same four properties. XAF evaluates
+    /// them with the very same <c>IsFitToView</c>, to decide whether an action appears inside an
+    /// already-active controller, so they are read with the very same rules.
+    /// </remarks>
+    /// <param name="targeting">Targeting to update.</param>
+    /// <param name="property">Property being assigned.</param>
+    /// <param name="value">Expression assigned to it.</param>
+    /// <param name="classDecl">Declaring class, used to resolve constants.</param>
+    /// <returns>Whether the property was one of the four conditions.</returns>
+    public static bool Apply(
+        ControllerTargeting targeting,
+        string property,
+        ExpressionSyntax value,
+        ClassDeclarationSyntax classDecl)
+    {
+        var parameters = TypeParameters(classDecl);
+
+        switch (property)
+        {
+            // ViewController<T>'s own constructor assigns typeof(T). That restricts whatever closes
+            // the generic, and nothing at all by itself.
+            case "TargetObjectType" when value is TypeOfExpressionSyntax objectType
+                                         && !parameters.Contains(objectType.Type.ToString()):
+                targeting.TargetObjectType = LastSegment(objectType.Type.ToString());
+                targeting.Declared.Add(nameof(ControllerTargeting.TargetObjectType));
+                return true;
+
+            case "TypeOfView" when value is TypeOfExpressionSyntax viewType
+                                   && !parameters.Contains(viewType.Type.ToString()):
+                targeting.TypeOfView = NormalizeViewType(viewType.Type.ToString());
+                targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
+                return true;
+
+            case "TargetViewType":
+                targeting.TypeOfView = NormalizeViewType(value.ToString());
+                targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
+                return true;
+
+            case "TargetViewNesting":
+                targeting.Nesting = NormalizeNesting(value.ToString());
+                targeting.Declared.Add(nameof(ControllerTargeting.Nesting));
+                return true;
+
+            case "TargetViewId":
+                ReadViewId(classDecl, value, targeting);
+                targeting.Declared.Add(ViewIdCondition);
+                return true;
+
+            default:
+                return false;
         }
     }
 

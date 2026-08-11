@@ -130,6 +130,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// </summary>
     private static void EnrichActionsFromConstructor(List<ExtractedAction> actions, BlockSyntax body, ExtractionOptions options)
     {
+        var classDecl = body.Ancestors().OfType<ClassDeclarationSyntax>().First();
+
         // Map field variable names to their action IDs for cross-referencing
         var fieldNameToAction = new Dictionary<string, ExtractedAction>();
 
@@ -189,6 +191,10 @@ public class ControllerAnalyzer : IControllerAnalyzer
                     if (expr is AssignmentExpressionSyntax initAssignment)
                     {
                         var propName = initAssignment.Left.ToString();
+
+                        if (ControllerTargetingReader.Apply(action.Targeting, propName, initAssignment.Right, classDecl))
+                            continue;
+
                         var value = SyntaxLiteral.ValueOf(initAssignment.Right);
 
                         switch (propName)
@@ -214,13 +220,19 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
             var objectName = memberAccess.Expression.ToString();
             var propertyName = memberAccess.Name.ToString();
-            var value = SyntaxLiteral.ValueOf(assignment.Right);
 
             // Look up by field name or action ID
             var action = fieldNameToAction.GetValueOrDefault(objectName)
                          ?? actions.FirstOrDefault(a => a.ActionId == objectName || objectName.EndsWith(a.ActionId));
 
             if (action == null) continue;
+
+            // An action's own view targeting, which narrows it further inside an already-active
+            // controller. Read with the same rules, because XAF evaluates it with the same method.
+            if (ControllerTargetingReader.Apply(action.Targeting, propertyName, assignment.Right, classDecl))
+                continue;
+
+            var value = SyntaxLiteral.ValueOf(assignment.Right);
 
             switch (propertyName)
             {
@@ -265,7 +277,6 @@ public class ControllerAnalyzer : IControllerAnalyzer
         // Now find the Execute handler method bodies
         if (options.IncludeMethodBodies)
         {
-            var classDecl = body.Ancestors().OfType<ClassDeclarationSyntax>().First();
             foreach (var action in actions.Where(a => a.ExecuteMethodName != null))
             {
                 var method = classDecl.Members.OfType<MethodDeclarationSyntax>()

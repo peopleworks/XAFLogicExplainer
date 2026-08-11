@@ -7,9 +7,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Groundwork for answering "what runs when I open this screen?".
+What runs when you open this screen.
 
 ### Added
+
+- **The screen inventory.** Every view the application has, and the logic XAF loads onto each one.
+  Neither half of that can be read from the repository: the Model Editor stores only the views
+  somebody changed, and the rest are generated at startup from the business classes — so the
+  fourteen-entity demo has **54 views, 54 of which appear in no file**. The id rules are the
+  framework's own generators: `{Class}_ListView`, `{Class}_DetailView`, `{Class}_LookupListView`,
+  and `{Class}_{Collection}_ListView` for every collection.
+  - Activation is a transcription of `ViewController.IsFitToView`, condition by condition, and each
+    match records *why* — so the answer can be checked instead of trusted.
+  - Actions are filtered by their own targeting, which can be narrower than their controller's.
+  - Immediately found the thing it was built to find: the demo's `CustomizeExpiryEditorController`
+    is a `ViewController<DetailView>` that names no object type, so it runs on the detail view of
+    **all fourteen** classes. Its own comment says it customizes "every expiry field".
+  - `xaf_view` (MCP) — call it with no argument for the inventory, or with a view id for the whole
+    picture. A `Screens` section in the HTML explainer, and a `_Screens.md` detail file beside the
+    other agent documentation.
+  - What it deliberately does not claim: `Active["reason"] = …` is set at run time from data, so a
+    controller listed on a view can still switch itself off. This is what XAF *loads*, and it says
+    so wherever it is reported.
+  - A controller restricted to a `TargetViewId` that is not a literal is listed apart rather than
+    against every screen — that would invent an appearance on all of them.
 
 - **Controller targeting is now read in full.** XAF decides where a controller activates with four
   conditions ANDed together — nesting, view type, object type and view id — and only two of them
