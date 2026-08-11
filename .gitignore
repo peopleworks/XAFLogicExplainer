@@ -80,3 +80,13 @@ scratch/
 # ---------------------------------------------------------------------------
 docs/XAF_Logic_Explainer_Presentation.pptx
 docs/xaflogic-cli-guide.html
+
+# ---------------------------------------------------------------------------
+# Built by the Pages workflow, which copies docs/assets into it so the site can
+# reference figures with a same-origin path. Committing it would give every
+# figure a second copy, free to drift from the one the README uses.
+#
+# Also written by site/capture-screenshots.py while it works.
+# ---------------------------------------------------------------------------
+site/assets/
+site/.report.html

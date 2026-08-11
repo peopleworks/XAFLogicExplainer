@@ -134,6 +134,10 @@ internal static class HtmlExplainerStyles
         table { border-collapse: collapse; width: 100%; margin-top: .9rem; font-size: .89rem; }
         th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
         th { font-family: var(--mono); font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
+        /* A row header that is an identifier, not a label. XAF view ids are case-sensitive, so
+           uppercasing Patient_Prescriptions_ListView prints an id that does not exist -- and it is
+           printed precisely so someone can go and find it. */
+        th.id { text-transform: none; letter-spacing: 0; font-size: .78rem; color: var(--ink); }
         td.mono, .mono { font-family: var(--mono); }
         /* A cross-reference points at another card on this page, so it is named in the colour that
            card is titled in. The browser default is a blue the rest of the page never uses. */

@@ -595,6 +595,7 @@ footer p { max-width: 44rem; }
   <span class="nav__brand"><span class="nav__mark"></span>XAF Logic Explainer</span>
   <a href="#gap" class="nav__hideable">The gap</a>
   <a href="#hidden" class="nav__hideable">Hidden behaviour</a>
+  <a href="#screens" class="nav__hideable">Screens</a>
   <a href="#output" class="nav__hideable">Output</a>
   <a href="#mcp" class="nav__hideable">MCP</a>
   <a href="#explainer" class="nav__hideable">Explainer</a>
@@ -880,10 +881,10 @@ footer p { max-width: 44rem; }
            component model. Nothing on the entity, and nothing in the Model Editor, mentions it.</p>
       </div>
       <div class="card card--lit">
-        <h3>Migrations that ran once</h3>
-        <p>A block guarded by <code>CurrentDBVersion</code> ran on somebody's production database
-           and never again. Reading today's code cannot recover it — so an agent asked why a column
-           holds what it holds will invent a reason.</p>
+        <h3>Migrations that run once</h3>
+        <p>A block guarded by <code>CurrentDBVersion</code> runs at most once for any database, and
+           never again after that. Reading today's code cannot recover what it did — so an agent
+           asked why a column holds what it holds will invent a reason.</p>
       </div>
     </div>
 
@@ -910,6 +911,53 @@ footer p { max-width: 44rem; }
         of why, and the question anyone reading a migration actually has.
       </figcaption>
     </figure>
+  </section>
+
+  <!-- --------------------------------------------------------- screens -->
+  <section id="screens" class="reveal">
+    <p class="eyebrow">What runs when you open a screen</p>
+    <h2>The screens are in no file.<br>Neither is what loads onto them.</h2>
+    <p>
+      XAF generates a list, a detail and a lookup view for every business class, plus a list view
+      for every collection — and the Model Editor stores only the ones somebody changed. Grep your
+      source for <code>Patient_Prescriptions_ListView</code> and you find nothing. It is still a
+      screen your users open.
+    </p>
+    <p>
+      Which controllers run there is decided at run time, by four conditions XAF ANDs together:
+      nesting, view type, object type and view id. Every one of them is unrestricted when unset, so
+      a controller that sets none loads onto <em>every</em> screen you have — and almost nobody
+      knows which of theirs do.
+    </p>
+
+    <figure class="figure">
+      <div class="fig-frame">
+        <img src="assets/explainer-screens.png"
+             alt="The screens section of a generated explainer: the five views XAF generates for one business class, each naming the controllers that activate on it and the condition that made each one match, with the framework's own controllers folded away behind a single line."
+             loading="lazy" style="display:block;width:100%;height:auto">
+      </div>
+      <figcaption>
+        A transcription of <code>ViewController.IsFitToView</code>, condition by condition, against
+        an inventory built from the framework's own id generators. Each match records <strong>why</strong>,
+        so the answer can be checked instead of trusted.
+      </figcaption>
+    </figure>
+
+    <div class="grid grid--pairs">
+      <div class="card card--lit">
+        <h3>Two layers, kept apart</h3>
+        <p>What your team wrote, in full. What XAF provides, folded behind one line — there is a
+           great deal of it, and it is not yours to change. The distinction is the whole point when
+           somebody asks you to change what a screen does.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>What it refuses to claim</h3>
+        <p>A controller listed here can still switch itself off through <code>Active["reason"]</code>,
+           which depends on the data and the user. This is what XAF <em>loads</em> onto a screen —
+           and anything unreadable from source is listed apart, with the reason, rather than quietly
+           counted as “runs everywhere”.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ---------------------------------------------------------- output -->

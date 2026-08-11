@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Text;
 using XafLogicExplainer.Core.Models;
@@ -433,7 +433,8 @@ public sealed class HtmlExplainerGenerator
                      .GroupBy(v => v.ObjectType ?? "Other")
                      .OrderBy(g => g.Key, StringComparer.Ordinal))
         {
-            sb.AppendLine($"  <article class=\"card\" data-search=\"{Haystack(group.Key, string.Join(" ", group.Select(v => v.Id)))}\">");
+            sb.AppendLine($"  <article class=\"card\" id=\"screens-{E(group.Key)}\" " +
+                          $"data-search=\"{Haystack(group.Key, string.Join(" ", group.Select(v => v.Id)))}\">");
             sb.AppendLine("    <div class=\"card__head\">");
             sb.AppendLine($"      <span class=\"card__name\">{E(group.Key)}</span>");
             sb.AppendLine($"      <span class=\"card__meta\">{group.Count()} views</span>");
@@ -442,7 +443,7 @@ public sealed class HtmlExplainerGenerator
             foreach (var view in group.OrderBy(v => v.Id, StringComparer.Ordinal))
             {
                 sb.AppendLine("    <table><tbody>");
-                sb.Append($"      <tr><th class=\"mono\">{E(view.Id)}</th><td>");
+                sb.Append($"      <tr><th class=\"mono id\">{E(view.Id)}</th><td>");
                 sb.Append(E(ScreenKind(view)));
 
                 if (view.InNavigation)
@@ -499,7 +500,7 @@ public sealed class HtmlExplainerGenerator
 
                     foreach (var activation in framework.OrderBy(a => a.Controller, StringComparer.Ordinal))
                     {
-                        sb.Append($"        <tr><th class=\"mono\">{E(activation.Controller)}</th><td class=\"t\">");
+                        sb.Append($"        <tr><th class=\"mono id\">{E(activation.Controller)}</th><td class=\"t\">");
                         sb.Append(E(activation.Summary ?? activation.SourceProject ?? ""));
                         sb.AppendLine("</td></tr>");
                     }
@@ -527,7 +528,7 @@ public sealed class HtmlExplainerGenerator
 
             foreach (var controller in undetermined)
             {
-                sb.AppendLine($"      <tr><th class=\"mono\">{E(controller.ClassName)}</th>" +
+                sb.AppendLine($"      <tr><th class=\"mono id\">{E(controller.ClassName)}</th>" +
                               $"<td class=\"t\">{E(Analyzers.ViewActivationResolver.UndeterminedReason(controller))}</td></tr>");
             }
 

@@ -73,13 +73,43 @@ tool never links against DevExpress assemblies:
   live in the platform project *beside* the module, so nobody reading the business objects meets
   them.
 - **Version-gated migrations** — the `CurrentDBVersion < new Version(…)` blocks in your updater.
-  Each ran once, on somebody's production database, and is the only explanation for data the
-  current code cannot account for.
+  Each runs at most once for any database, and is the only explanation for data the current code
+  cannot account for.
+- **Every screen, and what loads onto it** — see below.
 
-The last two are the reason an agent that has read every business class can still be confidently
-wrong about the application:
+These are the reason an agent that has read every business class can still be confidently wrong
+about the application:
 
 <img alt="The custom editors section of a generated explainer: a barcode scanner property editor with what it renders, the alias XAF matches on, its base type and the JavaScript file it depends on, followed by built-in editors a controller reconfigures at run time." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png">
+
+## What runs when you open this screen
+
+Nothing in an XAF repository answers that, and both halves are missing for different reasons.
+
+**The screens themselves are in no file.** XAF generates a list, a detail and a lookup view for
+every business class, plus a list view for every collection, and the Model Editor stores only the
+ones somebody changed. Grepping your source for `Patient_Prescriptions_ListView` finds nothing —
+and that is not evidence it is missing.
+
+**Which controllers run there is decided at run time**, by four conditions XAF ANDs together:
+nesting, view type, object type and view id. Each is unrestricted when unset, so a controller that
+sets none of them loads onto *every* screen you have.
+
+This reads all four the way `ViewController.IsFitToView` evaluates them, against a view inventory
+built from the framework's own id generators — and records **why** each one matched, so the answer
+can be checked rather than trusted:
+
+<img alt="The screens section of a generated explainer, showing the five views XAF generates for one business class. Each names the controllers that activate on it and the condition that made each one match; the framework's own controllers are folded away behind a single line." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-screens.png">
+
+Two layers, kept apart. What your team wrote gets the full treatment; what XAF provides is folded
+away behind one line, because there is a great deal of it and it is not yours to change. With a
+[ground-truth catalog](#optional-tell-your-code-apart-from-devexpresss) it is named too — scoped to
+the modules you actually register, so a WinForms controller never appears on a Blazor screen.
+
+What it will not claim: a controller listed here can still switch itself off through
+`Active["reason"]`, which depends on the data and the user. This is what XAF **loads** onto a
+screen, not what will necessarily do something — and anything it could not read from the source is
+listed apart, with the reason, instead of being quietly treated as "runs everywhere".
 
 ## Quick start
 
