@@ -50,29 +50,36 @@
       "narration": "Y esta. Un bloque protegido por current D B version se ejecutó una vez, en la base de datos de producción de alguien, hace tres años, y nunca más. Leyendo el código de hoy no hay forma de recuperar qué hizo. Así que cuando preguntas por qué una columna tiene ese valor, el agente se inventa una razón. La herramienta guarda la migración, y el comentario que explica el porqué."
     },
     {
-      "id": "07-roslyn",
-      "html": "scenes/es/07-roslyn.html",
-      "minSeconds": 14,
+      "id": "07-pantallas",
+      "html": "scenes/es/07-pantallas.html",
+      "minSeconds": 17,
       "voice": "Marcela",
-      "narration": "Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus ciento setenta y seis tests corren gratis en un runner público."
+      "narration": "Y luego la pregunta que nada en el repositorio responde: qué se ejecuta cuando abres esta pantalla. X A F genera una vista de lista, una de detalle y una de búsqueda por cada clase de negocio, así que las pantallas tampoco están en ningún archivo. Catorce clases, cincuenta y cuatro pantallas, ninguna escrita en ninguna parte. Y qué controladores se cargan en una son cuatro condiciones que el framework decide en tiempo de ejecución."
     },
     {
-      "id": "08-niveles",
-      "html": "scenes/es/08-niveles.html",
+      "id": "08-roslyn",
+      "html": "scenes/es/08-roslyn.html",
+      "minSeconds": 14,
+      "voice": "Marcela",
+      "narration": "Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus doscientos sesenta y siete tests corren gratis en un runner público."
+    },
+    {
+      "id": "09-niveles",
+      "html": "scenes/es/09-niveles.html",
       "minSeconds": 14,
       "voice": "Marcela",
       "narration": "AGENTS punto M D se lee en cada petición, así que la mayor parte de la documentación queda fuera a propósito. Once kilobytes siempre cargados, setenta que se abren solo si hacen falta. Y lo más pequeño es lo que más pesa: si no está en la lista, no existe."
     },
     {
-      "id": "09-mapa",
-      "html": "scenes/es/09-mapa.html",
+      "id": "10-mapa",
+      "html": "scenes/es/10-mapa.html",
       "minSeconds": 15,
       "voice": "Marcela",
       "narration": "La misma extracción escribe además una página autocontenida para una persona: quien acaba de heredar la aplicación. Con un mapa de tu modelo de dominio que la mayoría de equipos nunca ha visto, porque vive en la cabeza de una persona. Que es justo el conocimiento que se va cuando esa persona se va."
     },
     {
-      "id": "10-cierre",
-      "html": "scenes/es/10-cierre.html",
+      "id": "11-cierre",
+      "html": "scenes/es/11-cierre.html",
       "minSeconds": 13,
       "voice": "Marcela",
       "narration": "Es gratis, es M I T, y está en NuGet. Apúntalo a tu aplicación X A F, y cuando lea mal un patrón que tú usas, abre un issue. Tu agente ya sabe X A F. Vamos a enseñarle tu aplicación."

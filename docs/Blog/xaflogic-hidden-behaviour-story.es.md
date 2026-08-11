@@ -41,7 +41,7 @@ O sáltate los ficheros y deja que pregunte directamente, por MCP:
 { "mcpServers": { "xaf": { "command": "dnx", "args": ["XafLogicExplainer.Mcp", "--yes"] } } }
 ```
 
-Nueve herramientas, en vivo contra tu código. Arrancado desde la carpeta de la solución encuentra el módulo XAF él solo, así que no hay ninguna ruta que configurar.
+Diez herramientas, en vivo contra tu código. Arrancado desde la carpeta de la solución encuentra el módulo XAF él solo, así que no hay ninguna ruta que configurar.
 
 ## Lo que no esperaba: dónde se esconde de verdad el comportamiento
 
@@ -77,6 +77,22 @@ La herramienta guarda a qué versión se actualizaba, la cota de «solo bases de
 
 Los datos semilla se mantienen separados en todo momento. Los datos semilla dicen qué contiene una base de datos nueva; las migraciones dicen qué le pasó a todas las que no lo eran. Mezclarlos falsea las dos cosas.
 
+## Qué se ejecuta cuando abres esta pantalla
+
+Esa pregunta no tiene respuesta en ninguna parte de un repositorio XAF, y las dos mitades faltan por motivos distintos.
+
+**Las pantallas no están en ningún archivo.** XAF genera una vista de lista, una de detalle y una de búsqueda por cada clase de negocio, más una lista por cada colección — y el Model Editor guarda solo las que alguien tocó. Busca `Patient_Prescriptions_ListView` en toda la solución y no encuentras nada. Sigue siendo una pantalla que tus usuarios abren todos los días. La aplicación de demostración del repositorio tiene **catorce clases de negocio y cincuenta y cuatro vistas, ninguna de las cuales aparece en archivo alguno** — las reglas de los identificadores salen de los propios generadores de XAF, así que el inventario se deriva en vez de adivinarse.
+
+**Qué controladores corren ahí se decide en tiempo de ejecución.** `ViewController.IsFitToView` conjuga cuatro condiciones con AND: anidamiento, tipo de vista, tipo de objeto e identificador de vista. Todas quedan sin restringir si no se fijan — así que un controlador que no fija ninguna se carga en **todas** las pantallas de la aplicación, y casi nadie sabe cuáles de los suyos lo hacen. La prueba del tipo de objeto es `IsAssignableFrom`, no igualdad, de modo que apuntar a una clase base alcanza en silencio a todas las que cuelgan de ella.
+
+![La sección de pantallas: cinco vistas de una clase, los controladores de cada una y por qué coincidió cada uno](https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-screens.png)
+
+La herramienta evalúa las cuatro igual que el framework, y guarda **por qué** coincidió cada una, para que la respuesta se pueda comprobar en lugar de creerla. En la primerísima ejecución contra la demo encontró justo lo que la hizo nacer: un `ViewController<DetailView>` que no nombra tipo de objeto, así que se carga en la vista de detalle de las catorce clases. Su propio comentario dice que personaliza «cada campo de caducidad».
+
+Dos capas, separadas. Lo que escribió tu equipo va entero; lo que aporta XAF queda plegado tras una línea — hay muchísimo, y no es tuyo para cambiarlo. Esa distinción acaba siendo lo único que importa cuando alguien te pide que cambies lo que hace una pantalla.
+
+Y lo que se niega a afirmar pesa igual. Un controlador listado ahí todavía puede apagarse solo con `Active["razón"]`, que depende de los datos y del usuario. Esto es lo que XAF **carga** en una pantalla, no lo que necesariamente hará algo — y todo lo que no se puede leer del código va aparte, con el motivo, en vez de contarse calladamente como «corre en todas partes».
+
 ## La decisión sobre la que se sostiene todo lo demás
 
 La extracción es **análisis sintáctico con Roslyn**. La herramienta parsea tu código como texto. Nunca compila tu proyecto y nunca referencia un ensamblado de DevExpress.
@@ -84,7 +100,7 @@ La extracción es **análisis sintáctico con Roslyn**. La herramienta parsea tu
 Suena a limitación. Es la propiedad sobre la que se sostiene el proyecto entero:
 
 - **Funciona en una rama que no compila** — que es, muchas veces, justo cuando necesitas saber qué hace la aplicación.
-- **No hace falta licencia de DevExpress.** Quien quiera contribuir al extractor puede hacerlo sin suscripción, y CI corre gratis en un runner público de Ubuntu. La suite son 176 tests sobre fixtures XAF sintéticos que referencian tipos de DevExpress que no están instalados, porque nunca se compila nada.
+- **No hace falta licencia de DevExpress.** Quien quiera contribuir al extractor puede hacerlo sin suscripción, y CI corre gratis en un runner público de Ubuntu. La suite son 267 tests sobre fixtures XAF sintéticos que referencian tipos de DevExpress que no están instalados, porque nunca se compila nada.
 - **Es rápido.** Parsear con Roslyn un módulo grande son segundos, no una compilación.
 
 El precio es que las verdades que solo se ven por reflexión no están disponibles. Me pareció un buen intercambio, y tres años de uso en producción no me han hecho cambiar de opinión.
@@ -124,6 +140,23 @@ La demo llevaba tiempo declarando **12 relaciones cuando declara 24, y 5 reglas 
 Poco después, publicando el proyecto en un directorio de MCP, vi la ficha anunciando **v0.9.0, 7 herramientas y 129 tests**. Los números reales eran 0.11.0, 9 y 176. La sección de estado del README se había congelado meses atrás, y NuGet, el registro MCP y todos los directorios que replican un README lo estaban repitiendo.
 
 Los dos casos son el mismo fallo, y es justo el que esta herramienta existe para atacar: **una afirmación sobre una base de código que nada obliga a seguir siendo cierta**. Así que ahora un test fija la forma de la demo, y otro deriva del código la versión, el número de herramientas y el de tests, y rompe la compilación cuando el README se desvía. Si un inventario de mundo cerrado merece generarse para tu código, merece exigirse a mi propia documentación.
+
+## Después la auditamos en serio, y era peor
+
+Dos accidentes en una semana son un patrón, no mala suerte. Así que antes de etiquetar esta versión pasé tres revisores por el proyecto en **ejes deliberadamente disjuntos**: uno contrastando cada afirmación contra los fuentes de DevExpress instalados, otro cazando defectos en el código, y otro al que solo se le enseñó **la salida generada y jamás el generador**.
+
+El tercero encontró una categoría que los otros dos no podían ver por construcción. Leyó los artefactos como los leería quien acaba de heredar la aplicación, y reportó frases sencillamente falsas: dos generadores míos contradiciéndose sobre si algo pedía un editor personalizado; una receta que le decía a un agente que registrara las clases nuevas en una colección que XAF no exige; un rango de migración que nombraba como cota inferior la única versión que excluye. Leer código te hace leer tu propia intención. Leer la salida te hace leer lo que dice.
+
+El peor hallazgo vino del segundo revisor, y llevaba ahí mucho más que esta versión. La extracción devolvía solo la **primera** clase de controlador por archivo, y reconocía únicamente las que derivaban *directamente* de `ViewController` y sus dos hermanas. El código XAF real no es así — extiende controladores de la caja y clases base propias —, de modo que una prueba con cinco controladores en tres archivos reportaba **uno**. Todos los tests pasaban, porque todos construían su entrada a mano. Y un controlador que nunca se ve no se puede reportar como ausente, que es el único fallo que una herramienta basada en inventarios de mundo cerrado no puede sobrevivir.
+
+Unos treinta hallazgos, una sola falsa alarma. Las correcciones se parten limpio en dos, y vale la pena nombrar la partición porque es toda la disciplina:
+
+- **Sobre-reporte** — decir más de lo que el código demuestra. Un ternario en `TargetViewType` leído como una restricción segura a la última palabra que aparecía. Un controlador que extiende una clase invisible para el análisis, reportado como «no restringe nada, corre en todas partes». Una clase base listada en pantallas donde un descendiente registrado ya la había apagado. Cada una es una afirmación rotunda construida sobre no haber entendido una línea.
+- **Exhaustividad falsa** — una lista titulada *todas las expresiones de esta aplicación* que bebía de cuatro de los seis sitios donde hay criterios, y encima deduplicaba. Las dos que jamás tocó eran la expresión que un `RuleCriteria` realmente impone y el criterio que decide si el botón de una acción se puede pulsar siquiera. En la demo eso es `Not IsDispensed`: la condición que gobierna la única operación de la aplicación, en ningún documento generado.
+
+La regla con la que me quedé: **quedarse corto es malo, pasarse es peor, y «desconocido» no se puede escribir igual que «sin restricción»**. Cuando ahora la herramienta no puede leer algo, lo dice y nombra la expresión que no supo resolver, en vez de archivarla calladamente como «ninguna restricción».
+
+Prefiero publicar esa lista antes que un anuncio de lanzamiento. Una herramienta cuyo argumento entero es *deja de dejar que tu agente invente cosas* no tiene derecho a distribuir documentación que nadie comprueba.
 
 ## Dónde está
 

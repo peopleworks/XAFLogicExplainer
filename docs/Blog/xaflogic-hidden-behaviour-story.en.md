@@ -41,7 +41,7 @@ Or skip the files and let the agent ask directly, through MCP:
 { "mcpServers": { "xaf": { "command": "dnx", "args": ["XafLogicExplainer.Mcp", "--yes"] } } }
 ```
 
-Nine tools, live against your source. Started from a solution folder it finds the XAF module by itself, so there's no path to configure.
+Ten tools, live against your source. Started from a solution folder it finds the XAF module by itself, so there's no path to configure.
 
 ## The part that surprised me: where behaviour actually hides
 
@@ -77,6 +77,22 @@ The tool records which version it upgraded to, the "existing databases only" low
 
 Seed data is kept strictly separate throughout. Seed data says what a fresh database contains; migrations say what happened to every database that wasn't fresh. Conflating them misreports both.
 
+## What runs when you open this screen
+
+That question has no answer anywhere in an XAF repository, and the two halves are missing for different reasons.
+
+**The screens are in no file.** XAF generates a list, a detail and a lookup view for every business class, plus a list view for every collection, and the Model Editor stores only the ones somebody changed. Grep a solution for `Patient_Prescriptions_ListView` and you get nothing. It is still a screen your users open every day. The demo application in the repository has **fourteen business classes and fifty-four views, none of which appear in any file** — the id rules come from XAF's own node generators, so the inventory can be derived rather than guessed.
+
+**Which controllers run there is decided at run time.** `ViewController.IsFitToView` ANDs four conditions together: nesting, view type, object type and view id. Every one of them is unrestricted when unset — so a controller that sets none loads onto *every* screen in the application, and almost nobody knows which of theirs do. The object-type test is `IsAssignableFrom`, not equality, so targeting a base class quietly reaches every class beneath it.
+
+![The screens section: five views for one business class, the controllers on each, and why each matched](https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-screens.png)
+
+The tool evaluates all four the way the framework does, and records **why** each one matched, so the answer can be checked instead of trusted. On the very first run against the demo it found what I built it to find: a `ViewController<DetailView>` that names no object type, so it loads onto the detail view of all fourteen classes. Its own comment says it customizes "every expiry field".
+
+Two layers, kept apart. What your team wrote gets the full treatment; what XAF provides is folded behind one line — there is a great deal of it, and it is not yours to change. That distinction turns out to be the whole point when somebody asks you to change what a screen does.
+
+And what it refuses to claim matters as much. A controller listed there can still switch itself off through `Active["reason"]`, which depends on the data and the user. This is what XAF **loads** onto a screen, not what will necessarily do something — and anything unreadable from source is listed apart, with the reason, rather than quietly counted as "runs everywhere".
+
 ## The decision everything else rests on
 
 Extraction is **Roslyn syntax analysis**. The tool parses your source as text. It never compiles your project, and it never references a DevExpress assembly.
@@ -84,7 +100,7 @@ Extraction is **Roslyn syntax analysis**. The tool parses your source as text. I
 That sounds like a limitation. It's the feature the whole project stands on:
 
 - **It works on a branch that doesn't build** — which is often precisely when you need to know what the application does.
-- **It needs no DevExpress licence.** Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 176 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.
+- **It needs no DevExpress licence.** Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 267 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.
 - **It's fast.** Roslyn parsing over a large module takes seconds, not a build.
 
 The cost is that reflection-only truths are unavailable. I judged that a good trade, and three years of production use hasn't changed my mind.
@@ -124,6 +140,23 @@ The demo had been quietly reporting **12 relationships when it declares 24, and 
 Then, listing the project on an MCP directory, I saw the page advertising **v0.9.0, 7 tools and 129 tests**. The real numbers were 0.11.0, 9 and 176. The README's Status section had frozen months earlier, and NuGet, the MCP registry and every directory that mirrors a README were all repeating it.
 
 Both are the same failure, and it's the one this tool exists to attack: **a statement about a codebase that nothing forces to stay true**. So now a test asserts the demo's shape, and another derives the version, the tool count and the test count from the source and fails the build when the README drifts. If a closed-world inventory is worth generating for your code, it's worth enforcing on my own documentation.
+
+## Then I audited it properly, and it was worse
+
+Two accidents in one week is a pattern, not bad luck. So before tagging this release I ran three reviewers over the project on **deliberately disjoint axes**: one checking every claim against the installed DevExpress sources, one hunting defects in the code, and one that was shown **only the generated output and never the generator**.
+
+The third found a category the other two structurally could not. It read the artefacts the way somebody who had just inherited the app would, and reported sentences that were simply false: two of my generators contradicting each other about whether a custom editor was requested by anything; a recipe telling an agent to register new business classes in a collection XAF does not require; a migration range naming as its lower bound the one version it excludes. Reading code makes you read your own intent. Reading output makes you read what it says.
+
+The worst finding came from the second reviewer, and it had been there far longer than the release. Extraction returned only the **first** controller class per file, and only recognised classes deriving *directly* from `ViewController` and its two siblings. Real XAF code does not look like that — it extends shipped controllers and its own base classes — so a probe with five controllers across three files reported **one**. Every test passed, because every test built its input by hand. And a controller that is never seen cannot be reported as missing, which is the one failure a tool built on closed-world inventories cannot survive.
+
+Around thirty findings, one false alarm. The corrections split cleanly, and the split is worth naming because it is the whole discipline:
+
+- **Over-reporting** — saying more than the source proves. A ternary on `TargetViewType` read as a confident restriction to whatever word came last. A controller extending a class the analysis cannot see reported as "restricts nothing, runs everywhere". A base controller listed on screens where a registered descendant had already switched it off. Every one of these is a definite statement built out of not having understood a line.
+- **False completeness** — a list headed *every expression in this application* that drew from four of the six places criteria occur, while deduplicating. The two it never touched were the expression a `RuleCriteria` actually enforces and the criteria deciding whether an action's button can be pressed at all. On the demo that is `Not IsDispensed`: the condition governing the application's single operation, in no generated document.
+
+The rule I settled on: **under-reporting is bad, over-reporting is worse, and "unknown" must never be spelled the same way as "unrestricted"**. When the tool cannot read something now, it says so and names the expression it could not resolve, instead of quietly filing it under "no restriction".
+
+I would rather publish that list than a launch post. A tool whose entire pitch is *stop your agent inventing things* has no business shipping documentation nobody checks.
 
 ## Where it is
 

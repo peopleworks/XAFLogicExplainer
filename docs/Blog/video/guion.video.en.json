@@ -50,29 +50,36 @@
       "narration": "And this one. A block guarded by current D B version ran once, on somebody's production database, three years ago, and never again. Reading today's code cannot recover what it did. So when you ask why a column holds that value, the agent invents a reason. The tool keeps the migration — and the comment explaining why."
     },
     {
-      "id": "07-roslyn",
-      "html": "scenes/en/07-roslyn.html",
-      "minSeconds": 14,
+      "id": "07-pantallas",
+      "html": "scenes/en/07-pantallas.html",
+      "minSeconds": 17,
       "voice": "Rachel",
-      "narration": "All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its hundred and seventy six tests run free on a public runner."
+      "narration": "And then the question nothing in the repository answers: what runs when you open this screen. X A F generates a list, a detail and a lookup view for every business class, so the screens are in no file either. Fourteen classes, fifty four screens, none of them written down. And which controllers load onto one is four conditions the framework decides at run time."
     },
     {
-      "id": "08-niveles",
-      "html": "scenes/en/08-niveles.html",
+      "id": "08-roslyn",
+      "html": "scenes/en/08-roslyn.html",
+      "minSeconds": 14,
+      "voice": "Rachel",
+      "narration": "All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its two hundred and sixty seven tests run free on a public runner."
+    },
+    {
+      "id": "09-niveles",
+      "html": "scenes/en/09-niveles.html",
       "minSeconds": 14,
       "voice": "Rachel",
       "narration": "AGENTS dot M D is read on every single request, so most of the documentation is deliberately not in it. Eleven kilobytes always loaded, seventy opened on demand. And the smallest part matters most: if it isn't listed, it does not exist."
     },
     {
-      "id": "09-mapa",
-      "html": "scenes/en/09-mapa.html",
+      "id": "10-mapa",
+      "html": "scenes/en/10-mapa.html",
       "minSeconds": 15,
       "voice": "Rachel",
       "narration": "The same extraction also writes one self-contained page for a person — whoever just inherited the application. Including a map of your domain model that most teams have never seen, because it lives in one person's head. Which is exactly the knowledge that leaves when they do."
     },
     {
-      "id": "10-cierre",
-      "html": "scenes/en/10-cierre.html",
+      "id": "11-cierre",
+      "html": "scenes/en/11-cierre.html",
       "minSeconds": 13,
       "voice": "Rachel",
       "narration": "It's free, M I T, and on NuGet. Point it at your X A F application, and when it misreads a pattern yours uses, open an issue. Your agent already knows X A F. Let's teach it your application."

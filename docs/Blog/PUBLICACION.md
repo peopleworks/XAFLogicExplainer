@@ -59,7 +59,7 @@ usarla no hace falta licencia de DevExpress.
 
 ---
 
-## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · ~2:20 · 1280×720 · voz Rachel)
+## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · ~2:39 · 1280×720 · voz Rachel)
 
 **Título:**
 ```
@@ -74,7 +74,9 @@ DevExpress already ships agent skills for how the framework works, and a docs MC
 
 It never compiles your project and never references a DevExpress assembly — so it works on a branch that doesn't build, and needs no DevExpress licence to run.
 
-It also extracts the parts that aren't in your business classes at all: Model Editor (.xafml) customizations, custom property editors and the JavaScript they depend on, built-in editors reconfigured at run time, and the version-gated migrations that ran once on a production database.
+It also extracts the parts that aren't in your business classes at all: Model Editor (.xafml) customizations, custom property editors and the JavaScript they depend on, built-in editors reconfigured at run time, and version-gated migrations that run at most once per database.
+
+And it answers a question nothing in an XAF repository answers: what runs when you open a screen. XAF generates a list, a detail and a lookup view for every business class, so the screens are in no file either — and which controllers load onto one is four conditions the framework evaluates at run time.
 
 Free and open source (MIT). Built with .NET 10.
 
@@ -88,23 +90,24 @@ CHAPTERS
 00:29  Two minutes: AGENTS.md, CLAUDE.md, Copilot
 00:41  Where behaviour actually hides
 00:55  Custom editors, and their JavaScript
-01:10  Migrations that ran once, three years ago
-01:26  Roslyn: no compile, no licence
-01:40  Why most docs are NOT in AGENTS.md
-01:54  The domain map nobody has seen
-02:09  Try it on your application
+01:10  Migrations that run once per database
+01:26  What runs when you open a screen
+01:43  Roslyn: no compile, no licence
+01:57  Why most docs are NOT in AGENTS.md
+02:11  The domain map nobody has seen
+02:26  Try it on your application
 
 #DevExpress #XAF #dotnet #AI #OpenSource
 ```
 
 **Etiquetas / Tags (bloque para YouTube):**
 ```
-xaf, devexpress, devexpress xaf, expressapp framework, xpo, ef core, dotnet, .net 10, roslyn, mcp, model context protocol, ai coding agent, claude code, github copilot, agents.md, legacy code, code documentation, xafml, model editor, open source
+xaf, devexpress, devexpress xaf, expressapp framework, xpo, ef core, dotnet, .net 10, roslyn, mcp, model context protocol, ai coding agent, claude code, github copilot, agents.md, legacy code, code documentation, xafml, model editor, view controller, open source
 ```
 
 ---
 
-## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · ~2:20 · 1280×720 · voz Marcela)
+## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · ~2:39 · 1280×720 · voz Marcela)
 
 **Título:**
 ```
@@ -119,7 +122,9 @@ DevExpress ya publica skills para enseñar cómo funciona el framework, y un ser
 
 Nunca compila tu proyecto y nunca referencia un ensamblado de DevExpress — así que funciona en una rama que no compila, y para usarlo no hace falta licencia de DevExpress.
 
-Además extrae lo que no está en las clases de negocio: personalizaciones del Model Editor (.xafml), editores de propiedad propios y el JavaScript del que dependen, editores integrados reconfigurados en tiempo de ejecución, y las migraciones con versión que se ejecutaron una sola vez sobre una base de datos en producción.
+Además extrae lo que no está en las clases de negocio: personalizaciones del Model Editor (.xafml), editores de propiedad propios y el JavaScript del que dependen, editores integrados reconfigurados en tiempo de ejecución, y las migraciones con versión que se ejecutan como mucho una vez por base de datos.
+
+Y responde una pregunta que nada en un repositorio XAF responde: qué se ejecuta cuando abres una pantalla. XAF genera una vista de lista, una de detalle y una de búsqueda por cada clase de negocio, así que las pantallas tampoco están en ningún archivo — y qué controladores se cargan en una son cuatro condiciones que el framework evalúa en tiempo de ejecución.
 
 Gratis y de código abierto (MIT). Hecho con .NET 10.
 
@@ -133,18 +138,19 @@ CAPÍTULOS
 00:29  Dos minutos: AGENTS.md, CLAUDE.md, Copilot
 00:41  Dónde se esconde el comportamiento
 00:55  Editores propios, y su JavaScript
-01:10  Migraciones que corrieron una vez, hace tres años
-01:26  Roslyn: sin compilar, sin licencia
-01:40  Por qué la mayoría de la documentación NO está en AGENTS.md
-01:54  El mapa de dominio que nadie ha visto
-02:09  Pruébalo en tu aplicación
+01:10  Migraciones: como mucho una vez por base de datos
+01:26  Qué se ejecuta cuando abres una pantalla
+01:43  Roslyn: sin compilar, sin licencia
+01:57  Por qué la mayoría de la documentación NO está en AGENTS.md
+02:11  El mapa de dominio que nadie ha visto
+02:26  Pruébalo en tu aplicación
 
 #DevExpress #XAF #dotnet #IA #OpenSource
 ```
 
 **Etiquetas / Tags:**
 ```
-xaf, devexpress, devexpress xaf, xpo, ef core, dotnet, .net 10, roslyn, mcp, agentes de ia, claude code, github copilot, documentacion de codigo, codigo heredado, xafml, model editor, open source, programacion en español
+xaf, devexpress, devexpress xaf, xpo, ef core, dotnet, .net 10, roslyn, mcp, agentes de ia, claude code, github copilot, documentacion de codigo, codigo heredado, xafml, model editor, view controller, open source, programacion en español
 ```
 
 ---
@@ -227,6 +233,20 @@ grande y una sola idea por short. Cada uno debe entenderse **sin sonido**.
 [9.0s]  Texto: Lo más pequeño es lo que más pesa: si no está en la lista, no existe.
 ```
 
+
+### Short 8 — «La pantalla que no está en ningún archivo» · ~15 s
+```
+[0.0s]  Terminal: grep -r "Patient_Prescriptions_ListView" .
+[2.0s]  Debajo, en gris: (sin resultados)
+[3.5s]  Texto grande: Y sin embargo tus usuarios la abren todos los días.
+[6.0s]  Contador subiendo: 14 clases → 54 pantallas
+[8.0s]  Debajo: ninguna escrita en ningún archivo
+[10.0s] Corte a la sección Screens del informe, con DispenseController resaltado
+[12.5s] Texto: Y 30 más que pone XAF. Ahora sabes cuáles.
+```
+*El único short que necesita una captura real del informe. Los 12 primeros segundos funcionan
+enteros sin sonido, que es la prueba que importa.*
+
 ---
 
 ## 6. ORDEN DE PUBLICACIÓN SUGERIDO
@@ -249,4 +269,8 @@ grande y una sola idea por short. Cada uno debe entenderse **sin sonido**.
 - **No** presumir de 1.0. Está en 0.x a propósito, y el artículo lo dice: el 1.0 se gana cuando
   haya leído código que no escribimos nosotros.
 - **No** usar nombres de clientes en capturas ni en ejemplos. Todo el material visual sale de la
-  aplicación demo sintética del repositorio.
+  aplicación demo sintética del repositorio. En vídeo esto es más delicado que en una imagen: un
+  nombre de entidad se cuela en un fotograma y ya está publicado.
+- **No** dar cifras que no salgan del repositorio ese día. Tests, herramientas y versión cambian
+  cada release, y publicar un número viejo es exactamente el fallo que el artículo denuncia. Al
+  grabar, comprobarlas contra el README, que sí tiene tests que lo obligan.
