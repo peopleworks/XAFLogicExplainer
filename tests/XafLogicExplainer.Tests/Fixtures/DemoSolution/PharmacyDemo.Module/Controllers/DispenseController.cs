@@ -23,7 +23,7 @@ public class DispenseController : ViewController<DetailView>
             ImageName = "Action_Validate",
             ConfirmationMessage = "Dispense this prescription? Stock will be reduced and it cannot be undone.",
             TargetObjectsCriteria = "Not IsDispensed",
-            ToolTip = "Reduces stock, records the sale, and marks the prescription dispensed.",
+            ToolTip = "Reduces stock and marks the prescription dispensed.",
         };
 
         _dispenseAction.Execute += DispenseAction_Execute;

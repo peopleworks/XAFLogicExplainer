@@ -41,8 +41,9 @@ public static class ViewActivationResolver
             {
                 // XAF registers only controllers it can create, so an abstract base class runs on
                 // nothing itself. It is still resolved, because the classes below it inherit its
-                // targeting.
-                if (controller.IsAbstract)
+                // targeting. A window controller belongs to a window and has none of the four view
+                // conditions, so "unrestricted" would put it on every screen.
+                if (controller.IsAbstract || controller.IsWindowController)
                     continue;
 
                 if (Fits(controller.Targeting, view, ancestry) is not { } reasons)
@@ -178,6 +179,83 @@ public static class ViewActivationResolver
     }
 
     /// <summary>
+    /// Removes controllers a registered descendant supersedes.
+    /// </summary>
+    /// <remarks>
+    /// XAF keeps only the most derived controller of any inheritance chain: registering one whose
+    /// descendant is already present is skipped, and registering a descendant evicts its base
+    /// (<c>SharedControllersManager.RegisterController</c>). Only the survivors are ever activated.
+    /// <para>
+    /// Without this, a screen lists both <c>ModificationsController</c> and the platform's
+    /// <c>BlazorModificationsController</c> — duplicating every Save action — and, worse, credits
+    /// shipped behaviour to the framework in the one application that replaced it, which is exactly
+    /// where the difference matters.
+    /// </para>
+    /// </remarks>
+    /// <param name="project">The application, whose views are updated in place.</param>
+    /// <param name="catalog">The framework catalog, or null when this machine has none.</param>
+    public static void SuppressReplacedControllers(ExtractedProject project, XafCatalog? catalog)
+    {
+        var registered = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var controller in project.Controllers.Where(c => !c.IsAbstract))
+            registered[controller.ClassName] = StripArity(controller.BaseControllerType);
+
+        foreach (var name in FrameworkNames(project))
+        {
+            if (catalog?.Controllers.GetValueOrDefault(name) is { } entry)
+                registered[name] = StripArity(entry.BaseType ?? string.Empty);
+        }
+
+        // A base is superseded when something registered derives from it. Recorded both ways: the
+        // base drops off every screen because it genuinely never runs, and the class that displaced
+        // it says so -- "this application replaced the framework's delete behaviour" is the single
+        // most useful sentence on that screen.
+        var superseded = new HashSet<string>(StringComparer.Ordinal);
+        var replaces = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+
+        foreach (var (name, baseName) in registered)
+        {
+            if (baseName.Length == 0 || baseName == name || !registered.ContainsKey(baseName))
+                continue;
+
+            superseded.Add(baseName);
+
+            if (!replaces.TryGetValue(name, out var bases))
+                replaces[name] = bases = new SortedSet<string>(StringComparer.Ordinal);
+
+            bases.Add(baseName);
+        }
+
+        if (superseded.Count == 0)
+            return;
+
+        foreach (var view in project.Views)
+        {
+            view.Activates.RemoveAll(activation => superseded.Contains(activation.Controller));
+
+            foreach (var activation in view.Activates)
+            {
+                if (replaces.TryGetValue(activation.Controller, out var bases))
+                    activation.Replaces = [.. bases];
+            }
+        }
+
+        project.FrameworkAlwaysActive.RemoveAll(superseded.Contains);
+    }
+
+    /// <summary>Framework controllers this application loads onto something.</summary>
+    private static IEnumerable<string> FrameworkNames(ExtractedProject project) =>
+        project.Views
+            .SelectMany(view => view.Activates)
+            .Where(activation => activation.Framework)
+            .Select(activation => activation.Controller)
+            .Concat(project.FrameworkAlwaysActive)
+            .Distinct(StringComparer.Ordinal);
+
+    private static string StripArity(string name) => name.Split('`')[0];
+
+    /// <summary>
     /// Controllers restricted to a view id this analysis could not resolve.
     /// </summary>
     /// <remarks>
@@ -193,10 +271,18 @@ public static class ViewActivationResolver
     /// Says in one phrase why a controller's activation could not be worked out.
     /// </summary>
     /// <param name="controller">A controller from <see cref="Undetermined"/>.</param>
-    public static string UndeterminedReason(ExtractedController controller) =>
-        controller.Targeting.UnresolvedBase is { } baseName
-            ? $"extends `{baseName}`, which this analysis cannot see"
-            : $"`TargetViewId = {controller.Targeting.UnresolvedViewId}`";
+    public static string UndeterminedReason(ExtractedController controller)
+    {
+        var targeting = controller.Targeting;
+
+        if (targeting.UnresolvedBase is { } baseName)
+            return $"extends `{baseName}`, which this analysis cannot see";
+
+        if (targeting.Unreadable.Count > 0)
+            return $"`{string.Join("`, `", targeting.Unreadable)}` could not be read";
+
+        return $"`TargetViewId = {targeting.UnresolvedViewId}`";
+    }
 
     /// <summary>
     /// Evaluates the four conditions, returning why it matched or null when it did not.

@@ -25,6 +25,18 @@ public sealed class CodebaseConventions
     /// <summary>Directory (relative to the project) where most controllers live.</summary>
     public string? ControllerFolder { get; init; }
 
+    /// <summary>
+    /// Every folder controllers were found in, most populated first.
+    /// </summary>
+    /// <remarks>
+    /// An XAF solution routinely keeps controllers in two places: the module for anything
+    /// platform-independent, and the platform project for anything that touches its UI. Reporting
+    /// only the most common one is a coin flip when there are two of each, and it sent the
+    /// instruction "put the controller here" at the platform project of an application whose only
+    /// action controller lives in the module.
+    /// </remarks>
+    public IReadOnlyList<string> ControllerFolders { get; init; } = [];
+
     /// <summary>The base class most persistent classes derive from.</summary>
     public string? DominantEntityBaseType { get; init; }
 
@@ -62,6 +74,16 @@ public sealed class CodebaseConventions
             EntityNamespace = MostCommon(entities.Select(e => e.Namespace)),
             EntityFolder = MostCommon(entities.Select(e => FolderOf(e.FilePath, project.ProjectPath))),
             ControllerFolder = MostCommon(controllers.Select(c => FolderOf(c.FilePath, project.ProjectPath))),
+            ControllerFolders =
+            [
+                .. controllers
+                    .Select(c => FolderOf(c.FilePath, project.ProjectPath))
+                    .Where(folder => !string.IsNullOrWhiteSpace(folder))
+                    .GroupBy(folder => folder!, StringComparer.Ordinal)
+                    .OrderByDescending(group => group.Count())
+                    .ThenBy(group => group.Key, StringComparer.Ordinal)
+                    .Select(group => group.Key),
+            ],
             DominantEntityBaseType = MostCommon(entities.Select(e => e.BaseType)),
             DominantControllerBaseType = MostCommon(controllers.Select(c => c.BaseControllerType)),
             UsesNamedAssociations = entities.Any(e =>

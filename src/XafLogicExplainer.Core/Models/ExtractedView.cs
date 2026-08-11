@@ -109,6 +109,16 @@ public sealed class ViewActivation
 
     /// <summary>Actions of this controller that also pass their own targeting.</summary>
     public List<string> Actions { get; set; } = [];
+
+    /// <summary>
+    /// Controllers this one displaces, which therefore do not run here.
+    /// </summary>
+    /// <remarks>
+    /// XAF activates only the most derived controller of an inheritance chain, so a class extending
+    /// a shipped controller switches the original off application-wide. Worth naming: it is the
+    /// difference between adding behaviour beside the framework's and replacing it.
+    /// </remarks>
+    public List<string> Replaces { get; set; } = [];
 }
 
 /// <summary>

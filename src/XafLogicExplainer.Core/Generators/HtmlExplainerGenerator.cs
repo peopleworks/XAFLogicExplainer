@@ -314,7 +314,7 @@ public sealed class HtmlExplainerGenerator
             sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
             sb.AppendLine("    <div class=\"card__head\">");
             sb.AppendLine($"      <span class=\"card__name\">{E(controller.ClassName)}</span>");
-            sb.AppendLine($"      <span class=\"card__meta\">on {E(controller.TargetObjectType ?? "any view")}</span>");
+            sb.AppendLine($"      <span class=\"card__meta\">on {E(Scope(controller))}</span>");
 
             // Only present when a ground-truth catalog identified the base as a DevExpress type:
             // this controller changes shipped behaviour rather than adding something beside it.
@@ -367,6 +367,35 @@ public sealed class HtmlExplainerGenerator
         }
 
         sb.AppendLine("</section>");
+    }
+
+    /// <summary>
+    /// Says in a few words where a controller runs, from all four of its conditions.
+    /// </summary>
+    /// <remarks>
+    /// This read <c>TargetObjectType</c> alone, so a <c>ViewController&lt;DetailView&gt;</c> with no
+    /// object type was labelled "on any view" — while the screens section, from the same data,
+    /// correctly had it on detail views only.
+    /// </remarks>
+    private static string Scope(ExtractedController controller)
+    {
+        var targeting = controller.Targeting;
+
+        if (controller.IsWindowController)
+            return "windows, not views";
+
+        if (targeting.IsUndetermined)
+            return "views that could not be determined";
+
+        var where = (targeting.TargetObjectType, targeting.TypeOfView) switch
+        {
+            (null, null) => "any view",
+            (null, var view) => $"any {view}",
+            (var type, null) => type,
+            var (type, view) => $"{type} — {view} only",
+        };
+
+        return targeting.Nesting is { } nesting ? $"{where}, {nesting.ToLowerInvariant()} only" : where;
     }
 
     // --------------------------------------------------------------- screens
@@ -449,6 +478,9 @@ public sealed class HtmlExplainerGenerator
                     sb.Append(activation.Reasons.Count == 0
                         ? "restricts nothing, so it runs on every view"
                         : E(string.Join(", and ", activation.Reasons.Select(ActivationReasonText.English))));
+
+                    if (activation.Replaces.Count > 0)
+                        sb.Append($" — <strong>replaces {E(string.Join(", ", activation.Replaces))}</strong>");
 
                     if (activation.Actions.Count > 0)
                         sb.Append($" — {E(string.Join(", ", activation.Actions))}");
@@ -718,8 +750,10 @@ public sealed class HtmlExplainerGenerator
             return;
 
         sb.AppendLine("<section id=\"editors\">");
-        sb.AppendLine("  <h2>Screens that do not follow their type</h2>");
-        sb.AppendLine("  <p class=\"lede\"><strong>A property with a custom editor does not render the way its type implies</strong>, and the business class says nothing about it. These usually live in a platform project beside the module, so nobody reading the business objects meets them.</p>");
+        // The heading used to assert that screens deviate. Some of these editors are registered and
+        // requested by nothing, so the section contradicted itself two rows down.
+        sb.AppendLine("  <h2>Editors this application defines</h2>");
+        sb.AppendLine("  <p class=\"lede\"><strong>A property with a custom editor does not render the way its type implies</strong>, and the business class says nothing about it. These usually live in a platform project beside the module, so nobody reading the business objects meets them. Each row says whether anything currently asks for it.</p>");
 
         foreach (var editor in project.Editors)
         {
@@ -853,7 +887,10 @@ public sealed class HtmlExplainerGenerator
 
         sb.AppendLine("<section id=\"migrations\">");
         sb.AppendLine("  <h2>What happened to the data</h2>");
-        sb.AppendLine("  <p class=\"lede\">These ran <strong>once</strong>, when an existing database was upgraded past a version — and then never again. Reading the current code cannot recover what they did, which makes this the answer to “why does this column contain that?”.</p>");
+        // What the source proves is the guard, not the history: a version-gated block runs at most
+        // once for any given database. Whether a particular database ever passed through it is not
+        // in this repository, and stating it as fact was turning intent into an event.
+        sb.AppendLine("  <p class=\"lede\">Each of these runs <strong>at most once</strong> for any database, when it is upgraded past the version named — and never again after that. Reading the current code cannot recover what they did, which makes this the answer to “why does this column contain that?”.</p>");
 
         foreach (var migration in project.Migrations
                      .OrderBy(m => m.TargetVersion, StringComparer.Ordinal))
@@ -865,8 +902,11 @@ public sealed class HtmlExplainerGenerator
             sb.AppendLine("    <div class=\"card__head\">");
             sb.AppendLine($"      <span class=\"card__name\">upgrading to {E(migration.TargetVersion ?? "an unknown version")}</span>");
             sb.AppendLine($"      <span class=\"pill\">{E(Describe(migration.Phase))}</span>");
+            // "from X" includes X; the guard is `CurrentDBVersion > X`, which excludes it -- and X
+            // is usually 0.0.0.0, the version a database has before it has ever been updated. The
+            // one value the range definitely does not cover was named as its lower bound.
             if (!string.IsNullOrWhiteSpace(migration.MinimumVersion))
-                sb.AppendLine($"      <span class=\"card__meta\">existing databases only, from {E(migration.MinimumVersion)}</span>");
+                sb.AppendLine($"      <span class=\"card__meta\">existing databases only, above {E(migration.MinimumVersion)}</span>");
             sb.AppendLine("    </div>");
 
             // The comment is the only record of *why*, which is the question a reader has.

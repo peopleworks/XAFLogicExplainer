@@ -47,6 +47,6 @@ public class Product : XPCustomObject
     public XPCollection<StockBatch> Batches => GetCollection<StockBatch>(nameof(Batches));
 
     [PersistentAlias("Batches.Sum(RemainingUnits)")]
-    [Description("Units across every unexpired batch.")]
+    [Description("Units across every batch, expired ones included.")]
     public int OnHand => (int)EvaluateAlias(nameof(OnHand));
 }

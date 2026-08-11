@@ -107,7 +107,12 @@ public class MigrationTests
 
         Assert.Contains("Data migrations", index);
         Assert.Contains("1.1.0.0", index);
-        Assert.Contains("ran **once**", index);
+
+        // "ran once" states history the source cannot prove: the guard establishes that a block
+        // runs at most once for any database, not that a particular database ever passed through
+        // it. The distinction is the difference between reporting intent and reporting an event.
+        Assert.Contains("at most once", index);
+        Assert.DoesNotContain("ran **once**", index);
     }
 
     [Fact]

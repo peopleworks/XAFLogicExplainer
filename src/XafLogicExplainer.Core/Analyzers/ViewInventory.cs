@@ -26,9 +26,10 @@ public static class ViewInventory
     public static List<ExtractedView> Build(ExtractedProject project)
     {
         var views = new Dictionary<string, ExtractedView>(StringComparer.Ordinal);
+        var known = project.Entities.Select(e => e.ClassName).ToHashSet(StringComparer.Ordinal);
 
         foreach (var entity in project.Entities.Where(e => e.IsPersistent))
-            AddGenerated(views, entity);
+            AddGenerated(views, entity, known);
 
         MergeModelViews(views, project.ModelEditorInfo);
         MarkNavigation(views, project);
@@ -39,7 +40,10 @@ public static class ViewInventory
     /// <summary>
     /// Adds the four kinds of view XAF generates for one business class.
     /// </summary>
-    private static void AddGenerated(Dictionary<string, ExtractedView> views, ExtractedEntity entity)
+    private static void AddGenerated(
+        Dictionary<string, ExtractedView> views,
+        ExtractedEntity entity,
+        HashSet<string> known)
     {
         Add(views, new ExtractedView
         {
@@ -75,13 +79,21 @@ public static class ViewInventory
         foreach (var property in entity.Properties.Where(p => p.IsCollection))
         {
             var itemType = entity.Relationships
-                .FirstOrDefault(r => r.PropertyName == property.Name)?.RelatedEntity;
+                .FirstOrDefault(r => r.PropertyName == property.Name)?.RelatedEntity
+                ?? ItemTypeOf(property.TypeName);
+
+            // XAF generates a nested list view only when the collection holds a business class --
+            // ListPropertyEditor requires the item type to be in the model. A List<string> or a
+            // collection of some helper type produces no view, and inventing an id for one puts
+            // framework controllers on a screen that does not exist.
+            if (itemType is null || !known.Contains(itemType))
+                continue;
 
             Add(views, new ExtractedView
             {
                 Id = $"{entity.ClassName}_{property.Name}_ListView",
                 ViewType = ModelViewType.ListView,
-                ObjectType = itemType ?? ItemTypeOf(property.TypeName),
+                ObjectType = itemType,
                 Nesting = ViewNesting.Nested,
                 Origin = ViewOrigin.Generated,
                 OwnerEntity = entity.ClassName,

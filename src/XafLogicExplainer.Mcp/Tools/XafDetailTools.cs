@@ -440,7 +440,8 @@ public sealed class XafDetailTools
         var sb = new StringBuilder();
         sb.AppendLine($"# Data migrations — {app.ProjectName}");
         sb.AppendLine();
-        sb.AppendLine("Each ran **once**, on databases older than the version named, and never again.");
+        sb.AppendLine("Each runs **at most once** for any database, when it is upgraded past the version " +
+                      "named, and never again after that.");
 
         foreach (var migration in app.Migrations.OrderBy(m => m.TargetVersion, StringComparer.Ordinal))
         {
@@ -610,6 +611,13 @@ public sealed class XafDetailTools
                 : "- Matches because " +
                   string.Join(", and ", activation.Reasons.Select(Core.Generators.ActivationReasonText.English)) +
                   ".");
+
+            if (activation.Replaces.Count > 0)
+            {
+                sb.AppendLine($"- **Replaces {string.Join(", ", activation.Replaces.Select(name => $"`{name}`"))}** " +
+                              "— XAF activates only the most derived controller of a chain, so the " +
+                              "original is switched off application-wide.");
+            }
 
             if (activation.Actions.Count > 0)
             {

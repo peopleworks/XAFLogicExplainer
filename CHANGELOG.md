@@ -99,6 +99,31 @@ What runs when you open this screen.
 - **`TargetViewId` was trimmed and XAF does not trim it.** `"A; B"` never activates on `B`, because
   the entry XAF compares is `" B"`. The untrimmed id is now what gets reported, which is also what
   makes the typo visible to whoever wrote it.
+- **A controller a registered descendant replaces was still listed on screens.** XAF activates only
+  the most derived controller of an inheritance chain — registering a descendant evicts its base
+  (`SharedControllersManager.RegisterController`). Every screen of a Blazor application therefore
+  listed `ModificationsController` *and* `BlazorModificationsController`, duplicating every Save
+  action, and credited shipped behaviour to the framework in the one application that replaced it.
+  The survivor now says what it replaces, which is the sentence worth reading.
+- **Targeting was only read from constructor blocks**, so three ordinary shapes came out as
+  "restricts nothing, runs on every screen": an expression-bodied constructor, an assignment through
+  `base.`, and `InitializeComponent` — where the XAF designer puts it, which is every migrated
+  application.
+- **An action's targeting written in an object initializer was attributed to its controller.** Only
+  the `action.TargetViewId = …` form was guarded, and the initializer form is the one DevExpress
+  documentation uses.
+- **A condition the reader could not understand was treated as no restriction.**
+  `TargetViewType = isList ? ViewType.ListView : ViewType.DetailView` was reported as a confident
+  restriction to `DetailView` — the last word in the expression — and
+  `TargetObjectType = FindTypeInfo(name).Type` as no restriction at all. Both are now recorded as
+  unreadable, which keeps the controller out of the per-screen lists and into the one that says why.
+- **Window controllers were listed on every screen.** They belong to a window and have none of the
+  four view conditions, so "unrestricted" put them everywhere.
+- **The platform project was matched by substring**, so `Winery.Module` or `Darwin.Core` pulled every
+  WinForms framework controller onto a Blazor application's screens. Whole dotted segments now.
+- **Nested list views were invented for collections that never get one.** XAF generates one only
+  when the collection holds a business class, so a `List<string>` produced a fabricated view id —
+  and framework controllers were then reported on a screen that does not exist.
 - **`ViewController<DetailView>` reported no view type at all.** Only generic bases with two
   arguments were read, so the single-argument form — which is how DevExpress documentation writes
   controllers, and how the demo fixture's own `DispenseController` is written — lost half its
@@ -116,6 +141,24 @@ What runs when you open this screen.
   `ObjectViewController<TView, TObject>` were the same key and whichever file was read last won.
   The concrete `ObjectViewController` was reported as running on every screen instead of on object
   views; ten controllers were affected.
+- **Generated prose that said more than the source proves.** Found by reading the output rather than
+  the code, which is the only way any of these surface:
+  - `AGENTS.md` announced a custom editor as *"requested with `[EditorAlias(…)]`"* while the
+    explainer, from the same extraction, said nothing requested it. The alias is what an editor
+    offers, not evidence anything asks for it — and the index is the file read on every request.
+  - *"Register the type in `X`, as the other 4 are"* presented `AdditionalExportedTypes` as an
+    obligation. XAF finds business classes declared in a module by itself; that collection is for
+    types it cannot find.
+  - *"Controllers live in `…/`"* named one folder chosen by a coin flip between two. Both are
+    listed now, with which belongs in which.
+  - *"existing databases only, from 0.0.0.0"* — the guard is `> 0.0.0.0`, so the one version named
+    as the lower bound is the one version excluded.
+  - *"These ran once … and never again"* stated execution history. The source proves the guard, not
+    that any particular database ever passed through it: each runs **at most once** per database.
+  - *"on any view"* for a controller labelled from `TargetObjectType` alone, ignoring the view type
+    it also restricts.
+  - A heading asserting *"screens that do not follow their type"* over a section whose own rows said
+    nothing requests the editor.
 - **`ObjectView` was read as deriving directly from `View`.** It derives from `CompositeView`, so a
   controller targeting `CompositeView` reaches dashboards as well as list and detail views —
   checked against the 26.1 sources rather than assumed.

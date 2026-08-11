@@ -64,12 +64,21 @@ public static class FrameworkModuleScope
             .Select(name => name!)
             .ToList();
 
-        if (projects.Any(name => name.Contains("Blazor", StringComparison.OrdinalIgnoreCase)))
+        // A whole dotted segment, not a substring. `Contains("Win")` matched `Winery.Module` and
+        // `Darwin.Core`, and pulled every WinForms controller onto a Blazor application's screens
+        // -- the exact failure this file exists to prevent.
+        if (projects.Any(name => HasSegment(name, "Blazor")))
             yield return "DevExpress.ExpressApp.Blazor";
 
-        if (projects.Any(name => name.Contains("Win", StringComparison.OrdinalIgnoreCase)))
+        if (projects.Any(name => HasSegment(name, "Win")))
             yield return "DevExpress.ExpressApp.Win";
     }
+
+    /// <summary>
+    /// Whether a project name contains the given dotted segment, e.g. <c>Shop.Win.Server</c>.
+    /// </summary>
+    private static bool HasSegment(string projectName, string segment) =>
+        projectName.Split('.').Any(part => part.Equals(segment, StringComparison.OrdinalIgnoreCase));
 
     private static string LastSegment(string typeName)
     {

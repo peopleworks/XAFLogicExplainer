@@ -69,6 +69,15 @@ public class ExtractedController
     public bool IsAbstract { get; set; }
 
     /// <summary>
+    /// Whether this is a window controller, which belongs to a window rather than to a view.
+    /// </summary>
+    /// <remarks>
+    /// It has none of the four view conditions, so its targeting reads as unrestricted — and it
+    /// was landing on every screen in the application with "restricts nothing, runs everywhere".
+    /// </remarks>
+    public bool IsWindowController { get; set; }
+
+    /// <summary>
     /// Actions discovered from fields and constructor wiring.
     /// </summary>
     public List<ExtractedAction> Actions { get; set; } = [];

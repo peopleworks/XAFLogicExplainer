@@ -205,6 +205,10 @@ public class LogicExtractor : ILogicExtractor
         // one.
         ViewActivationResolver.ResolveFramework(project, catalog);
 
+        //     Last: XAF activates only the most derived controller of a chain, so anything a
+        //     registered descendant displaces has to come off the screens both passes put it on.
+        ViewActivationResolver.SuppressReplacedControllers(project, catalog);
+
         return project;
     }
 

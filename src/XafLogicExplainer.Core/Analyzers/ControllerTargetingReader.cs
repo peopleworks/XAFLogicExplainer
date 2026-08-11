@@ -83,12 +83,30 @@ public static class ControllerTargetingReader
         if (!derived.Declared.Contains(nameof(ControllerTargeting.Nesting)))
             derived.Nesting = inherited.Nesting;
 
+        // What the base could not read, the derived class inherits -- unless it set that same
+        // condition itself, in which case the base's value never mattered.
+        foreach (var note in inherited.Unreadable)
+        {
+            if (!derived.Declared.Contains(ConditionOf(note)))
+                derived.Unreadable.Add(note);
+        }
+
         if (derived.Declared.Contains(ViewIdCondition))
             return;
 
         derived.ViewIds = [.. inherited.ViewIds];
         derived.UnresolvedViewId = inherited.UnresolvedViewId;
     }
+
+    /// <summary>
+    /// Which condition an unreadable note is about.
+    /// </summary>
+    private static string ConditionOf(string note) => note.Split(' ')[0] switch
+    {
+        "TargetObjectType" => nameof(ControllerTargeting.TargetObjectType),
+        "TargetViewNesting" => nameof(ControllerTargeting.Nesting),
+        _ => nameof(ControllerTargeting.TypeOfView),
+    };
 
     /// <summary>
     /// Folds one declaration of a partial class into the targeting accumulated for the whole class.
@@ -120,6 +138,9 @@ public static class ControllerTargetingReader
 
         foreach (var condition in part.Declared)
             into.Declared.Add(condition);
+
+        foreach (var note in part.Unreadable)
+            into.Unreadable.Add(note);
     }
 
     /// <summary>
@@ -172,13 +193,15 @@ public static class ControllerTargetingReader
     /// </summary>
     private static void ReadFromConstructors(ClassDeclarationSyntax classDecl, ControllerTargeting targeting)
     {
-        foreach (var ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
+        foreach (var body in SetUpBodies(classDecl))
         {
-            if (ctor.Body is null)
-                continue;
-
-            foreach (var assignment in ctor.Body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+            foreach (var assignment in body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
             {
+                // `new SimpleAction(this, …) { TargetViewId = … }` reads as a bare identifier on
+                // the left, exactly like the controller's own property. It belongs to the action.
+                if (assignment.Ancestors().OfType<InitializerExpressionSyntax>().Any())
+                    continue;
+
                 if (PropertyAssignedOnThis(assignment.Left) is { } property)
                     Apply(targeting, property, assignment.Right, classDecl);
             }
@@ -210,25 +233,29 @@ public static class ControllerTargetingReader
         {
             // ViewController<T>'s own constructor assigns typeof(T). That restricts whatever closes
             // the generic, and nothing at all by itself.
-            case "TargetObjectType" when value is TypeOfExpressionSyntax objectType
-                                         && !parameters.Contains(objectType.Type.ToString()):
+            case "TargetObjectType" when value is TypeOfExpressionSyntax objectType:
+                if (parameters.Contains(objectType.Type.ToString()))
+                    return true;
+
                 targeting.TargetObjectType = LastSegment(objectType.Type.ToString());
                 targeting.Declared.Add(nameof(ControllerTargeting.TargetObjectType));
                 return true;
 
-            case "TypeOfView" when value is TypeOfExpressionSyntax viewType
-                                   && !parameters.Contains(viewType.Type.ToString()):
+            case "TypeOfView" when value is TypeOfExpressionSyntax viewType:
+                if (parameters.Contains(viewType.Type.ToString()))
+                    return true;
+
                 targeting.TypeOfView = NormalizeViewType(viewType.Type.ToString());
                 targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
                 return true;
 
-            case "TargetViewType":
-                targeting.TypeOfView = NormalizeViewType(value.ToString());
+            case "TargetViewType" when EnumMember(value, ViewTypeMembers) is { } viewTypeMember:
+                targeting.TypeOfView = NormalizeViewType(viewTypeMember);
                 targeting.Declared.Add(nameof(ControllerTargeting.TypeOfView));
                 return true;
 
-            case "TargetViewNesting":
-                targeting.Nesting = NormalizeNesting(value.ToString());
+            case "TargetViewNesting" when EnumMember(value, NestingMembers) is { } nestingMember:
+                targeting.Nesting = NormalizeNesting(nestingMember);
                 targeting.Declared.Add(nameof(ControllerTargeting.Nesting));
                 return true;
 
@@ -237,8 +264,68 @@ public static class ControllerTargetingReader
                 targeting.Declared.Add(ViewIdCondition);
                 return true;
 
+            // The property is one of the four and the value is not something this analysis can
+            // read: a ternary, a variable, a call. Recording it is the whole point -- dropping it
+            // leaves the condition looking unset, which reads as "no restriction".
+            case "TargetObjectType" or "TypeOfView" or "TargetViewType" or "TargetViewNesting":
+                targeting.Unreadable.Add($"{property} = {value}");
+                return true;
+
             default:
                 return false;
+        }
+    }
+
+    private static readonly string[] ViewTypeMembers = ["Any", "ListView", "DetailView", "DashboardView"];
+
+    private static readonly string[] NestingMembers = ["Any", "Root", "Nested"];
+
+    /// <summary>
+    /// The enum member an expression names, when it plainly names one.
+    /// </summary>
+    /// <remarks>
+    /// Only a bare name or a dotted one. Taking the text after the last dot of <em>any</em>
+    /// expression turned <c>isList ? ViewType.ListView : ViewType.DetailView</c> into a confident
+    /// restriction to <c>DetailView</c>.
+    /// </remarks>
+    private static string? EnumMember(ExpressionSyntax value, string[] members)
+    {
+        if (value is not (IdentifierNameSyntax or MemberAccessExpressionSyntax))
+            return null;
+
+        var name = LastSegment(value.ToString());
+
+        return Array.Exists(members, member => member == name) ? name : null;
+    }
+
+    /// <summary>
+    /// Every place a controller sets itself up before it is ever activated.
+    /// </summary>
+    /// <remarks>
+    /// Constructors, including expression-bodied ones, and <c>InitializeComponent</c> — which is
+    /// where the XAF designer puts the targeting, in the generated half of a partial class. Reading
+    /// constructor blocks alone made every designer-era controller, the standard shape of migrated
+    /// applications, come out as "restricts nothing, runs on every screen".
+    /// </remarks>
+    private static IEnumerable<SyntaxNode> SetUpBodies(ClassDeclarationSyntax classDecl)
+    {
+        foreach (var ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
+        {
+            if (ctor.Body is { } block)
+                yield return block;
+            else if (ctor.ExpressionBody is { } expression)
+                yield return expression;
+        }
+
+        foreach (var method in classDecl.Members.OfType<MethodDeclarationSyntax>())
+        {
+            if (method.Identifier.Text != "InitializeComponent")
+                continue;
+
+            if (method.Body is { } block)
+                yield return block;
+            else if (method.ExpressionBody is { } expression)
+                yield return expression;
         }
     }
 
@@ -254,7 +341,11 @@ public static class ControllerTargetingReader
     private static string? PropertyAssignedOnThis(ExpressionSyntax left) => left switch
     {
         IdentifierNameSyntax identifier => identifier.Identifier.Text,
-        MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } member => member.Name.Identifier.Text,
+        MemberAccessExpressionSyntax
+        {
+            // `base.TargetViewType = …` sets the same property as `this.TargetViewType = …`.
+            Expression: ThisExpressionSyntax or BaseExpressionSyntax,
+        } member => member.Name.Identifier.Text,
         _ => null,
     };
 

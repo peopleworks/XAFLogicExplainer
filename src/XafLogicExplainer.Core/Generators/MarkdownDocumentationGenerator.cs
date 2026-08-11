@@ -216,6 +216,12 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                         : string.Join(L(", y ", ", and "), activation.Reasons
                             .Select(reason => ActivationReasonText.ForLanguage(reason, _spanish))));
 
+                    if (activation.Replaces.Count > 0)
+                    {
+                        sb.AppendLine($"  - {L("Reemplaza a", "Replaces")} " +
+                                      string.Join(", ", activation.Replaces.Select(name => $"`{name}`")));
+                    }
+
                     foreach (var action in activation.Actions)
                         sb.AppendLine($"  - {action}");
                 }

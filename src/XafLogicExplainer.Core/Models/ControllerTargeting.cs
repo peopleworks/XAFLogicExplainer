@@ -70,6 +70,18 @@ public sealed class ControllerTargeting
     public string? UnresolvedBase { get; set; }
 
     /// <summary>
+    /// Assignments to one of the four conditions whose value this analysis could not read.
+    /// </summary>
+    /// <remarks>
+    /// Seen and not understood is a third state, and it used to collapse into "unrestricted".
+    /// <c>TargetViewType = isList ? ViewType.ListView : ViewType.DetailView</c> was read as a
+    /// confident restriction to <c>DetailView</c> — the last word in the expression — and
+    /// <c>TargetObjectType = FindTypeInfo(name).Type</c> as no restriction at all. Both are
+    /// definite statements about an application, built out of not having understood a line.
+    /// </remarks>
+    public List<string> Unreadable { get; set; } = [];
+
+    /// <summary>
     /// Which of these conditions the controller set itself, rather than inheriting.
     /// </summary>
     /// <remarks>
@@ -95,11 +107,13 @@ public sealed class ControllerTargeting
         && Nesting is null
         && ViewIds.Count == 0
         && UnresolvedViewId is null
-        && UnresolvedBase is null;
+        && UnresolvedBase is null
+        && Unreadable.Count == 0;
 
     /// <summary>
     /// Whether something about this controller's activation could not be read from the source.
     /// </summary>
     [JsonIgnore]
-    public bool IsUndetermined => UnresolvedViewId is not null || UnresolvedBase is not null;
+    public bool IsUndetermined =>
+        UnresolvedViewId is not null || UnresolvedBase is not null || Unreadable.Count > 0;
 }

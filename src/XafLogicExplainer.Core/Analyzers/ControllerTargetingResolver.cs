@@ -84,6 +84,9 @@ public static class ControllerTargetingResolver
 
         var baseName = StripGenerics(controller.BaseControllerType);
 
+        if (baseName == "WindowController")
+            controller.IsWindowController = true;
+
         if (byName.TryGetValue(baseName, out var baseController))
         {
             Resolve(baseController, byName, catalog, done, visiting);
@@ -91,11 +94,17 @@ public static class ControllerTargetingResolver
 
             // Whatever its base could not establish, this one cannot either.
             controller.Targeting.UnresolvedBase ??= baseController.Targeting.UnresolvedBase;
+            controller.IsWindowController |= baseController.IsWindowController;
         }
-        else if (catalog?.FindController(baseName)?.Targeting is { } frameworkTargeting)
+        else if (catalog?.FindController(baseName) is { } frameworkBase)
         {
-            // Already effective: a catalog stores targeting with its own inheritance resolved.
-            ControllerTargetingReader.Inherit(controller.Targeting, frameworkTargeting);
+            if (frameworkBase.Targeting is { } frameworkTargeting)
+            {
+                // Already effective: a catalog stores targeting with its own inheritance resolved.
+                ControllerTargetingReader.Inherit(controller.Targeting, frameworkTargeting);
+            }
+
+            controller.IsWindowController |= IsWindowController(frameworkBase, catalog);
         }
         else if (!Roots.Contains(baseName))
         {
@@ -125,6 +134,29 @@ public static class ControllerTargetingResolver
         }
 
         visiting.Remove(name);
+    }
+
+    /// <summary>
+    /// Whether a catalogued controller descends from <c>WindowController</c>.
+    /// </summary>
+    private static bool IsWindowController(XafCatalogType entry, XafCatalog catalog)
+    {
+        var current = entry;
+
+        for (var step = 0; step < 32 && current is not null; step++)
+        {
+            var baseName = current.BaseType?.Split('`')[0];
+
+            if (baseName is null or "Controller")
+                return false;
+
+            if (baseName == "WindowController")
+                return true;
+
+            current = catalog.Controllers.GetValueOrDefault(current.BaseType!);
+        }
+
+        return false;
     }
 
     private static string StripGenerics(string? typeName)

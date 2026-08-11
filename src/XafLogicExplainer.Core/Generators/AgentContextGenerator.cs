@@ -462,10 +462,16 @@ public sealed class AgentContextGenerator
             if (!string.IsNullOrWhiteSpace(editor.TargetType))
                 sb.Append($" for `{editor.TargetType}`");
 
+            // The alias is what the editor *offers*, not evidence that anything asks for it. The
+            // index said "requested with [EditorAlias(...)]" while the explainer, from the same
+            // extraction, said "nothing requests it by alias" -- and the index is the file read on
+            // every request.
             if (editor.IsDefault)
                 sb.Append(" — **replaces the default everywhere**");
-            else if (!string.IsNullOrWhiteSpace(editor.Alias))
+            else if (editor.UsedBy.Count > 0 && !string.IsNullOrWhiteSpace(editor.Alias))
                 sb.Append($" — requested with `[EditorAlias(\"{editor.Alias}\")]`");
+            else if (!string.IsNullOrWhiteSpace(editor.Alias))
+                sb.Append($" — registered as `\"{editor.Alias}\"`, and no property asks for it");
 
             sb.AppendLine();
 
@@ -516,7 +522,8 @@ public sealed class AgentContextGenerator
 
         sb.AppendLine("## Data migrations");
         sb.AppendLine();
-        sb.AppendLine("These ran **once**, when an existing database was upgraded, and never again. They explain");
+        sb.AppendLine("Each runs **at most once** for any database, when it is upgraded past the version");
+        sb.AppendLine("named, and never again after that. They explain");
         sb.AppendLine("data that the code running today does not account for:");
         sb.AppendLine();
 
@@ -559,8 +566,11 @@ public sealed class AgentContextGenerator
         if (conventions.EntityFolder is { } entityFolder)
             sb.AppendLine($"- **Entities live in:** `{entityFolder}/`");
 
-        if (conventions.ControllerFolder is { } controllerFolder)
-            sb.AppendLine($"- **Controllers live in:** `{controllerFolder}/`");
+        if (conventions.ControllerFolders.Count > 0)
+        {
+            sb.AppendLine("- **Controllers live in:** " +
+                          string.Join(", ", conventions.ControllerFolders.Select(folder => $"`{folder}/`")));
+        }
 
         if (conventions.DominantEntityBaseType is { } entityBase)
             sb.AppendLine($"- **Entity base class:** `{entityBase}`");
@@ -631,8 +641,17 @@ public sealed class AgentContextGenerator
 
         sb.AppendLine($"{step++}. Add `[DefaultClassOptions]` if it should appear in navigation on its own.");
 
+        // Not a registration step. XAF finds business classes declared in a module by itself;
+        // AdditionalExportedTypes is for types it cannot find, which normally means types from
+        // another assembly. This used to read "register the type, as the other 4 are", turning a
+        // partial list into an obligation an agent would then perpetuate.
         if (project.ModuleInfo is { } mod && mod.RegisteredTypes.Count > 0)
-            sb.AppendLine($"{step++}. Register the type in `{mod.ModuleClassName}`, as the other {mod.RegisteredTypes.Count} are.");
+        {
+            sb.AppendLine($"{step++}. No registration needed — XAF picks up business classes declared " +
+                          $"in this module. `{mod.ModuleClassName}` exports {mod.RegisteredTypes.Count} " +
+                          $"{Plural(mod.RegisteredTypes.Count, "type", "types")} through " +
+                          "`AdditionalExportedTypes`, which is only for types XAF cannot find on its own.");
+        }
 
         if (project.SeedData.Count > 0)
             sb.AppendLine($"{step++}. If it needs starting data, extend the module updater — {project.SeedData.Count} seed {Plural(project.SeedData.Count, "method", "methods")} already exist.");
@@ -644,8 +663,18 @@ public sealed class AgentContextGenerator
         sb.AppendLine();
         step = 1;
 
-        if (conventions.ControllerFolder is { } cFolder)
-            sb.AppendLine($"{step++}. Put the controller in `{cFolder}/`.");
+        if (conventions.ControllerFolders is [var onlyFolder])
+        {
+            sb.AppendLine($"{step++}. Put the controller in `{onlyFolder}/`.");
+        }
+        else if (conventions.ControllerFolders.Count > 1)
+        {
+            // Which of them is right depends on the action, so say so rather than picking one.
+            sb.AppendLine($"{step++}. Put the controller in " +
+                          string.Join(" or ", conventions.ControllerFolders.Select(folder => $"`{folder}/`")) +
+                          " — the module for anything platform-independent, the platform project only " +
+                          "when it touches that platform's UI.");
+        }
 
         if (conventions.DominantControllerBaseType is { } cBase)
             sb.AppendLine($"{step++}. Derive from `{cBase}`.");
