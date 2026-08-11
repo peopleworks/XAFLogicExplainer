@@ -1,4 +1,4 @@
-using XafLogicExplainer.Core.Models;
+﻿using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Tests;
 
@@ -130,7 +130,7 @@ public class ExtractionTests
     [Fact]
     public void FindsControllersAndTheirTargets()
     {
-        var controller = Assert.Single(SampleProjects.Xpo.Controllers);
+        var controller = SampleProjects.Xpo.Controller("ApproveOrderController");
 
         Assert.Equal("ApproveOrderController", controller.ClassName);
         Assert.Contains("Order", controller.TargetObjectType);
@@ -139,7 +139,7 @@ public class ExtractionTests
     [Fact]
     public void ReadsActionsWithTheirConfiguration()
     {
-        var action = Assert.Single(SampleProjects.Xpo.Controllers.Single().Actions);
+        var action = Assert.Single(SampleProjects.Xpo.Controller("ApproveOrderController").Actions);
 
         Assert.Equal("ApproveOrder", action.ActionId);
         Assert.Equal("Approve", action.Caption);
@@ -149,7 +149,7 @@ public class ExtractionTests
     [Fact]
     public void CapturesTheCodeAnActionRuns()
     {
-        var action = SampleProjects.Xpo.Controllers.Single().Actions.Single();
+        var action = SampleProjects.Xpo.Controller("ApproveOrderController").Actions.Single();
 
         // The handler body is what answers "what does this button actually do", so losing it
         // makes the controller detail useless.

@@ -77,6 +77,13 @@ public class LogicExtractor : ILogicExtractor
         // Extract project metadata from .csproj
         ExtractProjectMetadata(projectPath, project);
 
+        // Resolve the ground-truth catalog before anything reads source, and hand it to the
+        // analyzers through the options they already carry. Controller extraction needs it to
+        // recognise a class that extends a DevExpress controller, which is not something it can
+        // work out on its own.
+        var catalog = options.Catalog ?? (options.UseCatalog ? Catalog.XafCatalogStore.LoadLatest() : null);
+        options.Catalog = catalog;
+
         // 1. Extract entities (business objects) from Module
         project.Entities = _entityAnalyzer.AnalyzeEntities(projectPath, options);
         foreach (var e in project.Entities)
@@ -181,7 +188,6 @@ public class LogicExtractor : ILogicExtractor
 
         // 8. Annotate with the DevExpress ground-truth catalog, if this machine has one.
         //    Optional by design: no catalog means this step does nothing at all.
-        var catalog = options.Catalog ?? (options.UseCatalog ? Catalog.XafCatalogStore.LoadLatest() : null);
         Catalog.CatalogEnricher.Enrich(project, catalog);
 
         // 9. Complete each controller's targeting with what it inherits from the controller it

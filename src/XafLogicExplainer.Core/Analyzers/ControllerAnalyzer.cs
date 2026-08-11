@@ -19,7 +19,6 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// <returns>List of extracted controllers.</returns>
     public List<ExtractedController> AnalyzeControllers(string sourceDirectory, ExtractionOptions options)
     {
-        var controllers = new List<ExtractedController>();
         var controllerDir = Path.Combine(sourceDirectory, "Controllers");
 
         if (!Directory.Exists(controllerDir))
@@ -28,66 +27,172 @@ public class ControllerAnalyzer : IControllerAnalyzer
             controllerDir = sourceDirectory;
         }
 
-        var csFiles = Directory.GetFiles(controllerDir, "*.cs", SearchOption.AllDirectories)
-            .Where(f => BuildOutputFilter.IsAnalyzable(f, controllerDir));
+        var files = Directory.GetFiles(controllerDir, "*.cs", SearchOption.AllDirectories)
+            .Where(file => BuildOutputFilter.IsAnalyzable(file, controllerDir));
 
-        foreach (var file in csFiles)
-        {
-            var controller = AnalyzeControllerFile(file, options);
-            if (controller != null)
-                controllers.Add(controller);
-        }
-
-        return controllers;
+        return Build(files.SelectMany(ReadClasses).ToList(), options);
     }
 
     /// <summary>
-    /// Analyzes one C# file and extracts controller information when applicable.
+    /// Analyzes a single controller file.
     /// </summary>
-    public ExtractedController? AnalyzeControllerFile(string filePath, ExtractionOptions options)
+    /// <remarks>
+    /// A file on its own cannot see the rest of the project, so a controller whose base class lives
+    /// in another file is recognised here only when the catalog or the naming convention identifies
+    /// it. <see cref="AnalyzeControllers"/> closes over the whole tree and does not have that limit.
+    /// </remarks>
+    public List<ExtractedController> AnalyzeControllerFile(string filePath, ExtractionOptions options) =>
+        Build(ReadClasses(filePath), options);
+
+    /// <summary>
+    /// Turns the classes found in a source tree into controllers.
+    /// </summary>
+    private static List<ExtractedController> Build(List<ClassCandidate> candidates, ExtractionOptions options)
     {
-        var source = File.ReadAllText(filePath);
-        var tree = CSharpSyntaxTree.ParseText(source, path: filePath);
-        var root = tree.GetRoot();
+        var controllers = SelectControllers(candidates, options);
 
-        var classDecl = root.DescendantNodes()
-            .OfType<ClassDeclarationSyntax>()
-            .FirstOrDefault(c => IsXafController(c, options.ControllerBaseTypeNames));
+        return
+        [
+            .. candidates
+                .Where(candidate => controllers.Contains(candidate.ClassName))
+                // Every declaration of one class, so a partial split across files -- the shape the
+                // XAF designer generates -- is read as the one controller it is rather than as two.
+                .GroupBy(candidate => candidate.FullName, StringComparer.Ordinal)
+                .Select(group => Compose(group, options)),
+        ];
+    }
 
-        if (classDecl == null) return null;
+    /// <summary>
+    /// Reads every class declared in one file.
+    /// </summary>
+    private static List<ClassCandidate> ReadClasses(string filePath)
+    {
+        var root = CSharpSyntaxTree.ParseText(File.ReadAllText(filePath), path: filePath).GetRoot();
+
+        // Whether the file imports XAF at all. It is what separates `HomeController : Controller`,
+        // an ASP.NET controller that can sit in the same platform project, from an XAF one.
+        var importsXaf = root is CompilationUnitSyntax unit
+            && unit.Usings.Any(directive =>
+                directive.Name?.ToString().StartsWith("DevExpress.ExpressApp", StringComparison.Ordinal) == true);
+
+        return
+        [
+            .. root.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .Select(declaration => new ClassCandidate(filePath, declaration, importsXaf)),
+        ];
+    }
+
+    /// <summary>
+    /// Decides which classes are XAF controllers, following base classes to a fixed point.
+    /// </summary>
+    /// <remarks>
+    /// A single pass over a whitelist of base type names finds only controllers that derive
+    /// <em>directly</em> from <c>ViewController</c> and its two siblings. Real XAF code does not
+    /// look like that: it extends shipped controllers (<c>ArchiveController :
+    /// DeleteObjectsViewController</c>) and its own base classes, and every one of those was being
+    /// dropped from the extraction entirely — silently, because a controller that is never seen
+    /// cannot be reported as missing.
+    /// </remarks>
+    private static HashSet<string> SelectControllers(List<ClassCandidate> candidates, ExtractionOptions options)
+    {
+        var accepted = new HashSet<string>(StringComparer.Ordinal);
+        var pending = candidates.Where(candidate => candidate.BaseType.Length > 0).ToList();
+
+        // Each round can accept a class whose base was accepted in the previous one, so it repeats
+        // until a round changes nothing. Bounded by the number of classes.
+        bool changed;
+
+        do
+        {
+            changed = false;
+
+            for (var index = pending.Count - 1; index >= 0; index--)
+            {
+                if (!IsXafController(pending[index], accepted, options))
+                    continue;
+
+                accepted.Add(pending[index].ClassName);
+                pending.RemoveAt(index);
+                changed = true;
+            }
+        }
+        while (changed);
+
+        return accepted;
+    }
+
+    /// <summary>
+    /// Builds one controller from every declaration of one class.
+    /// </summary>
+    private static ExtractedController Compose(IEnumerable<ClassCandidate> declarations, ExtractionOptions options)
+    {
+        var parts = declarations.ToList();
+        var first = parts[0];
 
         var controller = new ExtractedController
         {
-            ClassName = classDecl.Identifier.Text,
-            Namespace = GetNamespace(classDecl),
-            FilePath = filePath,
-            BaseControllerType = GetBaseTypeName(classDecl),
+            ClassName = first.ClassName,
+            Namespace = first.Namespace,
+            FilePath = first.FilePath,
+            BaseControllerType = parts.Select(part => part.BaseType).FirstOrDefault(name => name.Length > 0) ?? "object",
+            // XAF only registers what it can instantiate, so an abstract base class never activates
+            // on anything -- it hands its targeting and its actions down to the classes that do.
+            IsAbstract = parts.Exists(part => part.Declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)),
         };
 
-        // Where this controller activates: object type, view type, nesting and view id, read the
-        // way XAF itself evaluates them.
-        controller.Targeting = ControllerTargetingReader.Read(classDecl);
-
-        // Extract actions from fields and constructor
-        controller.Actions.AddRange(ExtractActions(classDecl, options));
-
-        // Extract methods
-        if (options.IncludeMethodBodies)
+        foreach (var part in parts)
         {
-            controller.Methods.AddRange(ExtractMethods(classDecl));
-        }
+            var declaration = part.Declaration;
 
-        // Extract referenced entities
-        controller.ReferencedEntities.AddRange(ExtractReferencedEntities(classDecl));
-        controller.CustomizedEditors.AddRange(ExtractCustomizedEditors(classDecl));
+            ControllerTargetingReader.Merge(controller.Targeting, ControllerTargetingReader.Read(declaration));
 
-        // Extract comments
-        if (options.IncludeComments)
-        {
-            controller.SourceComments.AddRange(ExtractComments(classDecl));
+            foreach (var action in ExtractActions(declaration, options))
+            {
+                if (!controller.Actions.Exists(existing => existing.ActionId == action.ActionId))
+                    controller.Actions.Add(action);
+            }
+
+            if (options.IncludeMethodBodies)
+            {
+                foreach (var method in ExtractMethods(declaration))
+                {
+                    if (!controller.Methods.Exists(existing => existing.Name == method.Name))
+                        controller.Methods.Add(method);
+                }
+            }
+
+            Absorb(controller.ReferencedEntities, ExtractReferencedEntities(declaration));
+            Absorb(controller.CustomizedEditors, ExtractCustomizedEditors(declaration));
+
+            if (options.IncludeComments)
+                Absorb(controller.SourceComments, ExtractComments(declaration));
         }
 
         return controller;
+    }
+
+    private static void Absorb(List<string> into, IEnumerable<string> values)
+    {
+        foreach (var value in values)
+        {
+            if (!into.Contains(value, StringComparer.Ordinal))
+                into.Add(value);
+        }
+    }
+
+    /// <summary>
+    /// One class declaration, and what can be told about it without leaving its file.
+    /// </summary>
+    private sealed record ClassCandidate(string FilePath, ClassDeclarationSyntax Declaration, bool ImportsXaf)
+    {
+        public string ClassName => Declaration.Identifier.Text;
+
+        public string Namespace => GetNamespace(Declaration);
+
+        public string FullName => Namespace.Length == 0 ? ClassName : $"{Namespace}.{ClassName}";
+
+        public string BaseType => Declaration.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? string.Empty;
     }
 
     /// <summary>
@@ -389,21 +494,59 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
     #region Helper Methods
 
-    private static bool IsXafController(ClassDeclarationSyntax classDecl, string[] controllerBaseTypeNames)
+    /// <summary>
+    /// Whether a class is an XAF controller, given what has been accepted so far.
+    /// </summary>
+    private static bool IsXafController(ClassCandidate candidate, HashSet<string> accepted, ExtractionOptions options)
     {
-        if (classDecl.BaseList == null) return false;
+        if (candidate.Declaration.BaseList is null)
+            return false;
 
-        foreach (var baseType in classDecl.BaseList.Types)
+        foreach (var baseType in candidate.Declaration.BaseList.Types)
         {
-            var typeName = baseType.Type.ToString();
-            var simpleTypeName = typeName.Contains('<') ? typeName[..typeName.IndexOf('<')] : typeName;
+            var name = SimpleName(baseType.Type.ToString());
 
-            if (controllerBaseTypeNames.Any(ct => simpleTypeName.Equals(ct, StringComparison.Ordinal)
-                                                   || simpleTypeName.EndsWith($".{ct}")))
+            if (name.Length == 0)
+                continue;
+
+            // The three entry points XAF documents.
+            if (Array.Exists(options.ControllerBaseTypeNames, seed => name.Equals(seed, StringComparison.Ordinal)))
+                return true;
+
+            // A controller this project already accepted -- the team's own base class.
+            if (accepted.Contains(name))
+                return true;
+
+            // A controller DevExpress ships, when this machine has a ground-truth catalog.
+            if (options.Catalog?.FindController(name) is not null)
+                return true;
+
+            // Last resort, and the only rule that guesses: every XAF controller is named for what
+            // it is, and the file has to import XAF for the name to mean this one. `ControllerBase`
+            // is excluded because it belongs to ASP.NET and to nothing in XAF.
+            if (candidate.ImportsXaf
+                && name.EndsWith("Controller", StringComparison.Ordinal)
+                && !name.Equals("ControllerBase", StringComparison.Ordinal))
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reduces a written type to its bare name: no namespace, no generic arguments.
+    /// </summary>
+    private static string SimpleName(string typeName)
+    {
+        var name = typeName.Trim();
+        var generic = name.IndexOf('<');
+
+        if (generic > 0)
+            name = name[..generic];
+
+        var lastDot = name.LastIndexOf('.');
+
+        return lastDot >= 0 ? name[(lastDot + 1)..] : name;
     }
 
     private static bool IsActionType(string typeName)

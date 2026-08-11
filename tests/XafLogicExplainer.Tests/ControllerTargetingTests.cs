@@ -82,12 +82,27 @@ public class ControllerTargetingTests
     [Fact]
     public void SplitsTheSemicolonSeparatedViewIdList()
     {
-        // XAF accepts a list in the single TargetViewId string, and IsFitToViewID splits on ';'
-        // before comparing. Treating the whole string as one id matches no view at all.
+        // XAF accepts a list in the single TargetViewId string, and IsFitToViewID compares the whole
+        // string first and then each part. Treating the whole string as one id matches no view.
         var targeting = Read(
             "class C : ViewController { public C() { TargetViewId = \"Order_DetailView;Invoice_DetailView\"; } }");
 
-        Assert.Equal(["Order_DetailView", "Invoice_DetailView"], targeting.ViewIds);
+        Assert.Contains("Order_DetailView", targeting.ViewIds);
+        Assert.Contains("Invoice_DetailView", targeting.ViewIds);
+    }
+
+    [Fact]
+    public void DoesNotTrimTheViewIdListBecauseXafDoesNot()
+    {
+        // ViewController.IsFitToViewID splits on ';' with no trimming, so a space after the
+        // separator makes that entry match nothing and the controller silently never activates
+        // there. Trimming here reported it on a screen it never reaches, and hid the typo.
+        var targeting = Read(
+            "class C : ViewController { public C() { TargetViewId = \"Order_DetailView; Invoice_DetailView\"; } }");
+
+        Assert.Contains("Order_DetailView", targeting.ViewIds);
+        Assert.DoesNotContain("Invoice_DetailView", targeting.ViewIds);
+        Assert.Contains(" Invoice_DetailView", targeting.ViewIds);
     }
 
     [Fact]

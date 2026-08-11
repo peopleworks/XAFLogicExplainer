@@ -39,6 +39,12 @@ public static class ViewActivationResolver
 
             foreach (var controller in controllers)
             {
+                // XAF registers only controllers it can create, so an abstract base class runs on
+                // nothing itself. It is still resolved, because the classes below it inherit its
+                // targeting.
+                if (controller.IsAbstract)
+                    continue;
+
                 if (Fits(controller.Targeting, view, ancestry) is not { } reasons)
                     continue;
 
@@ -181,7 +187,16 @@ public static class ViewActivationResolver
     /// </remarks>
     /// <param name="controllers">The application's controllers.</param>
     public static IEnumerable<ExtractedController> Undetermined(IReadOnlyList<ExtractedController> controllers) =>
-        controllers.Where(controller => controller.Targeting.UnresolvedViewId is not null);
+        controllers.Where(controller => !controller.IsAbstract && controller.Targeting.IsUndetermined);
+
+    /// <summary>
+    /// Says in one phrase why a controller's activation could not be worked out.
+    /// </summary>
+    /// <param name="controller">A controller from <see cref="Undetermined"/>.</param>
+    public static string UndeterminedReason(ExtractedController controller) =>
+        controller.Targeting.UnresolvedBase is { } baseName
+            ? $"extends `{baseName}`, which this analysis cannot see"
+            : $"`TargetViewId = {controller.Targeting.UnresolvedViewId}`";
 
     /// <summary>
     /// Evaluates the four conditions, returning why it matched or null when it did not.
@@ -238,10 +253,11 @@ public static class ViewActivationResolver
 
         // 4. View id, exact match against any of the listed ids.
         //
-        // A controller restricted to an id this analysis could not read belongs on no view. Putting
-        // it on all of them would invent an appearance on every screen in the application, which is
-        // a far bigger lie than leaving it out -- and Undetermined lists them so it is not lost.
-        if (targeting.UnresolvedViewId is not null)
+        // Anything this analysis could not read -- an id that is not a literal, or a base class it
+        // cannot see -- belongs on no view. Putting it on all of them would invent an appearance on
+        // every screen in the application, which is a far bigger lie than leaving it out; and
+        // Undetermined lists them, with the reason, so nothing is lost silently.
+        if (targeting.IsUndetermined)
             return null;
 
         if (targeting.ViewIds.Count > 0)

@@ -59,6 +59,17 @@ public sealed class ControllerTargeting
     public string? UnresolvedViewId { get; set; }
 
     /// <summary>
+    /// The base controller whose own targeting could not be established, when there is one.
+    /// </summary>
+    /// <remarks>
+    /// Targeting is inherited, so a controller extending a class nobody can resolve has
+    /// <em>unknown</em> targeting, not none. Without that distinction a controller extending
+    /// <c>DeleteObjectsViewController</c> on a machine with no catalog reads as "restricts
+    /// nothing, runs on every screen" — a confident claim built out of an absence of information.
+    /// </remarks>
+    public string? UnresolvedBase { get; set; }
+
+    /// <summary>
     /// Which of these conditions the controller set itself, rather than inheriting.
     /// </summary>
     /// <remarks>
@@ -83,5 +94,12 @@ public sealed class ControllerTargeting
         && TypeOfView is null
         && Nesting is null
         && ViewIds.Count == 0
-        && UnresolvedViewId is null;
+        && UnresolvedViewId is null
+        && UnresolvedBase is null;
+
+    /// <summary>
+    /// Whether something about this controller's activation could not be read from the source.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsUndetermined => UnresolvedViewId is not null || UnresolvedBase is not null;
 }

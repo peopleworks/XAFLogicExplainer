@@ -9,6 +9,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 What runs when you open this screen.
 
+### Changed
+
+- **`IControllerAnalyzer.AnalyzeControllerFile` now returns a list** rather than a single
+  controller, because a file can declare more than one and returning the first silently lost the
+  rest. Breaking for anyone calling `Core` directly; `xaflogic` and the MCP server are unaffected.
+
 ### Added
 
 - **The screen inventory.** Every view the application has, and the logic XAF loads onto each one.
@@ -68,6 +74,31 @@ What runs when you open this screen.
 
 ### Fixed
 
+- **Controllers were being dropped from extraction entirely** — the worst shape of failure this
+  project has, because a controller that is never seen cannot be reported as missing. Two causes,
+  both silent:
+  - Only the **first** controller class in a file was read. Grouping small controllers in one file
+    is ordinary C#; every one after the first vanished.
+  - A class counted as a controller only if it derived **directly** from `ViewController`,
+    `ObjectViewController` or `WindowController`. Real XAF code does not look like that: it extends
+    shipped controllers and its own base classes. `ArchiveController : DeleteObjectsViewController`
+    — the example the README advertises as what the catalog makes possible — was never extracted,
+    so `FrameworkBaseType` could never be set and the feature could not fire.
+  - Discovery now follows base classes to a fixed point, through the application's own classes and
+    the catalog, falling back to the naming convention only when the file imports XAF. A probe with
+    five controller classes across three files reported one; it now reports all of them, and the
+    derived ones inherit their base's targeting.
+  - Every unit test passed throughout, because they all built their `ExtractedController` lists by
+    hand. The new tests go through the real pipeline against a fixture written in that shape.
+- **A controller extending a class this analysis cannot see was reported as unrestricted.**
+  Targeting is inherited, so an unresolvable base means the targeting is *unknown* — and unknown is
+  not "runs on every screen". Those controllers are now listed apart, with the base that could not
+  be resolved, exactly as an unreadable `TargetViewId` already was.
+- **Abstract controllers were reported as running on screens.** XAF registers only what it can
+  instantiate; an abstract base hands its targeting down and activates on nothing itself.
+- **`TargetViewId` was trimmed and XAF does not trim it.** `"A; B"` never activates on `B`, because
+  the entry XAF compares is `" B"`. The untrimmed id is now what gets reported, which is also what
+  makes the typo visible to whoever wrote it.
 - **`ViewController<DetailView>` reported no view type at all.** Only generic bases with two
   arguments were read, so the single-argument form — which is how DevExpress documentation writes
   controllers, and how the demo fixture's own `DispenseController` is written — lost half its

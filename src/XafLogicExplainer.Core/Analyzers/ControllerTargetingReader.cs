@@ -91,6 +91,38 @@ public static class ControllerTargetingReader
     }
 
     /// <summary>
+    /// Folds one declaration of a partial class into the targeting accumulated for the whole class.
+    /// </summary>
+    /// <remarks>
+    /// The opposite direction to <see cref="Inherit"/>: there the derived class wins and the base
+    /// only fills gaps, here every part is the same class, so whatever a part states is stated by
+    /// the class. It matters because the XAF designer splits a controller across two files and puts
+    /// the targeting in the generated half.
+    /// </remarks>
+    /// <param name="into">Targeting for the whole class, updated in place.</param>
+    /// <param name="part">Targeting read from one declaration.</param>
+    public static void Merge(ControllerTargeting into, ControllerTargeting part)
+    {
+        if (part.Declared.Contains(nameof(ControllerTargeting.TargetObjectType)))
+            into.TargetObjectType = part.TargetObjectType;
+
+        if (part.Declared.Contains(nameof(ControllerTargeting.TypeOfView)))
+            into.TypeOfView = part.TypeOfView;
+
+        if (part.Declared.Contains(nameof(ControllerTargeting.Nesting)))
+            into.Nesting = part.Nesting;
+
+        if (part.Declared.Contains(ViewIdCondition))
+        {
+            into.ViewIds = [.. part.ViewIds];
+            into.UnresolvedViewId = part.UnresolvedViewId;
+        }
+
+        foreach (var condition in part.Declared)
+            into.Declared.Add(condition);
+    }
+
+    /// <summary>
     /// Takes targeting from the generic base type.
     /// </summary>
     private static void ReadFromBaseType(ClassDeclarationSyntax classDecl, ControllerTargeting targeting)
@@ -248,8 +280,12 @@ public static class ControllerTargetingReader
         if (text.Length == 0 || text == "Any")
             return;
 
-        targeting.ViewIds.AddRange(
-            text.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        // Exactly as XAF splits it: the whole string is compared first, then each part, and it does
+        // NOT trim. `TargetViewId = "Order_ListView; Customer_ListView"` therefore never activates
+        // on Customer_ListView, because the entry is " Customer_ListView" with the space. Trimming
+        // here reported a controller on a screen it silently never reaches -- and printing the
+        // untrimmed id is what makes that visible to whoever wrote it.
+        targeting.ViewIds.AddRange(text.Contains(';') ? [text, .. text.Split(';')] : [text]);
     }
 
     /// <summary>

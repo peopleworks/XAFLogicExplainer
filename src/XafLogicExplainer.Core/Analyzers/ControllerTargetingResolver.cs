@@ -19,6 +19,18 @@ namespace XafLogicExplainer.Core.Analyzers;
 public static class ControllerTargetingResolver
 {
     /// <summary>
+    /// The generic entry points, which restrict nothing and inherit nothing worth chasing.
+    /// </summary>
+    private static readonly HashSet<string> Roots = new(StringComparer.Ordinal)
+    {
+        "Controller",
+        "ViewController",
+        "ObjectViewController",
+        "WindowController",
+        "object",
+    };
+
+    /// <summary>
     /// Resolves an application's controllers against each other and the framework.
     /// </summary>
     /// <param name="controllers">The extracted controllers, completed in place.</param>
@@ -76,11 +88,22 @@ public static class ControllerTargetingResolver
         {
             Resolve(baseController, byName, catalog, done, visiting);
             ControllerTargetingReader.Inherit(controller.Targeting, baseController.Targeting);
+
+            // Whatever its base could not establish, this one cannot either.
+            controller.Targeting.UnresolvedBase ??= baseController.Targeting.UnresolvedBase;
         }
         else if (catalog?.FindController(baseName)?.Targeting is { } frameworkTargeting)
         {
             // Already effective: a catalog stores targeting with its own inheritance resolved.
             ControllerTargetingReader.Inherit(controller.Targeting, frameworkTargeting);
+        }
+        else if (!Roots.Contains(baseName))
+        {
+            // Extends something this analysis cannot see: a DevExpress controller with no catalog
+            // to describe it, or a class from another assembly. Its targeting is inherited and
+            // unknown -- which is not the same as absent, and must not be reported as "runs
+            // everywhere".
+            controller.Targeting.UnresolvedBase = baseName;
         }
 
         visiting.Remove(controller.ClassName);

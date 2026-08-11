@@ -486,16 +486,17 @@ public sealed class HtmlExplainerGenerator
         {
             sb.AppendLine("  <article class=\"card\">");
             sb.AppendLine("    <div class=\"card__head\">");
-            sb.AppendLine("      <span class=\"card__name card__name--prose\">Restricted to a view that could not be named</span>");
+            sb.AppendLine("      <span class=\"card__name card__name--prose\">Where these run could not be established</span>");
             sb.AppendLine("    </div>");
-            sb.AppendLine("    <p class=\"card__desc\">These target a view id built from something other than a literal, " +
-                          "so they appear against no screen above. They are restricted all the same.</p>");
+            sb.AppendLine("    <p class=\"card__desc\">These appear against no screen above, because something " +
+                          "about where they activate cannot be read from the source. They are restricted all " +
+                          "the same — listing them on every screen would be the bigger error.</p>");
             sb.AppendLine("    <table><tbody>");
 
             foreach (var controller in undetermined)
             {
                 sb.AppendLine($"      <tr><th class=\"mono\">{E(controller.ClassName)}</th>" +
-                              $"<td><code class=\"crit\">{E(controller.Targeting.UnresolvedViewId)}</code></td></tr>");
+                              $"<td class=\"t\">{E(Analyzers.ViewActivationResolver.UndeterminedReason(controller))}</td></tr>");
             }
 
             sb.AppendLine("    </tbody></table>");

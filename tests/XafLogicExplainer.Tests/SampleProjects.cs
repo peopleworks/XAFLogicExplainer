@@ -98,6 +98,13 @@ internal static class SampleProjects
             $"The fixture has no entity '{className}'. Extracted: " +
             string.Join(", ", project.Entities.Select(e => e.ClassName)));
 
+    /// <summary>Finds one controller by name, failing the test clearly when it is missing.</summary>
+    public static ExtractedController Controller(this ExtractedProject project, string className) =>
+        project.Controllers.FirstOrDefault(c => c.ClassName == className)
+        ?? throw new InvalidOperationException(
+            $"The fixture has no controller '{className}'. Extracted: " +
+            string.Join(", ", project.Controllers.Select(c => c.ClassName)));
+
     /// <summary>Finds one property by name, failing the test clearly when it is missing.</summary>
     public static ExtractedProperty Property(this ExtractedEntity entity, string name) =>
         entity.Properties.FirstOrDefault(p => p.Name == name)

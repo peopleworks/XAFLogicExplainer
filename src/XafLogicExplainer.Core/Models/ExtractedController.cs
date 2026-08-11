@@ -59,6 +59,16 @@ public class ExtractedController
     public string BaseControllerType { get; set; } = string.Empty;
 
     /// <summary>
+    /// Whether the class is abstract, and therefore never activates on anything itself.
+    /// </summary>
+    /// <remarks>
+    /// XAF registers only controllers it can instantiate. An abstract base class exists to hand its
+    /// targeting and its actions down to the classes that do run, and reporting it on a screen
+    /// invents a controller the application never loads.
+    /// </remarks>
+    public bool IsAbstract { get; set; }
+
+    /// <summary>
     /// Actions discovered from fields and constructor wiring.
     /// </summary>
     public List<ExtractedAction> Actions { get; set; } = [];

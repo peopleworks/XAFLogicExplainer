@@ -685,14 +685,18 @@ public sealed class XafDetailTools
             return;
 
         sb.AppendLine();
-        sb.AppendLine("## Restricted to a view id that could not be read");
+        sb.AppendLine("## Where these run could not be established");
         sb.AppendLine();
-        sb.AppendLine("These are listed against no view above, because their `TargetViewId` is not a " +
-                      "literal. They are real, and they are restricted:");
+        sb.AppendLine("Listed against no view above, because something about where they activate cannot be " +
+                      "read from the source. They are real, and they are restricted — claiming them on every " +
+                      "screen would be the bigger error:");
         sb.AppendLine();
 
         foreach (var controller in undetermined)
-            sb.AppendLine($"- `{controller.ClassName}` — `TargetViewId = {controller.Targeting.UnresolvedViewId}`");
+        {
+            sb.AppendLine($"- `{controller.ClassName}` — " +
+                          Core.Analyzers.ViewActivationResolver.UndeterminedReason(controller));
+        }
     }
 
     /// <summary>One line describing what kind of view this is.</summary>
