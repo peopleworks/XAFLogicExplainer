@@ -1,3 +1,4 @@
+using XafLogicExplainer.Core.Catalog;
 using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Core.Analyzers;
@@ -57,6 +58,117 @@ public static class ViewActivationResolver
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// Adds the framework's own controllers to each view.
+    /// </summary>
+    /// <remarks>
+    /// The other half of the picture, and the half no repository contains. It is deliberately not
+    /// symmetric with an application's own controllers:
+    /// <list type="bullet">
+    ///   <item>Only the modules this application registers contribute, so a WinForms controller
+    ///   never appears on a Blazor screen.</item>
+    ///   <item>A framework controller that restricts nothing is recorded once, in
+    ///   <see cref="ExtractedProject.FrameworkAlwaysActive"/>, rather than under all of them.
+    ///   Nearly half of them restrict nothing, and repeating those under every screen would bury
+    ///   the ones specific to it.</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="project">The application, whose views are updated in place.</param>
+    /// <param name="catalog">The ground-truth catalog, or null to do nothing.</param>
+    public static void ResolveFramework(ExtractedProject project, XafCatalog? catalog)
+    {
+        project.FrameworkAlwaysActive.Clear();
+
+        if (catalog is null)
+            return;
+
+        var assemblies = FrameworkModuleScope.Resolve(project, catalog);
+        var ancestry = BuildAncestry(project.Entities);
+        var always = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var entry in catalog.Controllers.Values)
+        {
+            if (!IsLoadable(entry, assemblies) || !IsViewController(entry, catalog))
+                continue;
+
+            // Null targeting is unknown, not unrestricted, and guessing either way would be a
+            // claim the catalog cannot support. It happens when the DevExpress sources are absent.
+            if (entry.Targeting is not { } targeting)
+                continue;
+
+            if (targeting.IsUnrestricted)
+            {
+                always.Add(entry.Name);
+                continue;
+            }
+
+            foreach (var view in project.Views)
+            {
+                if (Fits(targeting, view, ancestry) is not { } reasons)
+                    continue;
+
+                view.Activates.Add(new ViewActivation
+                {
+                    Controller = entry.Name,
+                    SourceProject = entry.Assembly,
+                    Framework = true,
+                    Summary = entry.Summary,
+                    DocumentationUrl = entry.DocumentationUrl,
+                    Reasons = reasons,
+                });
+            }
+        }
+
+        project.FrameworkAlwaysActive = [.. always];
+    }
+
+    /// <summary>
+    /// Whether a catalogued controller is one this application can actually instantiate.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors what XAF itself accepts when it collects controllers from an assembly: it can create
+    /// an instance, and the type is not obsolete.
+    /// </remarks>
+    private static bool IsLoadable(XafCatalogType entry, IReadOnlySet<string> assemblies) =>
+        assemblies.Contains(entry.Assembly)
+        && !entry.IsAbstract
+        && !entry.IsObsolete
+        // A generic definition is never registered; only the classes that close it are, and those
+        // are catalogued separately.
+        && !entry.Name.Contains('`');
+
+    /// <summary>
+    /// Whether a controller is activated by views at all.
+    /// </summary>
+    /// <remarks>
+    /// A <c>WindowController</c> belongs to a window, not to a view, and has none of the four view
+    /// conditions. Its targeting therefore reads as "unrestricted", which would file every one of
+    /// them under the controllers that run on every screen — where they do not belong.
+    /// </remarks>
+    private static bool IsViewController(XafCatalogType entry, XafCatalog catalog)
+    {
+        var current = entry;
+
+        for (var step = 0; step < 32 && current is not null; step++)
+        {
+            // Reflection names a generic base ViewController`1, so the arity has to come off before
+            // the chain can be recognised at all.
+            var baseName = current.BaseType?.Split('`')[0];
+
+            switch (baseName)
+            {
+                case "ViewController" or "ObjectViewController":
+                    return true;
+                case "WindowController" or "Controller" or null:
+                    return false;
+            }
+
+            current = catalog.Controllers.GetValueOrDefault(current.BaseType!);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -147,9 +259,20 @@ public static class ViewActivationResolver
     /// Whether a view of this kind satisfies a <c>TypeOfView</c> restriction.
     /// </summary>
     /// <remarks>
-    /// XAF asks <c>typeOfView.IsAssignableFrom(view.GetType())</c>, and <c>ListView</c> and
-    /// <c>DetailView</c> both derive from <c>ObjectView</c> — which is why a controller targeting
-    /// <c>ObjectView</c>, as several built-in ones do, appears on both and on neither dashboard.
+    /// XAF asks <c>typeOfView.IsAssignableFrom(view.GetType())</c>, so the framework's own
+    /// hierarchy decides it — verified against the 26.1 sources, because the shape is not the
+    /// obvious one:
+    /// <code>
+    /// View
+    ///  └ CompositeView
+    ///     ├ ObjectView
+    ///     │  ├ ListView
+    ///     │  └ DetailView
+    ///     └ DashboardView
+    /// </code>
+    /// <c>ObjectView</c> sits under <c>CompositeView</c> rather than directly under <c>View</c>, so
+    /// a controller targeting <c>CompositeView</c> reaches dashboards as well — several built-in
+    /// ones do, and reading that as "detail views only" would have missed them.
     /// </remarks>
     private static bool IsViewTypeCompatible(string typeOfView, ModelViewType viewType) => typeOfView switch
     {
@@ -157,6 +280,7 @@ public static class ViewActivationResolver
         "DetailView" => viewType == ModelViewType.DetailView,
         "DashboardView" => viewType == ModelViewType.DashboardView,
         "ObjectView" => viewType is ModelViewType.ListView or ModelViewType.DetailView,
+        "CompositeView" => true,
         // A view class this application defines. Nothing here can rule it out, and excluding it
         // would drop a controller that does run.
         _ => true,

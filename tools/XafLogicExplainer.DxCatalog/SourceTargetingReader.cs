@@ -65,14 +65,6 @@ public sealed class SourceTargetingReader
             return 0;
         }
 
-        // Reflection names an open generic ConfirmationViewControllerBase`1; its declaration is
-        // called ConfirmationViewControllerBase. Matching on the bare name lets a generic base
-        // class contribute the targeting every closed subclass inherits, which is otherwise lost
-        // for the whole family.
-        var byBareName = catalog.Controllers.Values
-            .GroupBy(entry => entry.Name.Split('`')[0], StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
-
         var read = 0;
         var upgraded = 0;
 
@@ -98,7 +90,7 @@ public sealed class SourceTargetingReader
                     continue;
 
                 read++;
-                upgraded += Apply(byBareName, text, file);
+                upgraded += Apply(catalog, text, file);
             }
 
             _report($"  {Path.GetFileName(tree)}: {upgraded - before} controllers");
@@ -112,10 +104,7 @@ public sealed class SourceTargetingReader
     /// <summary>
     /// Applies one file's controller declarations to the catalog.
     /// </summary>
-    private static int Apply(
-        IReadOnlyDictionary<string, List<XafCatalogType>> byBareName,
-        string text,
-        string path)
+    private static int Apply(XafCatalog catalog, string text, string path)
     {
         var root = CSharpSyntaxTree.ParseText(text, path: path).GetRoot();
         var upgraded = 0;
@@ -126,24 +115,37 @@ public sealed class SourceTargetingReader
             // the same set: a class in the sources that is internal, or that ships in an assembly
             // outside the catalog's scope, is not part of the framework surface an application can
             // see.
-            if (!byBareName.TryGetValue(classDecl.Identifier.Text, out var entries))
+            if (!catalog.Controllers.TryGetValue(CatalogName(classDecl), out var entry))
                 continue;
 
-            foreach (var entry in entries)
-            {
-                // A partial class split across files would otherwise let the half without the
-                // constructor overwrite the half with it.
-                if (entry.TargetingSource == "sources" && classDecl.Modifiers.Any(SyntaxKind.PartialKeyword))
-                    continue;
+            // A partial class split across files would otherwise let the half without the
+            // constructor overwrite the half with it.
+            if (entry.TargetingSource == "sources" && classDecl.Modifiers.Any(SyntaxKind.PartialKeyword))
+                continue;
 
-                // Read per entry rather than once: the arity variants of a name are separate
-                // catalog types, and inheritance resolution mutates what it is given.
-                entry.Targeting = ControllerTargetingReader.Read(classDecl);
-                entry.TargetingSource = "sources";
-                upgraded++;
-            }
+            entry.Targeting = ControllerTargetingReader.Read(classDecl);
+            entry.TargetingSource = "sources";
+            upgraded++;
         }
 
         return upgraded;
+    }
+
+    /// <summary>
+    /// The catalog key for a declaration, arity included.
+    /// </summary>
+    /// <remarks>
+    /// Reflection names an open generic <c>ObjectViewController`2</c>; the declaration is called
+    /// <c>ObjectViewController</c>. Matching on the bare name looks harmless until a name exists at
+    /// two arities — and XAF has several, including <c>ObjectViewController</c> and
+    /// <c>ObjectViewController&lt;TView, TObject&gt;</c>. Whichever file was read last then wrote
+    /// its targeting onto the other, which is how the concrete <c>ObjectViewController</c> came to
+    /// be reported as running on every screen instead of on object views.
+    /// </remarks>
+    private static string CatalogName(ClassDeclarationSyntax classDecl)
+    {
+        var arity = classDecl.TypeParameterList?.Parameters.Count ?? 0;
+
+        return arity == 0 ? classDecl.Identifier.Text : $"{classDecl.Identifier.Text}`{arity}";
     }
 }

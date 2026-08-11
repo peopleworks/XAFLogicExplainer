@@ -80,8 +80,23 @@ public sealed class ViewActivation
     /// <summary>Controller class name.</summary>
     public string Controller { get; set; } = string.Empty;
 
-    /// <summary>Project the controller was extracted from.</summary>
+    /// <summary>Project the controller was extracted from, or the assembly it ships in.</summary>
     public string? SourceProject { get; set; }
+
+    /// <summary>
+    /// Whether DevExpress ships this controller rather than this team having written it.
+    /// </summary>
+    /// <remarks>
+    /// The distinction an agent most needs: framework behaviour is inherited and cannot be edited
+    /// here, and a request to "change what this screen does" means something different for each.
+    /// </remarks>
+    public bool Framework { get; set; }
+
+    /// <summary>Official one-line description, for a framework controller.</summary>
+    public string? Summary { get; set; }
+
+    /// <summary>Official documentation page, for a framework controller.</summary>
+    public string? DocumentationUrl { get; set; }
 
     /// <summary>
     /// Why it matches, in the terms XAF checks: one entry per condition that had something to say.

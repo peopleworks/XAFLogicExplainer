@@ -434,30 +434,47 @@ public sealed class HtmlExplainerGenerator
                                   $"<a href=\"#entity-{E(view.OwnerEntity)}\">{E(view.OwnerEntity)}</a>.{E(ownerProperty)}</td></tr>");
                 }
 
-                if (view.Activates.Count == 0)
+                var mine = view.Activates.Where(a => !a.Framework).ToList();
+                var framework = view.Activates.Where(a => a.Framework).ToList();
+
+                if (mine.Count == 0)
                 {
-                    sb.AppendLine("      <tr><th>Runs here</th><td class=\"t\">None of this application's controllers. " +
-                                  "XAF's own still do.</td></tr>");
+                    sb.AppendLine("      <tr><th>Runs here</th><td class=\"t\">None of this application's controllers.</td></tr>");
                 }
-                else
+
+                foreach (var activation in mine)
                 {
-                    foreach (var activation in view.Activates)
-                    {
-                        sb.Append($"      <tr><th>Runs here</th><td class=\"mono\">{E(activation.Controller)}</td></tr>");
-                        sb.AppendLine();
-                        sb.Append("      <tr><th></th><td class=\"t\">");
-                        sb.Append(activation.Reasons.Count == 0
-                            ? "restricts nothing, so it runs on every view"
-                            : E(string.Join(", and ", activation.Reasons.Select(ActivationReasonText.English))));
+                    sb.AppendLine($"      <tr><th>Runs here</th><td class=\"mono\">{E(activation.Controller)}</td></tr>");
+                    sb.Append("      <tr><th></th><td class=\"t\">");
+                    sb.Append(activation.Reasons.Count == 0
+                        ? "restricts nothing, so it runs on every view"
+                        : E(string.Join(", and ", activation.Reasons.Select(ActivationReasonText.English))));
 
-                        if (activation.Actions.Count > 0)
-                            sb.Append($" — {E(string.Join(", ", activation.Actions))}");
+                    if (activation.Actions.Count > 0)
+                        sb.Append($" — {E(string.Join(", ", activation.Actions))}");
 
-                        sb.AppendLine("</td></tr>");
-                    }
+                    sb.AppendLine("</td></tr>");
                 }
 
                 sb.AppendLine("    </tbody></table>");
+
+                // Folded away deliberately. It is inherited behaviour, there is a great deal of it,
+                // and giving it the same weight as the team's own would bury the line worth reading.
+                if (framework.Count > 0)
+                {
+                    sb.AppendLine($"    <details><summary>{framework.Count} more from XAF itself</summary>");
+                    sb.AppendLine("      <table><tbody>");
+
+                    foreach (var activation in framework.OrderBy(a => a.Controller, StringComparer.Ordinal))
+                    {
+                        sb.Append($"        <tr><th class=\"mono\">{E(activation.Controller)}</th><td class=\"t\">");
+                        sb.Append(E(activation.Summary ?? activation.SourceProject ?? ""));
+                        sb.AppendLine("</td></tr>");
+                    }
+
+                    sb.AppendLine("      </tbody></table>");
+                    sb.AppendLine("    </details>");
+                }
             }
 
             sb.AppendLine("  </article>");
@@ -483,6 +500,25 @@ public sealed class HtmlExplainerGenerator
 
             sb.AppendLine("    </tbody></table>");
             sb.AppendLine("  </article>");
+        }
+
+        if (project.FrameworkAlwaysActive.Count > 0)
+        {
+            sb.AppendLine("  <article class=\"card\">");
+            sb.AppendLine("    <div class=\"card__head\">");
+            sb.AppendLine($"      <span class=\"card__name card__name--prose\">XAF controllers on every screen</span>");
+            sb.AppendLine($"      <span class=\"card__meta\">{project.FrameworkAlwaysActive.Count}</span>");
+            sb.AppendLine("    </div>");
+            sb.AppendLine("    <p class=\"card__desc\">These restrict nothing, so they load onto all " +
+                          $"{project.Views.Count} screens above. Listed once rather than {project.Views.Count} times.</p>");
+            sb.AppendLine($"    <p class=\"card__desc mono\">{E(string.Join(", ", project.FrameworkAlwaysActive))}</p>");
+            sb.AppendLine("  </article>");
+        }
+        else if (project.CatalogVersion is null)
+        {
+            sb.AppendLine("  <p class=\"note\">XAF's own controllers run on these screens too, and naming them " +
+                          "needs the ground-truth catalog. Run <code>xaflogic catalog build</code> on a machine " +
+                          "with a DevExpress licence and this section will say which.</p>");
         }
 
         sb.AppendLine("  <p class=\"note\">A controller listed here can still switch itself off at run time " +

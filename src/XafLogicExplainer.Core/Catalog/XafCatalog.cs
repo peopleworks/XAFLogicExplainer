@@ -148,6 +148,15 @@ public sealed class XafCatalogType
     public bool IsAbstract { get; init; }
 
     /// <summary>
+    /// Whether the type is marked <c>[Obsolete]</c>.
+    /// </summary>
+    /// <remarks>
+    /// XAF filters obsolete controllers out when it collects them from an assembly, so one listed
+    /// as running on a screen would never actually be there.
+    /// </remarks>
+    public bool IsObsolete { get; init; }
+
+    /// <summary>
     /// Where XAF activates this controller, when it could be determined. Null means unknown.
     /// </summary>
     /// <remarks>

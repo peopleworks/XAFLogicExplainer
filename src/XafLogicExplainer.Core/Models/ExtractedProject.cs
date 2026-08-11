@@ -65,6 +65,17 @@ public class ExtractedProject
     public List<ExtractedView> Views { get; set; } = [];
 
     /// <summary>
+    /// Framework controllers that restrict nothing, so they load onto every screen.
+    /// </summary>
+    /// <remarks>
+    /// Recorded once instead of against each view. On DevExpress 26.1 nearly half of the framework's
+    /// controllers restrict nothing at all, and repeating them under every screen would bury the
+    /// handful that are specific to it — the ones a reader is actually looking for.
+    /// <para>Populated only when a catalog is present.</para>
+    /// </remarks>
+    public List<string> FrameworkAlwaysActive { get; set; } = [];
+
+    /// <summary>
     /// Seed data blocks extracted from updater classes.
     /// </summary>
     public List<ExtractedSeedData> SeedData { get; set; } = [];

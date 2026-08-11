@@ -194,6 +194,11 @@ public class LogicExtractor : ILogicExtractor
         ViewInventory.ResolveModelOnlyObjectTypes(project.Views, project.Entities);
         ViewActivationResolver.Resolve(project.Views, project.Controllers, project.Entities);
 
+        // The framework's own controllers, scoped to the modules this application registers. Adds
+        // nothing at all without a catalog, which is the state of every machine that has not built
+        // one.
+        ViewActivationResolver.ResolveFramework(project, catalog);
+
         return project;
     }
 

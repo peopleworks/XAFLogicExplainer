@@ -31,6 +31,20 @@ What runs when you open this screen.
     so wherever it is reported.
   - A controller restricted to a `TargetViewId` that is not a literal is listed apart rather than
     against every screen — that would invent an appearance on all of them.
+- **The framework's controllers on each screen**, when a catalog is present. Two layers, kept apart
+  everywhere they are reported: what this team wrote gets the full treatment, what XAF provides is
+  named compactly with its official one-line description. On the demo, `Prescription_DetailView`
+  runs 2 of the team's controllers and 32 of the framework's.
+  - Scoped to the modules the application registers, so a WinForms controller never appears on a
+    Blazor screen. The platform module is registered by the application builder and named in no
+    source — the platform project beside the module is the evidence that it is there.
+  - Only what XAF would actually instantiate: abstract types, generic definitions and `[Obsolete]`
+    types are excluded, mirroring the framework's own `IsValidControllerType`. `WindowController`
+    descendants are excluded too — they belong to a window, not a view.
+  - The 164 framework controllers that restrict nothing are recorded once rather than under all 54
+    screens, where they would bury the ones a reader came for.
+  - A controller whose targeting the catalog could not determine is left out of both lists. Unknown
+    is not unrestricted.
 
 - **Controller targeting is now read in full.** XAF decides where a controller activates with four
   conditions ANDed together — nesting, view type, object type and view id — and only two of them
@@ -66,6 +80,14 @@ What runs when you open this screen.
 - **The packed MCP server README advertised seven of nine tools**, omitting `xaf_editors` and
   `xaf_migrations` — and that is the README nuget.org renders and the MCP directories import. The
   test that keeps the front page honest now covers it too.
+- **Catalog entries sharing a name at two arities overwrote each other.** The sources pass matched
+  declarations to catalog types by bare name, so `ObjectViewController` and
+  `ObjectViewController<TView, TObject>` were the same key and whichever file was read last won.
+  The concrete `ObjectViewController` was reported as running on every screen instead of on object
+  views; ten controllers were affected.
+- **`ObjectView` was read as deriving directly from `View`.** It derives from `CompositeView`, so a
+  controller targeting `CompositeView` reaches dashboards as well as list and detail views —
+  checked against the 26.1 sources rather than assumed.
 
 ## [0.11.0] — 2026-08-10
 

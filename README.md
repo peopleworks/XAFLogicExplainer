@@ -235,6 +235,9 @@ Extraction then picks it up automatically and can say things it otherwise could 
   deletion works application-wide, not adding a feature beside it.
 - *"`[AuditedByFinance]` is not an XAF or .NET attribute"* — your team invented it, so its meaning
   lives in this codebase and in no documentation anywhere.
+- *"32 framework controllers also load onto this screen"* — named, with what each one does, and
+  scoped to the modules your application actually registers, so a WinForms controller never appears
+  on a Blazor screen.
 
 The catalog is written to `~/.xaflogic/catalog/`, **never into your repository**: it is derived from
 licensed software. Everything works without it — it only sharpens the output. See
@@ -284,7 +287,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 10 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **217 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **228 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

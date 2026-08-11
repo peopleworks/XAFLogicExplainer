@@ -113,6 +113,12 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         return sections;
     }
 
+    /// <summary>Joins controller names for a one-line mention.</summary>
+    private static string Names(IEnumerable<ViewActivation> activations) =>
+        string.Join(", ", activations
+            .OrderBy(a => a.Controller, StringComparer.Ordinal)
+            .Select(a => $"`{a.Controller}`"));
+
     /// <summary>
     /// Says in one phrase what kind of view this is, where it appears, and where it came from.
     /// </summary>
@@ -191,16 +197,17 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 if (view.OwnerProperty is { } ownerProperty)
                     sb.AppendLine($"- {L("Mostrada por", "Shown by")} `{view.OwnerEntity}.{ownerProperty}`");
 
-                if (view.Activates.Count == 0)
+                var mine = view.Activates.Where(a => !a.Framework).ToList();
+                var framework = view.Activates.Where(a => a.Framework).ToList();
+
+                if (mine.Count == 0)
                 {
                     sb.AppendLine(L(
-                        "- Ningun controlador de esta aplicacion se activa aqui. Los propios de XAF si.",
-                        "- No controller of this application activates here. XAF's own still do."));
-                    sb.AppendLine();
-                    continue;
+                        "- Ningun controlador de esta aplicacion se activa aqui.",
+                        "- No controller of this application activates here."));
                 }
 
-                foreach (var activation in view.Activates)
+                foreach (var activation in mine)
                 {
                     sb.Append($"- `{activation.Controller}` — ");
                     sb.AppendLine(activation.Reasons.Count == 0
@@ -213,8 +220,40 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                         sb.AppendLine($"  - {action}");
                 }
 
+                // Named but not expanded: inherited behaviour, and a lot of it. Giving each entry
+                // the weight of the team's own would bury the line worth reading.
+                if (framework.Count > 0)
+                {
+                    sb.AppendLine(L(
+                        $"- Ademas, de XAF: {Names(framework)}",
+                        $"- Plus, from XAF: {Names(framework)}"));
+                }
+
                 sb.AppendLine();
             }
+        }
+
+        if (project.FrameworkAlwaysActive.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {L("Controladores de XAF en todas las pantallas", "XAF controllers on every screen")}");
+            sb.AppendLine();
+            sb.AppendLine(L(
+                $"Estos no restringen nada, asi que se cargan en las {project.Views.Count} pantallas de " +
+                "arriba. Listados una vez y no en cada una.",
+                $"These restrict nothing, so they load onto all {project.Views.Count} screens above. " +
+                "Listed once rather than under each."));
+            sb.AppendLine();
+            sb.AppendLine(string.Join(", ", project.FrameworkAlwaysActive.Select(name => $"`{name}`")));
+        }
+        else if (project.CatalogVersion is null)
+        {
+            sb.AppendLine();
+            sb.AppendLine(L(
+                "> Los controladores propios de XAF tambien corren en estas pantallas. Nombrarlos " +
+                "necesita el catalogo: `xaflogic catalog build` en una maquina con licencia DevExpress.",
+                "> XAF's own controllers run on these screens too. Naming them needs the catalog: " +
+                "`xaflogic catalog build` on a machine with a DevExpress licence."));
         }
 
         sb.AppendLine();

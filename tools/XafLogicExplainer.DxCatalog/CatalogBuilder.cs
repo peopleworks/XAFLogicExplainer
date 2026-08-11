@@ -191,9 +191,30 @@ public sealed class CatalogBuilder
             Assembly = StripVersionSuffix(assemblyName),
             BaseType = type.BaseType?.Name,
             IsAbstract = type.IsAbstract,
+            IsObsolete = IsObsolete(type),
             Summary = string.IsNullOrWhiteSpace(docs?.Summary) ? null : docs.Summary,
             DocumentationUrl = docs?.DocumentationUrl,
         };
+    }
+
+    /// <summary>
+    /// Whether a type carries <c>[Obsolete]</c>.
+    /// </summary>
+    /// <remarks>
+    /// Read from the attribute's name rather than with <c>typeof</c>: types loaded through a
+    /// <see cref="MetadataLoadContext"/> are distinct from the running process's types.
+    /// </remarks>
+    private static bool IsObsolete(Type type)
+    {
+        try
+        {
+            return type.GetCustomAttributesData()
+                .Any(attribute => attribute.AttributeType.FullName == "System.ObsoleteAttribute");
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or TypeLoadException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

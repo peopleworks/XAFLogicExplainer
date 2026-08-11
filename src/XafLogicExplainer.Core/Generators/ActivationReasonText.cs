@@ -21,8 +21,8 @@ public static class ActivationReasonText
 
         ActivationCondition.ViewType when reason.Actual is null =>
             $"view is a {reason.Required}",
-        ActivationCondition.ViewType when reason.Required == "ObjectView" =>
-            $"a {reason.Actual} is an ObjectView",
+        ActivationCondition.ViewType when reason.Required is "ObjectView" or "CompositeView" =>
+            $"a {reason.Actual} is {(reason.Required == "ObjectView" ? "an" : "a")} {reason.Required}",
         ActivationCondition.ViewType =>
             $"it targets {reason.Required}, a view class this analysis cannot place",
 
@@ -43,8 +43,8 @@ public static class ActivationReasonText
 
         ActivationCondition.ViewType when reason.Actual is null =>
             $"la vista es un {reason.Required}",
-        ActivationCondition.ViewType when reason.Required == "ObjectView" =>
-            $"un {reason.Actual} es un ObjectView",
+        ActivationCondition.ViewType when reason.Required is "ObjectView" or "CompositeView" =>
+            $"un {reason.Actual} es un {reason.Required}",
         ActivationCondition.ViewType =>
             $"apunta a {reason.Required}, una clase de vista que este analisis no puede situar",
 

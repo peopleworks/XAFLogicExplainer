@@ -534,10 +534,12 @@ public sealed class XafDetailTools
 
             foreach (var view in group.OrderBy(v => v.Id, StringComparer.Ordinal))
             {
+                var mine = view.Activates.Count(a => !a.Framework);
+
                 sb.Append($"- `{view.Id}` — {Describe(view)}");
 
-                if (view.Activates.Count > 0)
-                    sb.Append($", {view.Activates.Count} controller{(view.Activates.Count == 1 ? "" : "s")}");
+                if (mine > 0)
+                    sb.Append($", {mine} of this codebase's controller{(mine == 1 ? "" : "s")}");
 
                 sb.AppendLine();
             }
@@ -581,44 +583,82 @@ public sealed class XafDetailTools
             _ => "Defined in the Model Editor. It has no generated counterpart.",
         });
 
+        var mine = view.Activates.Where(a => !a.Framework).ToList();
+        var framework = view.Activates.Where(a => a.Framework).ToList();
+
         sb.AppendLine();
-        sb.AppendLine("## What runs here");
+        sb.AppendLine($"## Written by this team ({mine.Count})");
 
-        if (view.Activates.Count == 0)
+        if (mine.Count == 0)
         {
             sb.AppendLine();
-            sb.AppendLine("None of this application's controllers activate on this view. XAF's own " +
-                          "built-in controllers still do — this lists what **this team** wrote.");
+            sb.AppendLine("None. No controller in this codebase activates on this view.");
         }
-        else
+
+        foreach (var activation in mine)
         {
             sb.AppendLine();
-            sb.AppendLine($"{view.Activates.Count} of this application's controllers, in the order XAF " +
-                          "loads them:");
+            sb.Append($"### {activation.Controller}");
 
-            foreach (var activation in view.Activates)
+            if (!string.IsNullOrWhiteSpace(activation.SourceProject))
+                sb.Append($" ({activation.SourceProject})");
+
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine(activation.Reasons.Count == 0
+                ? "- Restricts nothing, so it runs on **every view in the application**."
+                : "- Matches because " +
+                  string.Join(", and ", activation.Reasons.Select(Core.Generators.ActivationReasonText.English)) +
+                  ".");
+
+            if (activation.Actions.Count > 0)
+            {
+                sb.AppendLine("- Actions here:");
+                foreach (var action in activation.Actions)
+                    sb.AppendLine($"  - {action}");
+            }
+        }
+
+        // The framework layer is kept compact on purpose: it is inherited behaviour, there is a lot
+        // of it, and giving each entry the same weight as the team's own would bury the two lines
+        // someone actually came to read.
+        if (framework.Count > 0 || app.FrameworkAlwaysActive.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Provided by XAF ({framework.Count} specific to this view)");
+            sb.AppendLine();
+            sb.AppendLine("Inherited behaviour from the registered modules. It is not in this codebase " +
+                          "and cannot be changed here — but it is why the view has the actions it has.");
+
+            if (framework.Count > 0)
+                sb.AppendLine();
+
+            foreach (var activation in framework.OrderBy(a => a.Controller, StringComparer.Ordinal))
+            {
+                sb.Append($"- `{activation.Controller}` ({activation.SourceProject})");
+
+                if (!string.IsNullOrWhiteSpace(activation.Summary))
+                    sb.Append($" — {XafDiscoveryTools.Compact(activation.Summary)}");
+
+                sb.AppendLine();
+            }
+
+            if (app.FrameworkAlwaysActive.Count > 0)
             {
                 sb.AppendLine();
-                sb.Append($"### {activation.Controller}");
-
-                if (!string.IsNullOrWhiteSpace(activation.SourceProject))
-                    sb.Append($" ({activation.SourceProject})");
-
-                sb.AppendLine();
-                sb.AppendLine();
-                sb.AppendLine(activation.Reasons.Count == 0
-                    ? "- Restricts nothing, so it runs on **every view in the application**."
-                    : "- Matches because " +
-                      string.Join(", and ", activation.Reasons.Select(Core.Generators.ActivationReasonText.English)) +
-                      ".");
-
-                if (activation.Actions.Count > 0)
-                {
-                    sb.AppendLine("- Actions here:");
-                    foreach (var action in activation.Actions)
-                        sb.AppendLine($"  - {action}");
-                }
+                sb.AppendLine($"Plus {app.FrameworkAlwaysActive.Count} framework controllers that restrict " +
+                              "nothing and therefore load onto every view in the application: " +
+                              string.Join(", ", app.FrameworkAlwaysActive.Select(name => $"`{name}`")) + ".");
             }
+        }
+        else if (app.CatalogVersion is null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Provided by XAF");
+            sb.AppendLine();
+            sb.AppendLine("Not known. XAF's own controllers run here too, and naming them needs the " +
+                          "ground-truth catalog — run `xaflogic catalog build` on a machine with a " +
+                          "DevExpress licence.");
         }
 
         sb.AppendLine();
