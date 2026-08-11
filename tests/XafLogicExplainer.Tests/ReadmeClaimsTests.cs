@@ -54,17 +54,22 @@ public class ReadmeClaimsTests
         Assert.Equal(DeclaredTools.Count, claimed);
     }
 
-    [Fact]
-    public void DescribesEveryToolItShips()
+    [Theory]
+    [InlineData("README.md")]
+    [InlineData("src/XafLogicExplainer.Mcp/README.md")]
+    public void DescribesEveryToolItShips(string file)
     {
         // The count alone was not enough: the table a reader actually consults to decide whether
         // to install listed seven of nine, and the two it omitted are the ones nothing else
         // extracts.
-        var readme = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
+        //
+        // Both READMEs, because fixing the front page left the packed one wrong -- and the packed
+        // one is what nuget.org shows and what the MCP directories import.
+        var readme = File.ReadAllText(Path.Combine(RepositoryRoot, file));
         var undocumented = DeclaredTools.Where(tool => !readme.Contains($"`{tool}`")).ToList();
 
         Assert.True(undocumented.Count == 0,
-            $"The MCP server exposes tools the README never mentions: {string.Join(", ", undocumented)}.");
+            $"The MCP server exposes tools {file} never mentions: {string.Join(", ", undocumented)}.");
     }
 
     /// <summary>

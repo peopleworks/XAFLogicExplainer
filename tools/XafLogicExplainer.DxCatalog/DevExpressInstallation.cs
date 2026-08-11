@@ -17,12 +17,25 @@ public sealed partial class DevExpressInstallation
     public required IReadOnlyList<string> XafAssemblies { get; init; }
 
     /// <summary>
+    /// The source code directory, when that optional component is installed.
+    /// </summary>
+    /// <remarks>
+    /// Worth finding because framework controllers declare where they activate inside their
+    /// constructors, which assembly metadata does not carry. Without it the catalog still builds;
+    /// it just knows less about the framework's own behavior.
+    /// </remarks>
+    public string? SourceDirectory { get; init; }
+
+    /// <summary>
     /// Finds an installation, preferring an explicit path.
     /// </summary>
     /// <param name="explicitPath">
     /// A DevExpress root, or a directory of assemblies. Null searches the usual locations.
     /// </param>
-    public static DevExpressInstallation? Locate(string? explicitPath = null)
+    /// <param name="explicitSources">
+    /// A <c>Components/Sources</c> directory. Null looks for one beside the assemblies.
+    /// </param>
+    public static DevExpressInstallation? Locate(string? explicitPath = null, string? explicitSources = null)
     {
         foreach (var directory in CandidateDirectories(explicitPath))
         {
@@ -43,10 +56,31 @@ public sealed partial class DevExpressInstallation
                 Version = InferVersion(assemblies[0], directory),
                 AssemblyDirectory = directory,
                 XafAssemblies = assemblies,
+                SourceDirectory = LocateSources(explicitSources, directory),
             };
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Finds the sources, preferring an explicit path.
+    /// </summary>
+    /// <remarks>
+    /// A standard installation puts them one level up from the assemblies:
+    /// <c>Components/Bin/NetCore</c> beside <c>Components/Sources</c>. When <c>--path</c> pointed at
+    /// a bare folder of DLLs there is nothing to find, and an explicit <c>--sources</c> is the only
+    /// way in.
+    /// </remarks>
+    private static string? LocateSources(string? explicitSources, string assemblyDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitSources))
+            return Directory.Exists(explicitSources) ? explicitSources : null;
+
+        var components = Directory.GetParent(assemblyDirectory)?.Parent;
+        var sources = components is null ? null : Path.Combine(components.FullName, "Sources");
+
+        return sources is not null && Directory.Exists(sources) ? sources : null;
     }
 
     /// <summary>

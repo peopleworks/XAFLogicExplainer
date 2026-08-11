@@ -64,9 +64,9 @@ public class ControllerAnalyzer : IControllerAnalyzer
             BaseControllerType = GetBaseTypeName(classDecl),
         };
 
-        // Extract TargetObjectType from base type generic argument or constructor assignment
-        controller.TargetObjectType = ExtractTargetObjectType(classDecl);
-        controller.TargetViewType = ExtractTargetViewType(classDecl);
+        // Where this controller activates: object type, view type, nesting and view id, read the
+        // way XAF itself evaluates them.
+        controller.Targeting = ControllerTargetingReader.Read(classDecl);
 
         // Extract actions from fields and constructor
         controller.Actions.AddRange(ExtractActions(classDecl, options));
@@ -345,74 +345,6 @@ public class ControllerAnalyzer : IControllerAnalyzer
         }
 
         return editors.Distinct(StringComparer.Ordinal).ToList();
-    }
-
-    /// <summary>
-    /// Resolves target object type from generic base type or constructor assignment.
-    /// </summary>
-    private static string? ExtractTargetObjectType(ClassDeclarationSyntax classDecl)
-    {
-        // An explicit assignment states the intent outright, so it wins over anything inferred
-        // from the base type. It was previously checked last and never reached.
-        var ctor = classDecl.Members.OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
-        if (ctor?.Body != null)
-        {
-            var assignment = ctor.Body.DescendantNodes()
-                .OfType<AssignmentExpressionSyntax>()
-                .FirstOrDefault(a => a.Left.ToString() == "TargetObjectType");
-
-            if (assignment?.Right is TypeOfExpressionSyntax typeOf)
-                return typeOf.Type.ToString();
-        }
-
-        // ObjectViewController<TView, TObject>: the second argument is the business type.
-        //
-        // ViewController<TView> is NOT the same shape. Its single argument constrains the *view*
-        // (DetailView, ListView), not the object, so reading it as a business type reported
-        // "targets DetailView" for a controller that targets Order -- a statement about the
-        // application that is simply false.
-        var baseType = classDecl.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? "";
-
-        if (baseType.Contains('<'))
-        {
-            var genericArgs = baseType[(baseType.IndexOf('<') + 1)..baseType.LastIndexOf('>')];
-            var parts = genericArgs.Split(',').Select(p => p.Trim()).ToArray();
-
-            if (parts.Length >= 2)
-                return parts[1];
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Resolves target view type from generic base type or constructor assignment.
-    /// </summary>
-    private static string? ExtractTargetViewType(ClassDeclarationSyntax classDecl)
-    {
-        // From generic base type: ObjectViewController<DetailView, PeriodoComision>
-        var baseType = classDecl.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? "";
-        if (baseType.Contains('<'))
-        {
-            var genericArgs = baseType[(baseType.IndexOf('<') + 1)..baseType.LastIndexOf('>')];
-            var parts = genericArgs.Split(',').Select(p => p.Trim()).ToArray();
-            if (parts.Length >= 2)
-                return parts[0]; // First arg is view type
-        }
-
-        // From constructor: TargetViewType = ViewType.DetailView
-        var ctor = classDecl.Members.OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
-        if (ctor?.Body != null)
-        {
-            var assignment = ctor.Body.DescendantNodes()
-                .OfType<AssignmentExpressionSyntax>()
-                .FirstOrDefault(a => a.Left.ToString() == "TargetViewType");
-
-            if (assignment != null)
-                return assignment.Right.ToString();
-        }
-
-        return null;
     }
 
     /// <summary>

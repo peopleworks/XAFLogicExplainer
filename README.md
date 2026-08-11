@@ -223,6 +223,11 @@ That reads **your own installation** and records what XAF itself provides — at
 model interfaces and modules, with the official summaries and documentation links DevExpress ships.
 On DevExpress 26.1 that is around 850 framework types.
 
+If you also installed the DevExpress **source code** component, it records *where each framework
+controller activates* — the four conditions XAF checks before running it. That cannot be read from
+the assemblies: four out of five built-in controllers set their target inside a constructor. Pass
+`--dx-sources <Components/Sources>` if they are not beside your assemblies.
+
 Extraction then picks it up automatically and can say things it otherwise could not:
 
 - *"`ArchiveController` extends the built-in `DeleteObjectsViewController`"* — you are changing how
@@ -278,7 +283,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 9 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **177 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **203 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

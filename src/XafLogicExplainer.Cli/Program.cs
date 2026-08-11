@@ -1624,10 +1624,14 @@ var catalogPathOption = new Option<string?>(
     "--dx-path",
     "DevExpress installation directory. Searched for automatically if omitted.");
 catalogBuildCommand.AddOption(catalogPathOption);
+var catalogSourcesOption = new Option<string?>(
+    "--dx-sources",
+    "DevExpress Components/Sources directory. Found beside the assemblies if omitted.");
+catalogBuildCommand.AddOption(catalogSourcesOption);
 
-catalogBuildCommand.SetHandler((dxPath) =>
+catalogBuildCommand.SetHandler((dxPath, dxSources) =>
 {
-    var installation = DevExpressInstallation.Locate(dxPath);
+    var installation = DevExpressInstallation.Locate(dxPath, dxSources);
 
     if (installation is null)
     {
@@ -1648,6 +1652,16 @@ catalogBuildCommand.SetHandler((dxPath) =>
     AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Reading framework metadata...", ctx =>
     {
         builtCatalog = new CatalogBuilder().Build(installation);
+
+        // Where a controller activates is decided in its constructor, which assembly metadata does
+        // not carry. The sources do, when that optional component is installed.
+        if (installation.SourceDirectory is { } dxSourceDirectory)
+        {
+            ctx.Status("Reading controller constructors from source...");
+            new SourceTargetingReader().Apply(builtCatalog, dxSourceDirectory);
+        }
+
+        ControllerTargetingResolver.Resolve(builtCatalog);
     });
 
     var savedPath = XafCatalogStore.Save(builtCatalog);
@@ -1659,11 +1673,26 @@ catalogBuildCommand.SetHandler((dxPath) =>
     catalogTable.AddRow("Modules", builtCatalog.Modules.Count.ToString());
     AnsiConsole.Write(catalogTable);
 
+    // Say how much of the framework's activation behaviour is actually known. Silence here reads
+    // as "all of it", and without the sources it is almost none of it.
+    var knownTargeting = builtCatalog.Controllers.Values.Count(c => c.TargetingSource == "sources");
+
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine(
+        $"[grey]Know where {knownTargeting} of {builtCatalog.Controllers.Count} framework controllers activate.[/]");
+
+    if (installation.SourceDirectory is null)
+    {
+        AnsiConsole.MarkupLine(
+            "[yellow]![/] [grey]No DevExpress sources found. Install the source code component, or pass[/]");
+        AnsiConsole.MarkupLine("[grey]  [/][cyan]--dx-sources <Components/Sources>[/][grey], to complete it.[/]");
+    }
+
     AnsiConsole.WriteLine();
     AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(savedPath)}");
     AnsiConsole.MarkupLine("[grey]Kept outside your repository: it is derived from licensed software.[/]");
     AnsiConsole.MarkupLine("[grey]Extraction picks it up automatically from now on.[/]");
-}, catalogPathOption);
+}, catalogPathOption, catalogSourcesOption);
 
 var catalogStatusCommand = new Command("status", "Show which catalog is in use");
 

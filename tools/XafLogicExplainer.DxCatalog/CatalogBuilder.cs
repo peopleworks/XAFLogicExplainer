@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
+using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Catalog;
+using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.DxCatalog;
 
@@ -134,13 +136,11 @@ public sealed class CatalogBuilder
                 if (!type.IsPublic)
                     continue;
 
-                var entry = Describe(type, assemblyName, documentation);
-
                 if (type.IsInterface)
                 {
                     if (type.Name.StartsWith("IModel", StringComparison.Ordinal))
                     {
-                        catalog.ModelInterfaces[type.Name] = entry;
+                        catalog.ModelInterfaces[type.Name] = Describe(type, assemblyName, documentation);
                         added++;
                     }
 
@@ -149,17 +149,25 @@ public sealed class CatalogBuilder
 
                 if (DerivesFrom(type, AttributeBase))
                 {
-                    catalog.Attributes[type.Name] = entry;
+                    catalog.Attributes[type.Name] = Describe(type, assemblyName, documentation);
                     added++;
                 }
                 else if (DerivesFrom(type, ControllerBase))
                 {
+                    var entry = Describe(type, assemblyName, documentation);
+
+                    if (TargetingFromBaseChain(type) is { } targeting)
+                    {
+                        entry.Targeting = targeting;
+                        entry.TargetingSource = "reflection";
+                    }
+
                     catalog.Controllers[type.Name] = entry;
                     added++;
                 }
                 else if (DerivesFrom(type, ModuleBase))
                 {
-                    catalog.Modules[type.Name] = entry;
+                    catalog.Modules[type.Name] = Describe(type, assemblyName, documentation);
                     added++;
                 }
             }
@@ -186,6 +194,66 @@ public sealed class CatalogBuilder
             Summary = string.IsNullOrWhiteSpace(docs?.Summary) ? null : docs.Summary,
             DocumentationUrl = docs?.DocumentationUrl,
         };
+    }
+
+    /// <summary>
+    /// Reads whatever targeting the generic base type states, or null when it states none.
+    /// </summary>
+    /// <remarks>
+    /// This is all reflection can offer. A controller written as
+    /// <c>ObjectViewController&lt;DetailView, Order&gt;</c> carries its targeting in metadata; one
+    /// that assigns <c>TargetViewType</c> in its constructor carries it in IL that assembly
+    /// metadata does not expose. In the SystemModule alone the second form outnumbers the first
+    /// five to one, which is why the sources pass exists.
+    /// <para>
+    /// It was being thrown away for free: <c>type.BaseType?.Name</c> drops the generic arguments,
+    /// so the cases reflection <em>can</em> answer were reduced to the string "ViewController".
+    /// </para>
+    /// </remarks>
+    private static ControllerTargeting? TargetingFromBaseChain(Type type)
+    {
+        try
+        {
+            for (var current = type.BaseType; current is not null; current = current.BaseType)
+            {
+                if (!current.IsGenericType)
+                    continue;
+
+                var arguments = current.GetGenericArguments();
+
+                // An open generic -- ViewController<T> on a class that is itself generic -- names
+                // no particular view.
+                if (Array.Exists(arguments, argument => argument.IsGenericParameter))
+                    continue;
+
+                var definition = current.GetGenericTypeDefinition().Name;
+
+                if (definition == "ObjectViewController`2" && arguments.Length == 2)
+                {
+                    return new ControllerTargeting
+                    {
+                        TypeOfView = ControllerTargetingReader.NormalizeViewType(arguments[0].Name),
+                        TargetObjectType = arguments[1].Name,
+                    };
+                }
+
+                if (definition == "ViewController`1" && arguments.Length == 1)
+                {
+                    // ViewController<View> restricts nothing, and saying so would imply the
+                    // constructor was read too.
+                    if (ControllerTargetingReader.NormalizeViewType(arguments[0].Name) is not { } viewType)
+                        return null;
+
+                    return new ControllerTargeting { TypeOfView = viewType };
+                }
+            }
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or TypeLoadException)
+        {
+            // A base type in an assembly that is not present. Nothing more can be said about it.
+        }
+
+        return null;
     }
 
     /// <summary>

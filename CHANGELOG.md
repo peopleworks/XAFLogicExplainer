@@ -7,6 +7,45 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Groundwork for answering "what runs when I open this screen?".
+
+### Added
+
+- **Controller targeting is now read in full.** XAF decides where a controller activates with four
+  conditions ANDed together — nesting, view type, object type and view id — and only two of them
+  were being read. All four are now extracted, normalized to the way XAF evaluates them, and
+  reported per controller.
+  - `TargetViewId` is split on `;`, because XAF accepts a list in that one string and compares
+    against each. An id it cannot resolve to a literal is kept as the expression that produced it
+    rather than dropped, since a controller restricted to an unnamed view is still restricted.
+  - Targeting assigned to an *action* (`someAction.TargetViewId = …`) is deliberately not read as
+    the controller's. XAF evaluates the action's own copy separately, to narrow it further inside
+    an already-active controller.
+- **The ground-truth catalog now records where every framework controller activates**, given the
+  DevExpress source component. Reflection over the assemblies cannot see it: four out of five
+  built-in controllers assign their targeting inside a constructor, which assembly metadata does
+  not carry. The catalog builder reads those constructors with the same syntax analysis the rest of
+  the project uses. On DevExpress 26.1 that is 386 of 386 controllers, up from 5.
+  - `xaflogic catalog build --dx-sources <Components/Sources>` when they are not beside the
+    assemblies, and the command now states how many controllers it could answer for.
+  - Each entry records whether its targeting came from `sources` (complete) or `reflection` (a
+    lower bound), so nothing downstream can mistake a partial answer for a whole one.
+
+### Fixed
+
+- **`ViewController<DetailView>` reported no view type at all.** Only generic bases with two
+  arguments were read, so the single-argument form — which is how DevExpress documentation writes
+  controllers, and how the demo fixture's own `DispenseController` is written — lost half its
+  targeting.
+- **Targeting inherited from a base controller was ignored**, which reported any controller whose
+  base class does the targeting as running on every view in the application. It is set in a
+  constructor and constructors run base-first, so it is inherited; reading each class in isolation
+  understated 33 controllers in the DevExpress framework alone. Both an application's own base
+  classes and framework ones are now followed.
+- **The packed MCP server README advertised seven of nine tools**, omitting `xaf_editors` and
+  `xaf_migrations` — and that is the README nuget.org renders and the MCP directories import. The
+  test that keeps the front page honest now covers it too.
+
 ## [0.11.0] — 2026-08-10
 
 Everything that lives *outside* the business classes.

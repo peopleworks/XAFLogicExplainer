@@ -26,14 +26,32 @@ public class ExtractedController
     public string? SourceProject { get; set; }
 
     /// <summary>
+    /// Where XAF activates this controller.
+    /// </summary>
+    public ControllerTargeting Targeting { get; set; } = new();
+
+    /// <summary>
     /// Target business object type when declared.
     /// </summary>
-    public string? TargetObjectType { get; set; }
+    /// <remarks>One of the four conditions in <see cref="Targeting"/>, kept under its XAF name.</remarks>
+    public string? TargetObjectType
+    {
+        get => Targeting.TargetObjectType;
+        set => Targeting.TargetObjectType = value;
+    }
 
     /// <summary>
     /// Target view type when declared.
     /// </summary>
-    public string? TargetViewType { get; set; }
+    /// <remarks>
+    /// The <c>TargetViewType</c> enum and <c>TypeOfView</c> are the same field in XAF — the enum's
+    /// setter writes the type — so this reads <see cref="ControllerTargeting.TypeOfView"/>.
+    /// </remarks>
+    public string? TargetViewType
+    {
+        get => Targeting.TypeOfView;
+        set => Targeting.TypeOfView = value;
+    }
 
     /// <summary>
     /// Base controller type text.

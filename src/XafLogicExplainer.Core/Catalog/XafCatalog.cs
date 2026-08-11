@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Core.Catalog;
 
@@ -145,6 +146,27 @@ public sealed class XafCatalogType
 
     /// <summary>Whether the type is abstract, which for a controller means it is meant to be derived from.</summary>
     public bool IsAbstract { get; init; }
+
+    /// <summary>
+    /// Where XAF activates this controller, when it could be determined. Null means unknown.
+    /// </summary>
+    /// <remarks>
+    /// Settable, unlike the rest, because a catalog is built in two passes: reflection over the
+    /// assemblies first, then the installed sources if they are present.
+    /// </remarks>
+    public ControllerTargeting? Targeting { get; set; }
+
+    /// <summary>
+    /// How <see cref="Targeting"/> was obtained.
+    /// </summary>
+    /// <remarks>
+    /// <c>sources</c> is complete: the constructor was read, so an unset condition really is
+    /// unrestricted. <c>reflection</c> is a <em>lower bound</em> — it sees only what the generic
+    /// base type states, and four out of five framework controllers assign their targeting inside a
+    /// constructor, which assembly metadata does not carry. Anything deciding whether a controller
+    /// runs on a view has to treat the two differently or it will claim certainty it does not have.
+    /// </remarks>
+    public string? TargetingSource { get; set; }
 
     /// <summary>Full name, for display.</summary>
     [JsonIgnore]

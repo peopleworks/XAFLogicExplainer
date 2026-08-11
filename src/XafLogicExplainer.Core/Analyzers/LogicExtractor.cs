@@ -184,6 +184,10 @@ public class LogicExtractor : ILogicExtractor
         var catalog = options.Catalog ?? (options.UseCatalog ? Catalog.XafCatalogStore.LoadLatest() : null);
         Catalog.CatalogEnricher.Enrich(project, catalog);
 
+        // 9. Complete each controller's targeting with what it inherits from the controller it
+        //    extends. Needs every controller parsed first, so it cannot live in the analyzer.
+        ControllerTargetingResolver.Resolve(project.Controllers, catalog);
+
         return project;
     }
 
