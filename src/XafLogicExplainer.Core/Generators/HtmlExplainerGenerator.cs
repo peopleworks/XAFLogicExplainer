@@ -115,7 +115,10 @@ public sealed class HtmlExplainerGenerator
         Stat(sb, project.Entities.Count, "entities");
         Stat(sb, project.Controllers.Count, "controllers");
         Stat(sb, actions, "actions");
-        Stat(sb, rules, "rules");
+        // Named for what they are. "9 rules" reads as a total, and it counted two of the six kinds
+        // of rule this page goes on to document.
+        Stat(sb, project.Entities.Sum(e => e.ValidationRules.Count), "validation rules");
+        Stat(sb, project.Entities.Sum(e => e.AppearanceRules.Count), "appearance rules");
         if (project.Navigation.Count > 0) Stat(sb, project.Navigation.Count, "nav groups");
         if (project.SeedData.Count > 0) Stat(sb, project.SeedData.Count, "seed methods");
         sb.AppendLine("  </div>");
@@ -250,6 +253,7 @@ public sealed class HtmlExplainerGenerator
                     sb.Append($"      <tr><td class=\"mono\">{E(property.Name)}</td><td class=\"mono t\">{E(property.TypeName)}</td><td>");
                     if (property.IsKey) sb.Append("<span class=\"pill pill--key\">key</span> ");
                     if (property.IsRequired) sb.Append("<span class=\"pill pill--req\">required</span> ");
+                    if (property.IsUnique) sb.Append("<span class=\"pill pill--req\">unique</span> ");
                     if (!string.IsNullOrWhiteSpace(property.PersistentAlias)) sb.Append("<span class=\"pill pill--calc\">calculated</span> ");
                     if (property.IsCollection) sb.Append("<span class=\"pill\">collection</span> ");
                     sb.Append("</td><td class=\"t\">");
@@ -670,7 +674,10 @@ public sealed class HtmlExplainerGenerator
 
         sb.AppendLine("<section id=\"criteria\">");
         sb.AppendLine("  <h2>Criteria expressions</h2>");
-        sb.AppendLine("  <p class=\"lede\">XAF filters, validates and styles with criteria strings — neither SQL nor C#. Every expression in this application, gathered from attributes scattered across the codebase.</p>");
+        // "Every expression" while the collector deduplicates by expression and drew from four of
+        // the six places they occur. It now reads them all, and says what it did with duplicates
+        // rather than leaving a reader to assume there were none.
+        sb.AppendLine("  <p class=\"lede\">XAF filters, validates and styles with criteria strings — neither SQL nor C#. Every <em>distinct</em> expression in this application, gathered from validation and appearance rules, lookup filters, action availability and the Model Editor. An expression used twice appears once.</p>");
 
         if (conventions.CriteriaExamples.Count == 0)
         {

@@ -280,9 +280,14 @@ public class LogicExtractor : ILogicExtractor
     /// </summary>
     private static List<ExtractedNavigationItem> BuildNavigationStructure(List<ExtractedEntity> entities)
     {
+        // [DefaultClassOptions] puts a class in navigation. Without a [NavigationItem] naming a
+        // group it goes into XAF's Default group -- it is still in the menu, and it was being
+        // dropped from an inventory headed "what a user sees in the menu".
+        const string DefaultGroup = "Default";
+
         return entities
-            .Where(e => !string.IsNullOrEmpty(e.NavigationGroup))
-            .GroupBy(e => e.NavigationGroup!)
+            .Where(e => !string.IsNullOrEmpty(e.NavigationGroup) || e.IsDefaultClassOptions)
+            .GroupBy(e => string.IsNullOrEmpty(e.NavigationGroup) ? DefaultGroup : e.NavigationGroup!)
             .Select(g => new ExtractedNavigationItem
             {
                 GroupName = g.Key,

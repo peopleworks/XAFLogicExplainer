@@ -184,6 +184,16 @@ public class ExtractedAction
     public string? EnabledCriteria { get; set; }
 
     /// <summary>
+    /// Criteria the selected objects must satisfy for the action to be available.
+    /// </summary>
+    /// <remarks>
+    /// The condition that decides whether a button can be pressed at all — for a Dispense action,
+    /// <c>"Not IsDispensed"</c>. It governs the one operation on the screen and was in no generated
+    /// document, including an index that claimed to hold every criteria expression.
+    /// </remarks>
+    public string? TargetObjectsCriteria { get; set; }
+
+    /// <summary>
     /// Where this action appears, within the views its controller is already active on.
     /// </summary>
     /// <remarks>

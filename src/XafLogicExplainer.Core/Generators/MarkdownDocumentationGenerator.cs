@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using XafLogicExplainer.Core.Interfaces;
 using XafLogicExplainer.Core.Models;
@@ -111,6 +111,34 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             sections.Add(GenerateScreensSection(project));
 
         return sections;
+    }
+
+    /// <summary>
+    /// Says what an appearance rule actually does, and on which screen.
+    /// </summary>
+    /// <remarks>
+    /// It used to print the visibility and the enabled flag only, so a rule whose whole effect is
+    /// a red font read as "when OnHand = 0 ()" — a condition with no consequence, on no stated
+    /// screen. The context matters as much: the same criteria colours a list and does nothing in a
+    /// detail view.
+    /// </remarks>
+    private string DescribeAppearance(ExtractedAppearanceRule rule)
+    {
+        var effects = new List<string>();
+
+        if (rule.Visibility is { Length: > 0 }) effects.Add($"{_l.Visibility}={rule.Visibility}");
+        if (rule.Enabled is { Length: > 0 }) effects.Add($"{_l.Enabled}={rule.Enabled}");
+        if (rule.FontColor is { Length: > 0 }) effects.Add($"{L("color de letra", "font colour")}={rule.FontColor}");
+        if (rule.BackColor is { Length: > 0 }) effects.Add($"{L("color de fondo", "back colour")}={rule.BackColor}");
+
+        var where = new List<string>();
+
+        if (rule.Context is { Length: > 0 }) where.Add($"{L("en", "in")} {rule.Context}");
+        if (rule.TargetItems is { Length: > 0 }) where.Add($"{_l.Fields}: {rule.TargetItems}");
+
+        var text = effects.Count > 0 ? $": {string.Join(", ", effects)}" : $": {L("sin efecto declarado", "no declared effect")}";
+
+        return where.Count > 0 ? $"{text} ({string.Join(", ", where)})" : text;
     }
 
     /// <summary>Joins controller names for a one-line mention.</summary>
@@ -402,6 +430,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 {
                     var notes = new List<string>();
                     if (prop.Size.HasValue) notes.Add($"Size:{prop.Size}");
+                    if (prop.IsUnique) notes.Add(L("Unico", "Unique"));
                     if (prop.IsComputed) notes.Add(_l.Computed);
                     if (prop.ImmediatePostData) notes.Add("PostData");
                     if (!string.IsNullOrEmpty(prop.DisplayFormat)) notes.Add($"{_l.Format}:{prop.DisplayFormat}");
@@ -444,7 +473,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 sb.AppendLine();
                 foreach (var rule in entity.AppearanceRules)
                 {
-                    sb.AppendLine($"- **{rule.Id}**: {(rule.Visibility != null ? $"{_l.Visibility}={rule.Visibility}" : "")} {(rule.Enabled != null ? $"{_l.Enabled}={rule.Enabled}" : "")} {_l.When} `{rule.Criteria}`{(!string.IsNullOrEmpty(rule.TargetItems) ? $" ({rule.TargetItems})" : "")}");
+                    sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}");
                 }
                 sb.AppendLine();
             }
@@ -592,7 +621,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             sb.AppendLine($"### {entity.ClassName}");
             foreach (var rule in entity.AppearanceRules)
             {
-                sb.AppendLine($"- {_l.When} `{rule.Criteria}`: {(rule.Visibility != null ? $"{_l.Visibility}={rule.Visibility}" : "")} {(rule.Enabled != null ? $"{_l.Enabled}={rule.Enabled}" : "")} {(!string.IsNullOrEmpty(rule.TargetItems) ? $"({_l.Fields}: {rule.TargetItems})" : "")}");
+                sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}");
             }
             sb.AppendLine();
         }
@@ -601,7 +630,10 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         sb.AppendLine();
         foreach (var entity in project.Entities)
         {
-            var computed = entity.Properties.Where(p => p.IsComputed).ToList();
+            // Collections are association ends, not calculations. An XPO collection property is
+            // getter-only, so it satisfied IsComputed and was filed under derived logic -- inviting
+            // a reader to treat a persistent relationship as a formula.
+            var computed = entity.Properties.Where(p => p.IsComputed && !p.IsCollection).ToList();
             if (computed.Count == 0) continue;
 
             sb.AppendLine($"### {entity.ClassName}");

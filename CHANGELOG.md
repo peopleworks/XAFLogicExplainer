@@ -79,6 +79,30 @@ What runs when you open this screen.
 
 ### Fixed
 
+- **Inventories that promised to be complete and were not.** The worst shape of error this project
+  can make: a list headed "every expression in this application" reads as authoritative, and a
+  reader has no way to see what is missing.
+  - The criteria index drew from four of the six places criteria occur, and called the result
+    *every* expression while deduplicating by expression. It now reads all six — including the two
+    it never touched: **the expression a `RuleCriteria` enforces** (its own criteria is a different
+    field from the one saying when the rule applies, and only the second was read) and **an action's
+    `TargetObjectsCriteria`**, which on the demo is `Not IsDispensed`, the condition governing its
+    single operation. On the demo the index went from six expressions to nine.
+  - **`[Indexed(Unique = true)]` was captured nowhere.** A constraint the user meets as a save that
+    fails, enforced below the application, absent from documents promising every rule.
+  - **Classes with `[DefaultClassOptions]` and no `[NavigationItem]` were missing from navigation.**
+    They go into XAF's `Default` group — still in the menu, and dropped from an inventory headed
+    "what a user sees in the menu".
+  - **Interfaces were not ancestors.** XAF's object-type test is `IsAssignableFrom`, which an
+    interface satisfies, and DevExpress targets interfaces — `ChangePasswordController` targets
+    `IAuthenticationStandardUser`. Following the base class alone made every interface-targeted
+    controller match no view at all, silently.
+  - **Collections were filed as calculated properties.** An XPO collection is getter-only, so it
+    satisfied `IsComputed` and appeared under derived logic, inviting a reader to treat a persistent
+    relationship as a formula.
+  - **Appearance rules were printed without their effect or their screen** — "when `OnHand = 0` ()",
+    a condition with no consequence. Font colour, back colour and the context are now shown.
+  - **"9 rules"** counted two of the six kinds of rule the page documents. It now names them.
 - **Controllers were being dropped from extraction entirely** — the worst shape of failure this
   project has, because a controller that is never seen cannot be reported as missing. Two causes,
   both silent:

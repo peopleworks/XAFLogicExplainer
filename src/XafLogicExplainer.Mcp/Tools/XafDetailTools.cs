@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
 using XafLogicExplainer.Core.Models;
@@ -73,6 +73,7 @@ public sealed class XafDetailTools
             var flags = new List<string>();
             if (property.IsKey) flags.Add("key");
             if (property.IsRequired) flags.Add("required");
+            if (property.IsUnique) flags.Add("unique — the database refuses a duplicate");
             if (property.IsCollection) flags.Add("collection");
             if (property.Size is > 0) flags.Add($"max {property.Size}");
             if (property.ImmediatePostData) flags.Add("immediate post");

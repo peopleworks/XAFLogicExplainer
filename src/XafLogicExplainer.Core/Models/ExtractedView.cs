@@ -59,6 +59,11 @@ public sealed class ExtractedView
     /// <summary>Caption from the Model Editor, when one was set.</summary>
     public string? Caption { get; set; }
 
+    /// <summary>
+    /// Filter applied to the view in the Model Editor, which exists in no C# file.
+    /// </summary>
+    public string? Criteria { get; set; }
+
     /// <summary>For a nested list view, the class whose property shows it.</summary>
     public string? OwnerEntity { get; set; }
 

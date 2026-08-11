@@ -113,8 +113,14 @@ public sealed class CodebaseConventions
 
         foreach (var entity in project.Entities)
         {
+            // Both halves of a validation rule. The expression is what must be true; the target
+            // criteria is when the rule applies at all -- and only the second was gathered, so the
+            // expression a user actually hits was missing from the index.
+            foreach (var rule in entity.ValidationRules.Where(r => !string.IsNullOrWhiteSpace(r.Expression)))
+                found.Add(new CriteriaExample(rule.Expression!, $"{entity.ClassName} validation ({rule.RuleType})"));
+
             foreach (var rule in entity.ValidationRules.Where(r => !string.IsNullOrWhiteSpace(r.TargetCriteria)))
-                found.Add(new CriteriaExample(rule.TargetCriteria!, $"{entity.ClassName} validation ({rule.RuleType})"));
+                found.Add(new CriteriaExample(rule.TargetCriteria!, $"{entity.ClassName} validation applies when"));
 
             foreach (var rule in entity.AppearanceRules.Where(r => !string.IsNullOrWhiteSpace(r.Criteria)))
                 found.Add(new CriteriaExample(rule.Criteria!, $"{entity.ClassName} appearance ({rule.Id})"));
@@ -127,7 +133,16 @@ public sealed class CodebaseConventions
         {
             foreach (var action in controller.Actions.Where(a => !string.IsNullOrWhiteSpace(a.EnabledCriteria)))
                 found.Add(new CriteriaExample(action.EnabledCriteria!, $"{action.ActionId} enabled when"));
+
+            // What decides whether the button can be pressed. On a demo whose single action is
+            // guarded by "Not IsDispensed", this was the one expression that governed the whole
+            // application, and it was in no generated document.
+            foreach (var action in controller.Actions.Where(a => !string.IsNullOrWhiteSpace(a.TargetObjectsCriteria)))
+                found.Add(new CriteriaExample(action.TargetObjectsCriteria!, $"{action.ActionId} available when"));
         }
+
+        foreach (var view in project.Views.Where(v => !string.IsNullOrWhiteSpace(v.Criteria)))
+            found.Add(new CriteriaExample(view.Criteria!, $"{view.Id} filter"));
 
         // Distinct by the expression itself: the same criteria repeated across ten entities teaches
         // nothing new the second time, and the list is meant to be read, not to be exhaustive.

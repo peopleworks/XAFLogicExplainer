@@ -309,6 +309,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
                             case "ImageName": action.ImageName = value; break;
                             case "ToolTip": action.ToolTip = value; break;
                             case "Category": action.Category = value; break;
+                            case "TargetObjectsCriteria": action.TargetObjectsCriteria = value; break;
                         }
                     }
                 }
@@ -346,6 +347,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
                 case "ImageName": action.ImageName = value; break;
                 case "ToolTip": action.ToolTip = value; break;
                 case "Category": action.Category = value; break;
+                case "TargetObjectsCriteria": action.TargetObjectsCriteria = value; break;
             }
         }
 

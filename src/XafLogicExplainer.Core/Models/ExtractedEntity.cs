@@ -46,6 +46,22 @@ public class ExtractedEntity
     public string BaseType { get; set; } = string.Empty;
 
     /// <summary>
+    /// Everything the class declares after the colon: its base class and its interfaces.
+    /// </summary>
+    /// <remarks>
+    /// XAF's controller test is <c>Type.IsAssignableFrom</c>, which an interface satisfies — and
+    /// DevExpress uses that: <c>ChangePasswordController</c> targets
+    /// <c>IAuthenticationStandardUser</c>, not a class. Following the base class alone made every
+    /// interface-targeted controller match no view at all, silently.
+    /// <para>
+    /// Not split into "base class" and "interfaces" because syntax alone cannot tell them apart,
+    /// and for an assignability test the distinction does not matter: everything listed here is
+    /// truthfully an ancestor.
+    /// </para>
+    /// </remarks>
+    public List<string> BaseTypes { get; set; } = [];
+
+    /// <summary>
     /// Indicates whether <c>DefaultClassOptions</c> is present.
     /// </summary>
     public bool IsDefaultClassOptions { get; set; }
@@ -125,6 +141,16 @@ public class ExtractedProperty
     /// Indicates whether property is part of the key.
     /// </summary>
     public bool IsKey { get; set; }
+
+    /// <summary>
+    /// Whether the database refuses a duplicate value, from <c>[Indexed(Unique = true)]</c>.
+    /// </summary>
+    /// <remarks>
+    /// A constraint the user meets as a save that fails, and the only one enforced below the
+    /// application. It was captured nowhere — so an import, an integration or a seed method could
+    /// be written against documentation that promised to hold every rule and never mentioned it.
+    /// </remarks>
+    public bool IsUnique { get; set; }
 
     /// <summary>
     /// Indicates whether property represents a collection relation.

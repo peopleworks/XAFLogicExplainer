@@ -21,6 +21,18 @@ public class ExtractedValidationRule
     public string? MessageTemplate { get; set; }
 
     /// <summary>
+    /// The criteria the rule enforces, for <c>RuleCriteria</c>.
+    /// </summary>
+    /// <remarks>
+    /// Not the same thing as <see cref="TargetCriteria"/>, and conflating them loses the rule
+    /// itself. <c>[RuleCriteria("Prescription_NotExpired", DefaultContexts.Save,
+    /// "ExpiresOn &gt; IssuedOn")]</c> says what must be true; a target criteria says when the rule
+    /// applies at all. Only the second was being read, so the expression a user actually hits was
+    /// missing from an index that claimed to hold every one.
+    /// </remarks>
+    public string? Expression { get; set; }
+
+    /// <summary>
     /// Rule criteria/context expression when present.
     /// </summary>
     public string? TargetCriteria { get; set; }

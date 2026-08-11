@@ -117,6 +117,7 @@ public static class ViewInventory
             {
                 existing.Origin = ViewOrigin.Customized;
                 existing.Caption ??= modelView.Caption;
+                existing.Criteria ??= modelView.Criteria;
                 continue;
             }
 
@@ -131,6 +132,7 @@ public static class ViewInventory
                 Nesting = ViewNesting.Either,
                 Origin = ViewOrigin.ModelOnly,
                 Caption = modelView.Caption,
+                Criteria = modelView.Criteria,
             };
         }
     }

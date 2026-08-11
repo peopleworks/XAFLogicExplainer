@@ -63,6 +63,7 @@ public class EntityAnalyzer : IEntityAnalyzer
             Namespace = GetNamespace(classDecl),
             FilePath = filePath,
             BaseType = GetBaseTypeName(classDecl),
+            BaseTypes = GetBaseTypeNames(classDecl),
             Description = GetAttributeStringArg(classDecl, "Description"),
             NavigationGroup = GetAttributeStringArg(classDecl, "NavigationItem"),
             DefaultProperty = GetAttributeStringArg(classDecl, "XafDefaultProperty")
@@ -140,6 +141,10 @@ public class EntityAnalyzer : IEntityAnalyzer
                          || HasAttribute(prop, "Required"),
             ImmediatePostData = HasAttribute(prop, "ImmediatePostData"),
             IsKey = HasAttribute(prop, "Key"),
+            // [Indexed] alone is a performance hint; [Indexed(Unique = true)] is a rule the
+            // database enforces, and the two are the same attribute.
+            IsUnique = GetAttributeStringArg(prop, "Indexed", "Unique") is { } unique
+                       && unique.Equals("true", StringComparison.OrdinalIgnoreCase),
         };
 
         // Size attribute (XPO)
@@ -365,12 +370,43 @@ public class EntityAnalyzer : IEntityAnalyzer
 
             if (argName.Contains("Message", StringComparison.OrdinalIgnoreCase))
                 rule.MessageTemplate = argValue;
-            else if (argName.Equals("TargetCriteria", StringComparison.OrdinalIgnoreCase)
-                     || argName.Equals("Criteria", StringComparison.OrdinalIgnoreCase))
+            else if (argName.Equals("TargetCriteria", StringComparison.OrdinalIgnoreCase))
                 rule.TargetCriteria = argValue;
+            else if (argName.Equals("Criteria", StringComparison.OrdinalIgnoreCase))
+                rule.Expression = argValue;
             else if (argName.Equals("TargetPropertyName", StringComparison.OrdinalIgnoreCase))
                 rule.TargetProperty = argValue;
         }
+
+        rule.Expression ??= PositionalCriteria(rule, args);
+    }
+
+    /// <summary>
+    /// The expression a <c>RuleCriteria</c> enforces, when it was passed positionally.
+    /// </summary>
+    /// <remarks>
+    /// Its overloads put the criteria in different positions — <c>("Total &gt;= 0")</c>,
+    /// <c>("id", DefaultContexts.Save, "Total &gt;= 0")</c> — so the position cannot be hardcoded.
+    /// The last positional string <em>literal</em> is the criteria in every overload: the id comes
+    /// before it, and the contexts argument is an enum in the form people write.
+    /// </remarks>
+    private static string? PositionalCriteria(ExtractedValidationRule rule, SeparatedSyntaxList<AttributeArgumentSyntax> args)
+    {
+        if (!rule.RuleType.Contains("Criteria", StringComparison.Ordinal))
+            return null;
+
+        string? found = null;
+
+        foreach (var arg in args)
+        {
+            if (arg.NameEquals is not null)
+                break;
+
+            if (arg.Expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+                found = literal.Token.ValueText;
+        }
+
+        return found;
     }
 
     /// <summary>
@@ -472,6 +508,33 @@ public class EntityAnalyzer : IEntityAnalyzer
         return classDecl.BaseList?.Types.FirstOrDefault()?.Type.ToString() ?? "object";
     }
 
+    /// <summary>
+    /// Every name in the class's base list, with namespaces and generic arguments removed.
+    /// </summary>
+    private static List<string> GetBaseTypeNames(ClassDeclarationSyntax classDecl)
+    {
+        var names = new List<string>();
+
+        foreach (var baseType in classDecl.BaseList?.Types ?? default)
+        {
+            var name = baseType.Type.ToString();
+            var generic = name.IndexOf('<');
+
+            if (generic > 0)
+                name = name[..generic];
+
+            var lastDot = name.LastIndexOf('.');
+
+            if (lastDot >= 0)
+                name = name[(lastDot + 1)..];
+
+            if (name.Length > 0 && !names.Contains(name, StringComparer.Ordinal))
+                names.Add(name);
+        }
+
+        return names;
+    }
+
     private static bool HasAttribute(MemberDeclarationSyntax member, string attributeName)
     {
         return member.AttributeLists
@@ -489,6 +552,24 @@ public class EntityAnalyzer : IEntityAnalyzer
             return null;
 
         return SyntaxLiteral.ValueOf(attr.ArgumentList.Arguments[0].Expression);
+    }
+
+    /// <summary>
+    /// Reads one named argument of an attribute, e.g. the <c>Unique</c> of <c>[Indexed]</c>.
+    /// </summary>
+    private static string? GetAttributeStringArg(
+        MemberDeclarationSyntax member,
+        string attributeName,
+        string argumentName)
+    {
+        var attr = member.AttributeLists
+            .SelectMany(al => al.Attributes)
+            .FirstOrDefault(a => MatchesAttributeName(a.Name.ToString(), attributeName));
+
+        var argument = attr?.ArgumentList?.Arguments
+            .FirstOrDefault(a => a.NameEquals?.Name.ToString() == argumentName);
+
+        return argument is null ? null : SyntaxLiteral.ValueOf(argument.Expression);
     }
 
     private static string? GetModelDefaultValue(PropertyDeclarationSyntax prop, string propertyName)

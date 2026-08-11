@@ -400,22 +400,34 @@ public static class ViewActivationResolver
     /// </remarks>
     private static Dictionary<string, HashSet<string>> BuildAncestry(IReadOnlyList<ExtractedEntity> entities)
     {
-        var baseOf = entities.ToDictionary(e => e.ClassName, e => e.BaseType, StringComparer.Ordinal);
+        var byName = new Dictionary<string, ExtractedEntity>(StringComparer.Ordinal);
+
+        foreach (var entity in entities)
+            byName.TryAdd(entity.ClassName, entity);
+
         var ancestry = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
         foreach (var entity in entities)
         {
             var chain = new HashSet<string>(StringComparer.Ordinal) { entity.ClassName };
-            var current = entity.BaseType;
 
-            // Bounded by the number of classes, so a cycle in source that does not compile cannot
-            // spin here.
-            for (var step = 0; step < entities.Count + 1 && !string.IsNullOrWhiteSpace(current); step++)
+            // Breadth-first over the whole base list, not just the base class: an interface is an
+            // ancestor for IsAssignableFrom, and DevExpress targets interfaces. Bounded by the
+            // number of classes, so a cycle in source that does not compile cannot spin here.
+            var pending = new Queue<string>(Ancestors(entity));
+
+            for (var step = 0; step < (entities.Count * 4) + 8 && pending.Count > 0; step++)
             {
-                if (!chain.Add(current))
-                    break;
+                var name = pending.Dequeue();
 
-                current = baseOf.GetValueOrDefault(current, string.Empty);
+                if (!chain.Add(name))
+                    continue;
+
+                if (byName.TryGetValue(name, out var ancestor))
+                {
+                    foreach (var next in Ancestors(ancestor))
+                        pending.Enqueue(next);
+                }
             }
 
             ancestry[entity.ClassName] = chain;
@@ -423,4 +435,13 @@ public static class ViewActivationResolver
 
         return ancestry;
     }
+
+    /// <summary>
+    /// What a class declares after the colon, falling back to the single base type recorded by
+    /// older extractions.
+    /// </summary>
+    private static IEnumerable<string> Ancestors(ExtractedEntity entity) =>
+        entity.BaseTypes.Count > 0
+            ? entity.BaseTypes
+            : string.IsNullOrWhiteSpace(entity.BaseType) ? [] : [entity.BaseType];
 }
