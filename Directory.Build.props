@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
 
   <!--
     Repo-wide build settings, imported before every .csproj (so any project can still

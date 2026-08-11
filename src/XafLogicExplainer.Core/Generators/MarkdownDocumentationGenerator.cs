@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using XafLogicExplainer.Core.Interfaces;
 using XafLogicExplainer.Core.Models;

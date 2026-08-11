@@ -1,4 +1,4 @@
-﻿# XAF Logic Explainer
+# XAF Logic Explainer
 
 [![CI](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml/badge.svg)](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/peopleworks/XAFLogicExplainer?color=blue)](LICENSE)
@@ -317,7 +317,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 10 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **267 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **270 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

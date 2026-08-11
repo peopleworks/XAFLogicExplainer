@@ -153,7 +153,7 @@ xaflogic agents --project "C:\MySolution\MyApp.Module"</code></pre>
   <p>That sounds like a limitation. It's the feature the whole project stands on:</p>
   <ul>
     <li><strong>It works on a branch that doesn't build</strong> — which is often precisely when you need to know what the application does.</li>
-    <li><strong>It needs no DevExpress licence.</strong> Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 267 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.</li>
+    <li><strong>It needs no DevExpress licence.</strong> Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 270 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.</li>
     <li><strong>It's fast.</strong> Roslyn parsing over a large module takes seconds, not a build.</li>
   </ul>
   <p>The cost is that reflection-only truths are unavailable. I judged that a good trade, and three years of production use hasn't changed my mind.</p>

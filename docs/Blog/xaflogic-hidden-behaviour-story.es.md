@@ -100,7 +100,7 @@ La extracción es **análisis sintáctico con Roslyn**. La herramienta parsea tu
 Suena a limitación. Es la propiedad sobre la que se sostiene el proyecto entero:
 
 - **Funciona en una rama que no compila** — que es, muchas veces, justo cuando necesitas saber qué hace la aplicación.
-- **No hace falta licencia de DevExpress.** Quien quiera contribuir al extractor puede hacerlo sin suscripción, y CI corre gratis en un runner público de Ubuntu. La suite son 267 tests sobre fixtures XAF sintéticos que referencian tipos de DevExpress que no están instalados, porque nunca se compila nada.
+- **No hace falta licencia de DevExpress.** Quien quiera contribuir al extractor puede hacerlo sin suscripción, y CI corre gratis en un runner público de Ubuntu. La suite son 270 tests sobre fixtures XAF sintéticos que referencian tipos de DevExpress que no están instalados, porque nunca se compila nada.
 - **Es rápido.** Parsear con Roslyn un módulo grande son segundos, no una compilación.
 
 El precio es que las verdades que solo se ven por reflexión no están disponibles. Me pareció un buen intercambio, y tres años de uso en producción no me han hecho cambiar de opinión.

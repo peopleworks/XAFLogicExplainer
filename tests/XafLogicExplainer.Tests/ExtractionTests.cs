@@ -1,4 +1,4 @@
-﻿using XafLogicExplainer.Core.Models;
+using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Tests;
 

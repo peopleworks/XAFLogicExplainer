@@ -46,6 +46,26 @@ public class ReadmeClaimsTests
         ("src/XafLogicExplainer.Mcp/.mcp/server.json", @"""version"": ""(\d+\.\d+\.\d+)"""),
     ];
 
+    [Theory]
+    [InlineData("src/XafLogicExplainer.Mcp/.mcp/server.json")]
+    [InlineData("plugins/xaf-logic-explainer/.claude-plugin/plugin.json")]
+    [InlineData(".claude-plugin/marketplace.json")]
+    public void ShipsManifestsWithoutAByteOrderMark(string file)
+    {
+        // nuget.org rejects the package outright — "The MCP server metadata file '.mcp/server.json'
+        // is invalid" — and the byte order mark is invisible in every editor and every diff, so the
+        // failure arrives at publish time with nothing to look at.
+        //
+        // Added after exactly that: a bulk version bump written with Python's utf-8-sig, which
+        // preserves a BOM where one exists and adds one where it does not.
+        var bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot, file));
+
+        Assert.False(
+            bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF,
+            $"{file} starts with a UTF-8 byte order mark. Strict JSON readers reject it, " +
+            "including the one nuget.org runs when it validates an MCP package.");
+    }
+
     [Fact]
     public void CountsTheToolsTheMcpServerExposes()
     {

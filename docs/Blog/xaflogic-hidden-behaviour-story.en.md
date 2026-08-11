@@ -100,7 +100,7 @@ Extraction is **Roslyn syntax analysis**. The tool parses your source as text. I
 That sounds like a limitation. It's the feature the whole project stands on:
 
 - **It works on a branch that doesn't build** — which is often precisely when you need to know what the application does.
-- **It needs no DevExpress licence.** Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 267 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.
+- **It needs no DevExpress licence.** Contributors without a subscription can work on the extractor, and CI runs free on a public Ubuntu runner. The test suite is 270 tests over synthetic XAF fixtures that reference DevExpress types which are never installed, because nothing is ever compiled.
 - **It's fast.** Roslyn parsing over a large module takes seconds, not a build.
 
 The cost is that reflection-only truths are unavailable. I judged that a good trade, and three years of production use hasn't changed my mind.

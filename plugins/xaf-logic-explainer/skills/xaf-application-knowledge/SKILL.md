@@ -1,4 +1,4 @@
-﻿---
+---
 name: xaf-application-knowledge
 description: >-
   Answer questions about the DevExpress XAF application in this repository using facts extracted

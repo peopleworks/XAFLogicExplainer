@@ -61,7 +61,7 @@
       "html": "scenes/es/08-roslyn.html",
       "minSeconds": 14,
       "voice": "Marcela",
-      "narration": "Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus doscientos sesenta y siete tests corren gratis en un runner público."
+      "narration": "Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus doscientos setenta tests corren gratis en un runner público."
     },
     {
       "id": "09-niveles",

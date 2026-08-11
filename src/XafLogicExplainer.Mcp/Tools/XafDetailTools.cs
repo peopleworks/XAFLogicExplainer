@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
 using XafLogicExplainer.Core.Models;

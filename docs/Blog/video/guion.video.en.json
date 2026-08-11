@@ -61,7 +61,7 @@
       "html": "scenes/en/08-roslyn.html",
       "minSeconds": 14,
       "voice": "Rachel",
-      "narration": "All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its two hundred and sixty seven tests run free on a public runner."
+      "narration": "All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its two hundred and seventy tests run free on a public runner."
     },
     {
       "id": "09-niveles",

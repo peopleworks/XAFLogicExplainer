@@ -1,4 +1,4 @@
-﻿namespace XafLogicExplainer.Core.Generators;
+namespace XafLogicExplainer.Core.Generators;
 
 /// <summary>
 /// Strongly-typed localized label set used by documentation generators.
