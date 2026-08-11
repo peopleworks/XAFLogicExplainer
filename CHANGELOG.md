@@ -7,7 +7,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-08-11
+
 What runs when you open this screen.
+
+Most of this release is corrections, and they came from an audit rather than from a bug report:
+three reviewers on disjoint axes — one against the DevExpress sources, one against the new code,
+one reading only the generated output and never the generator. The third found what the other two
+structurally could not, which is the argument for keeping all three.
 
 ### Changed
 

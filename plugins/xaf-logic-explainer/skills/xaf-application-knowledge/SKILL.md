@@ -1,4 +1,4 @@
----
+﻿---
 name: xaf-application-knowledge
 description: >-
   Answer questions about the DevExpress XAF application in this repository using facts extracted
@@ -17,7 +17,7 @@ compatibility: >-
   text and never compiles the target project.
 metadata:
   author: PeopleWorks
-  version: "0.11.0"
+  version: "0.12.0"
   repository: https://github.com/peopleworks/XAFLogicExplainer
 ---
 

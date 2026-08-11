@@ -1,4 +1,4 @@
-# XAF Logic Explainer
+﻿# XAF Logic Explainer
 
 [![CI](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml/badge.svg)](https://github.com/peopleworks/XAFLogicExplainer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/peopleworks/XAFLogicExplainer?color=blue)](LICENSE)
@@ -300,7 +300,7 @@ project is a no-op. There is an MSBuild `.targets` file if you want it to run on
 
 ## Status
 
-**v0.11.0.** The extraction engine is the mature part: it runs in production against real XAF
+**v0.12.0.** The extraction engine is the mature part: it runs in production against real XAF
 applications. The agent-facing surface is what is landing now, in the open.
 
 | | |
