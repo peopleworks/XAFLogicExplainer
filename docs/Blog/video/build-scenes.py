@@ -143,6 +143,11 @@ body::before {
 
 COPY = {
     "en": {
+        "intro": {
+            "name": "XAF LOGIC EXPLAINER",
+            "line": "Teach your coding agent what your application does",
+            "pills": ["Free", "MIT", ".NET 10"],
+        },
         "01-gancho": {
             "cap": "YOU ASK YOUR CODING AGENT",
             "prompt": "Add a validation rule to Invoice",
@@ -225,6 +230,11 @@ COPY = {
         },
     },
     "es": {
+        "intro": {
+            "name": "XAF LOGIC EXPLAINER",
+            "line": "Enséñale a tu agente qué hace tu aplicación",
+            "pills": ["Gratis", "MIT", ".NET 10"],
+        },
         "01-gancho": {
             "cap": "LE PIDES ALGO A TU AGENTE",
             "prompt": "Añade una regla de validación a Invoice",
@@ -603,6 +613,38 @@ def scene_11(c: dict, _: dict) -> tuple[str, str]:
     return css, body
 
 
+def scene_intro(c: dict, _: dict) -> tuple[str, str]:
+    """Three and a half seconds. Long enough to name the thing, too short for a second idea."""
+    css = """
+.stage { justify-content:center; align-items:center; text-align:center; }
+.name {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size:46px; font-weight:640; letter-spacing:.10em; color:%(ink)s;
+}
+.rule { width:150px; height:2px; background:%(yours)s; margin:26px auto 24px; }
+.line { font-size:22px; color:%(mute)s; }
+/* Symmetric margins: the shared .pill has a right margin only, which leaves a centred group
+   sitting half a gap to the left of centre. */
+.pills { margin-top:34px; }
+.pills .pill { margin:0 5px; }
+""" % PALETTE
+
+    pills = "".join(f'<span class="pill" {a("fade", 2.0 + i * 0.18, 0.5)}>{escape(p)}</span>'
+                    for i, p in enumerate(c["pills"]))
+
+    body = f"""
+<div class="stage">
+  <div>
+    <div class="name" {a("rise", 0.15, 0.7)}>{escape(c["name"])}</div>
+    <div class="rule" style="animation:.7s cubic-bezier(.2,.7,.3,1) .75s both grow;
+         transform-origin:center"></div>
+    <div class="line" {a("fade", 1.15, 0.6)}>{escape(c["line"])}</div>
+    <div class="pills">{pills}</div>
+  </div>
+</div>"""
+    return css, body
+
+
 def scene_04(c: dict, _: dict) -> tuple[str, str]:
     """The business class, real, beside the four things that are not in it."""
     css = CODE_CSS + """
@@ -828,6 +870,7 @@ __MOTION__
 
 
 BUILDERS = {
+    "intro": scene_intro,
     "01-gancho": scene_01,
     "02-la-brecha": scene_02,
     "03-dos-minutos": scene_03,
@@ -845,7 +888,7 @@ BUILDERS = {
 # scene rather than a second count, so retiming a scene does not leave its poster showing a
 # half-drawn frame.
 POSTER_AT = {
-    "01-gancho": .94, "02-la-brecha": .75, "03-dos-minutos": .80, "04-oculto": .78,
+    "intro": .90, "01-gancho": .94, "02-la-brecha": .75, "03-dos-minutos": .80, "04-oculto": .78,
     "05-editores": .82, "06-migraciones": .80, "07-pantallas": .62, "08-roslyn": .84,
     "09-niveles": .74, "10-mapa": .62, "11-cierre": .82,
 }
@@ -1035,6 +1078,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", nargs="*", default=None, metavar="SCENE",
                         help="render mp4s; with no ids, every scene")
+    parser.add_argument("--assemble", action="store_true",
+                        help="join the rendered scenes into one film per language, carrying "
+                             "each scene's narration if audio/<lang>/<scene>.mp3 exists")
     parser.add_argument("--retime", action="store_true",
                         help="rewrite each scene's length from its recorded take, or from its "
                              "word count until one exists, and print the chapter list")
@@ -1069,7 +1115,8 @@ def main() -> None:
         for lang, g in guiones.items():
             (SCENES / lang).mkdir(parents=True, exist_ok=True)
             (POSTERS / lang).mkdir(parents=True, exist_ok=True)
-            seconds = {s["id"]: s["minSeconds"] for s in g["scenes"]}
+            seconds = {"intro": g["intro"]["seconds"]}
+            seconds.update({s["id"]: s["minSeconds"] for s in g["scenes"]})
 
             print(f"\n{lang}")
             for scene_id, build in BUILDERS.items():
@@ -1097,8 +1144,74 @@ def main() -> None:
 
         browser.close()
 
+    if args.assemble:
+        print("\nassembling")
+        for lang, g in guiones.items():
+            assemble(lang, ["intro"] + [s["id"] for s in g["scenes"]])
+
     if pacing:
         sys.exit("\nnarration that does not fit its scene:\n  " + "\n  ".join(pacing))
+
+
+def audio_take(lang: str, scene_id: str) -> pathlib.Path | None:
+    for ext in AUDIO_EXTS:
+        take = AUDIO / lang / f"{scene_id}{ext}"
+        if take.exists():
+            return take
+    return None
+
+
+def assemble(lang: str, order: list[str]) -> None:
+    """Join the scene mp4s into one film, carrying each scene's narration if it is recorded.
+
+    Every segment gets an audio stream -- the real take, or silence -- because concat with
+    `-c copy` needs the streams to match, and a video that is silent until scene four would
+    otherwise concat into a file whose audio starts halfway through.
+    """
+    parts = RENDER / lang
+    missing = [s for s in order if not (parts / f"{s}.mp4").exists()]
+    if missing:
+        print(f"  {lang}: cannot assemble, not rendered yet: {', '.join(missing)}")
+        return
+
+    work = parts / ".segments"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
+
+    voiced = 0
+    for scene_id in order:
+        clip, segment = parts / f"{scene_id}.mp4", work / f"{scene_id}.mp4"
+        take = audio_take(lang, scene_id)
+        if take is None:
+            command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(clip),
+                       "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+                       "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac",
+                       "-b:a", "160k", "-shortest", str(segment)]
+        else:
+            voiced += 1
+            # apad with -shortest, so the take ends exactly where the picture does instead of
+            # leaving a stream shorter than its scene for concat to trip over.
+            command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(clip), "-i", str(take),
+                       "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac",
+                       "-b:a", "160k", "-af", "apad", "-shortest", str(segment)]
+        subprocess.run(command, check=True)
+
+    listing = work / "concat.txt"
+    listing.write_text("".join(f"file '{work / f'{s}.mp4'}'\n".replace("\\", "/")
+                               for s in order), encoding="utf-8")
+
+    out = RENDER / f"xaflogic-explainer-{lang}.mp4"
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+                    "-i", str(listing), "-c", "copy", str(out)], check=True)
+    shutil.rmtree(work)
+
+    length = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                             "-of", "csv=p=0", str(out)], capture_output=True, text=True)
+    total = float(length.stdout.strip() or 0)
+    narration = f"{voiced}/{len(order)} scenes voiced" if voiced else "silent — no takes yet"
+    print(f"  {out.relative_to(VIDEO)}  {int(total // 60)}:{total % 60:04.1f}  "
+          f"{out.stat().st_size:,} bytes  ({narration})")
 
 
 def render(page_obj, html: pathlib.Path, out: pathlib.Path, seconds: float) -> None:
