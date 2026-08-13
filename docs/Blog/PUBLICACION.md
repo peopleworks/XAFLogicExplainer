@@ -15,6 +15,30 @@ Enlaces fijos:
 
 ---
 
+## 0. IMÁGENES DESTACADAS
+
+Generadas con `python site/build-covers.py`, que las escribe en `docs/assets/`. No se editan a
+mano: el guion produce las cuatro variantes de una sola definición, así que la portada no puede
+decir una cosa y el artículo otra.
+
+| Fichero | Tamaño | Dónde |
+| --- | --- | --- |
+| `cover-en-wide.png`, `cover-es-wide.png` | 1000×420 | **dev.to** (ya puesto en `cover_image`) |
+| `cover-en.png`, `cover-es.png` | 1200×630 | **LinkedIn**, Open Graph, cabecera del blog propio |
+| `cover-*.svg` | vector | blog propio, si sirve SVG |
+
+Dos proporciones porque cada sitio recorta distinto: dev.to recorta a 1000×420 y se comería la
+línea de instalación de la versión alta. **PNG para dev.to y LinkedIn**, que no aceptan SVG.
+
+La portada dice `Invoice.TotalAmount` frente a `Invoice.Total` — que es el ejemplo con el que abre
+el artículo. Si se reescribe esa apertura, hay que cambiar `COPY` en el guion; el mismo fallo que
+tendría un pie de figura desactualizado, solo que en la imagen que más gente ve.
+
+El `cover_image` del frontmatter apunta a `raw.githubusercontent.com`, así que **las imágenes
+tienen que estar en `main` antes de publicar** o dev.to mostrará el artículo sin portada.
+
+---
+
 ## 1. ARTÍCULO — Inglés (`xaflogic-hidden-behaviour-story.en.md`)
 
 **Título:** Your coding agent knows XAF. It has never seen your application.

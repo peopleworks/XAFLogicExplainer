@@ -2,7 +2,7 @@
 title: "Tu agente de código sabe XAF. Nunca ha visto tu aplicación."
 description: "Un agente de IA puede recitarte la documentación de XAF y aun así equivocarse con total seguridad sobre tu aplicación, porque buena parte de lo que hace una app XAF no está en las clases de negocio. Esto es lo que construí, y los cuatro sitios donde se esconde el comportamiento."
 canonical_url: "https://peopleworksgpt.com/tu-agente-sabe-xaf-pero-no-tu-aplicacion/"
-cover_image: "https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png"
+cover_image: "https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/cover-es-wide.png"
 tags: [dotnet, devexpress, xaf, ia]
 author: "Pedro Hernández (PeopleWorks)"
 lang: es

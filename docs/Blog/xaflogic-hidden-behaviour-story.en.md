@@ -2,7 +2,7 @@
 title: "Your coding agent knows XAF. It has never seen your application."
 description: "An AI agent can recite the XAF documentation and still be confidently wrong about your app, because a third of what an XAF application does isn't in the business classes at all. Here's what I built to fix that, and the four places behaviour hides."
 canonical_url: "https://peopleworksgpt.com/your-coding-agent-knows-xaf/"
-cover_image: "https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/explainer-editors.png"
+cover_image: "https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/cover-en-wide.png"
 tags: [dotnet, devexpress, xaf, ai]
 author: "Pedro Hernández (PeopleWorks)"
 lang: en

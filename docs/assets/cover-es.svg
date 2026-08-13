@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"
+     viewBox="0 0 1200 630" role="img" aria-labelledby="cover-t cover-d">
+  <title id="cover-t">Tu agente sabe XAF. Nunca ha visto tu aplicación.</title>
+  <desc id="cover-d">LO QUE ESCRIBE EL AGENTE: Invoice.TotalAmount. LO QUE TIENE TU CLASE: Invoice.Total.</desc>
+
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+    .cap  { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+             letter-spacing: .13em; }
+    .head { font-size: 52px; font-weight: 640; letter-spacing: -.015em; }
+    .body { fill: #8794a4; }
+  </style>
+
+  <defs>
+    <!-- A flat rectangle at 1200px reads as an empty slide. The grid is barely visible and
+         only has to keep the surface from looking like a placeholder. -->
+    <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#f2f5f8" opacity=".035"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="#07090c"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <text class="cap" x="72" y="78"
+        style="fill:#64707e;font-size:13px">XAF LOGIC EXPLAINER  ·  MIT  ·  CÓDIGO ABIERTO</text>
+
+  <!-- Grey line, then colour: framework knowledge is the plentiful half, yours is the scarce one. -->
+  <text class="head" x="72" y="196" style="fill:#737f8f">Tu agente sabe XAF.</text>
+  <text class="head" x="72" y="258" style="fill:#f2f5f8">Nunca ha visto <tspan
+        style="fill:#ff8a3d">tu aplicación.</tspan></text>
+
+  <g>
+    <rect x="72" y="322" width="508" height="160" rx="12"
+          fill="#10151d" stroke="#232b36" stroke-width="1"/>
+    <text class="cap" x="98" y="360"
+          style="fill:#737f8f;font-size:12px">LO QUE ESCRIBE EL AGENTE</text>
+    <text class="mono" x="98" y="414"
+          style="fill:#737f8f;font-size:34px;font-weight:600">Invoice.TotalAmount</text>
+    <text class="body" x="98" y="454"
+          style="font-size:13.5px">XAF impecable. Miembro inexistente.</text>
+  </g>
+
+  <g>
+    <rect x="620" y="322" width="508" height="160" rx="12"
+          fill="rgba(255,138,61,.10)" stroke="#ff8a3d" stroke-width="1.5"/>
+    <text class="cap" x="646" y="360"
+          style="fill:#ff8a3d;font-size:12px">LO QUE TIENE TU CLASE</text>
+    <text class="mono" x="646" y="414"
+          style="fill:#ff8a3d;font-size:34px;font-weight:600">Invoice.Total</text>
+    <text class="body" x="646" y="454"
+          style="font-size:13.5px">Leído de tu código, con Roslyn.</text>
+  </g>
+
+  <text class="mono" x="72" y="560"
+        style="fill:#8794a4;font-size:17px">$ dotnet tool install -g XafLogicExplainer.Cli</text>
+  <text class="mono" x="1128" y="560" text-anchor="end"
+        style="fill:#64707e;font-size:13px">github.com/peopleworks/XAFLogicExplainer</text>
+</svg>
