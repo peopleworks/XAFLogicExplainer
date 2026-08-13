@@ -300,7 +300,7 @@ project is a no-op. There is an MSBuild `.targets` file if you want it to run on
 
 ## Status
 
-**v0.12.0.** The extraction engine is the mature part: it runs in production against real XAF
+**v0.12.1.** The extraction engine is the mature part: it runs in production against real XAF
 applications. The agent-facing surface is what is landing now, in the open.
 
 | | |

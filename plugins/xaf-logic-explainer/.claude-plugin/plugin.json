@@ -1,7 +1,7 @@
 {
   "name": "xaf-logic-explainer",
   "description": "Query a specific DevExpress XAF application: its entities, controllers, actions, business rules and Model Editor customizations, extracted from source with Roslyn.",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "license": "MIT",
   "author": {
     "name": "Pedro Hernández (PeopleWorks)",
