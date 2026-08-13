@@ -56,4 +56,16 @@ public class LegacyEntityDiscoveryTests
     {
         Assert.Equal("Sales", SampleProjects.LegacyEf.Entity("Invoice").NavigationGroup);
     }
+
+    [Fact]
+    public void FindsEntitiesRegisteredThroughASharedContextBase()
+    {
+        // ArchiveDbContext derives from AuditedDbContext, which derives from DbContext -- so it
+        // never names DbContext in its own declaration. A shared base is how an application keeps
+        // auditing or a connection convention in one place, and reading the roster only from
+        // classes that say `: DbContext` themselves would find nothing in one.
+        var names = SampleProjects.LegacyEf.Entities.Select(entity => entity.ClassName);
+
+        Assert.Contains("ArchivedInvoice", names);
+    }
 }

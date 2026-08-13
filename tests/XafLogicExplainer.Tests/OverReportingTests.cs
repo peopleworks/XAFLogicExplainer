@@ -195,6 +195,51 @@ public class OverReportingTests
         Assert.DoesNotContain("Order_Tags_ListView", views);
     }
 
+    [Fact]
+    public void ReportsAPartialClassOnceWithAllOfItsProperties()
+    {
+        // A class matched by its base list can only match once -- one part declares the base list.
+        // A class matched by the DbSet roster matches on its name, so every part matches, and the
+        // scaffolded split that produces two parts is exactly what the roster is for. Reported
+        // twice, each copy holds half the columns: two entities, neither of them true.
+        var shipments = SampleProjects.LegacyEf.Entities
+            .Where(entity => entity.ClassName == "Shipment")
+            .ToList();
+
+        Assert.Single(shipments);
+        Assert.Equal(
+            ["Id", "TrackingNumber", "DispatchedOn", "IsDelivered"],
+            shipments[0].Properties.Select(property => property.Name));
+
+        // The attributes live on the hand-written part; the merge must not lose them either.
+        Assert.Equal("Sales", shipments[0].NavigationGroup);
+    }
+
+    [Fact]
+    public void DoesNotPersistADtoThatMerelySharesAnEntityName()
+    {
+        // SampleLegacy.Module.BusinessObjects.Contracts.Warehouse is a wire shape, not a table. A roster of bare
+        // names cannot tell it from the entity, and an agent told it is persistent will write
+        // queries against it.
+        var warehouses = SampleProjects.LegacyEf.Entities
+            .Where(entity => entity.ClassName == "Warehouse")
+            .ToList();
+
+        Assert.Single(warehouses);
+        Assert.Equal("SampleLegacy.Module.BusinessObjects", warehouses[0].Namespace);
+    }
+
+    [Fact]
+    public void DoesNotRegisterADbSetWrittenAsALocal()
+    {
+        // `DbSet<AuditEntry> entries = database.Set<AuditEntry>()` inside a method body is a type
+        // name, not the application declaring a table. Only the properties a context declares are
+        // its statement of what it persists.
+        var names = SampleProjects.LegacyEf.Entities.Select(entity => entity.ClassName);
+
+        Assert.DoesNotContain("AuditEntry", names);
+    }
+
     private static ControllerTargeting Read(string source) =>
         ControllerTargetingReader.Read(CSharpSyntaxTree.ParseText(source).GetRoot()
             .DescendantNodes().OfType<ClassDeclarationSyntax>().First());
