@@ -37,9 +37,7 @@ public sealed class XafDiscoveryTools
         var sb = new StringBuilder();
 
         var actionCount = app.Controllers.Sum(c => c.Actions.Count);
-        var orm = app.OrmType.Contains("EF", StringComparison.OrdinalIgnoreCase)
-            ? "Entity Framework Core"
-            : "XPO";
+        var orm = Orm.Label(app.OrmType);
 
         sb.AppendLine($"# {app.ProjectName}");
         sb.AppendLine();

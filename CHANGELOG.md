@@ -9,6 +9,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`Unknown` now reaches every place the ORM is reported.** The agent files learned it; the HTML
+  explainer and the MCP `xaf_overview` kept deciding in a binary with no third answer, so a project
+  whose ORM could not be determined was reported as **XPO** by both. The MCP one was the worse of
+  the two: it prints the ORM two lines above "These lists are complete, not sampled", from a tool
+  whose description tells the agent that anything absent does not exist in the application. All
+  three now go through one `Orm` helper — the defect was never the wrong answer, it was that three
+  places were each entitled to one.
+
 - **The ORM is read as syntax, and is `Unknown` when nothing says.** Detection scanned raw file
   text for `DevExpress.Persistent.BaseImpl.EF` and fell through to XPO, so an EF Core application
   whose entities do not use the DevExpress EF base implementation — a legacy schema, its security
