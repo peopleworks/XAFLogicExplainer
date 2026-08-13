@@ -7,6 +7,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The ORM is read as syntax, and is `Unknown` when nothing says.** Detection scanned raw file
+  text for `DevExpress.Persistent.BaseImpl.EF` and fell through to XPO, so an EF Core application
+  whose entities do not use the DevExpress EF base implementation — a legacy schema, its security
+  tables in another project — was reported as XPO. That is not a hole in the document: ground rule
+  1 then tells the agent that `DbContext`, `DbSet<T>` and EF migrations "do not exist in this
+  application and must never be suggested", which forbids the only correct answer. Signals are now
+  ranked by what it costs to be wrong about them — a `DbSet<T>` registered on a context first,
+  then `using` directives and base classes — and where neither ORM leaves a trace, the rule is
+  omitted rather than guessed. Reading text also counted a *mention*: a comment naming the
+  namespace was enough, which is how the fixture for this fix first passed against the old code.
+
 ## [0.12.1] — 2026-08-13
 
 Entities the application declares, rather than the ones that inherit from the right class.

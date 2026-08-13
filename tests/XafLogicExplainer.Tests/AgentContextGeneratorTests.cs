@@ -17,6 +17,21 @@ public class AgentContextGeneratorTests
     private static string EfCoreIndex =>
         new AgentContextGenerator("0.9.0").GenerateIndex(SampleProjects.EfCore, []);
 
+    private static string NoOrmIndex =>
+        new AgentContextGenerator("0.9.0").GenerateIndex(SampleProjects.NoOrm, []);
+
+    [Fact]
+    public void DoesNotRuleOutAnOrmItNeverFoundEvidenceFor()
+    {
+        // The ground rule is emphatic in both directions on purpose -- which is exactly why it must
+        // not fire on a guess. Telling an agent that DbContext "does not exist in this application"
+        // is a harder failure than saying nothing, because it forbids the correct answer.
+        var index = NoOrmIndex;
+
+        Assert.DoesNotContain("Persistence is DevExpress XPO", index);
+        Assert.DoesNotContain("Persistence is Entity Framework Core", index);
+    }
+
     [Fact]
     public void StatesThatTheInventoriesAreComplete()
     {

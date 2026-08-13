@@ -22,12 +22,6 @@ public class EntityAnalyzer : IEntityAnalyzer
         var entities = new List<ExtractedEntity>();
         var csFiles = FindFiles(sourceDirectory, options.BusinessObjectPatterns, options.ExcludePatterns).ToList();
 
-        // Resolve ORM type
-        var ormType = options.Orm == OrmType.Auto
-            ? DetectOrmType(csFiles)
-            : options.Orm;
-        options.ResolvedOrm = ormType;
-
         // Parsed once and kept, because the DbSet roster has to be known before the first class is
         // classified and re-parsing every file to build it costs more than holding the trees.
         //
@@ -43,6 +37,13 @@ public class EntityAnalyzer : IEntityAnalyzer
             .ToList();
 
         var roster = DbSetRoster.Read(parsedFiles.Select(parsed => parsed.Root));
+
+        // Resolved after the parse, because the roster is the best evidence there is and it only
+        // exists once the trees do.
+        var ormType = options.Orm == OrmType.Auto
+            ? DetectOrmType(parsedFiles.Select(parsed => parsed.Root), roster)
+            : options.Orm;
+        options.ResolvedOrm = ormType;
 
         foreach (var (file, root) in parsedFiles)
         {
@@ -475,16 +476,72 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// <summary>
     /// Detects ORM mode by scanning file contents for EF-specific namespaces.
     /// </summary>
-    private static OrmType DetectOrmType(IEnumerable<string> csFiles)
+    /// <summary>
+    /// Decides which ORM an application persists with, from what its source declares.
+    /// </summary>
+    /// <remarks>
+    /// Read as syntax rather than as text. Scanning file contents for a namespace counts a mention
+    /// of it in a comment, a string or an <c>#if</c>-disabled block as evidence — and a project
+    /// that merely discusses EF Core is not one that uses it.
+    /// <para>
+    /// The signals are ranked by what each one costs to be wrong about. A <c>DbSet&lt;T&gt;</c>
+    /// registered on a context is the application declaring a table, and it cannot be mistaken;
+    /// a <c>using</c> directive is weaker but still deliberate. Where neither ORM leaves any
+    /// trace the answer is <see cref="OrmType.Unknown"/>, because the alternative is to state a
+    /// default in the same voice as everything that was actually read.
+    /// </para>
+    /// </remarks>
+    private static OrmType DetectOrmType(IEnumerable<SyntaxNode> roots, DbSetRoster roster)
     {
-        foreach (var file in csFiles)
+        // The application cannot run without its registrations being right, which makes them the
+        // one signal that is never incidental.
+        if (roster.RegistersAnything)
+            return OrmType.EfCore;
+
+        var efCore = false;
+        var xpo = false;
+
+        foreach (var root in roots)
         {
-            var source = File.ReadAllText(file);
-            if (source.Contains("DevExpress.Persistent.BaseImpl.EF"))
-                return OrmType.EfCore;
+            foreach (var directive in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+            {
+                if (directive.Alias is not null || directive.Name is null)
+                    continue;
+
+                var name = directive.Name.ToString();
+
+                // Exact or namespace-prefixed, never StartsWith on its own:
+                // `DevExpress.Persistent.BaseImpl` is XPO and a prefix of the EF Core one.
+                if (IsOrDescends(name, "Microsoft.EntityFrameworkCore")
+                    || IsOrDescends(name, "DevExpress.Persistent.BaseImpl.EF")
+                    || IsOrDescends(name, "DevExpress.ExpressApp.EFCore"))
+                    efCore = true;
+                else if (IsOrDescends(name, "DevExpress.Xpo"))
+                    xpo = true;
+            }
+
+            // A base class is as deliberate as a using directive and survives file-scoped
+            // namespaces that name nothing.
+            foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+            {
+                foreach (var baseTypeName in GetBaseTypeNames(classDecl))
+                {
+                    if (baseTypeName is "XPObject" or "XPCustomObject" or "XPLiteObject" or "XPBaseObject")
+                        xpo = true;
+                    else if (baseTypeName is "DbContext")
+                        efCore = true;
+                }
+            }
         }
-        return OrmType.Xpo;
+
+        if (efCore) return OrmType.EfCore;
+        if (xpo) return OrmType.Xpo;
+
+        return OrmType.Unknown;
     }
+
+    private static bool IsOrDescends(string name, string ns) =>
+        name.Equals(ns, StringComparison.Ordinal) || name.StartsWith($"{ns}.", StringComparison.Ordinal);
 
     /// <summary>
     /// The types an application registers as <c>DbSet&lt;T&gt;</c> on a <c>DbContext</c>, and the
@@ -515,6 +572,9 @@ public class EntityAnalyzer : IEntityAnalyzer
     private sealed class DbSetRoster
     {
         private readonly List<(string Argument, HashSet<string> Scopes)> _registrations = [];
+
+        /// <summary>Whether any context in the source registers anything at all.</summary>
+        public bool RegistersAnything => _registrations.Count > 0;
 
         /// <summary>
         /// Reads every <c>DbSet&lt;T&gt;</c> property declared on a context in the parsed source.

@@ -90,7 +90,12 @@ public class LogicExtractor : ILogicExtractor
             e.SourceProject ??= new DirectoryInfo(projectPath).Name;
 
         // Set detected ORM type
-        project.OrmType = options.ResolvedOrm == OrmType.EfCore ? "EF Core" : "XPO";
+        project.OrmType = options.ResolvedOrm switch
+        {
+            OrmType.EfCore => "EF Core",
+            OrmType.Unknown => "Unknown",
+            _ => "XPO",
+        };
 
         // 2. Extract controllers from Module
         project.Controllers = _controllerAnalyzer.AnalyzeControllers(projectPath, options);
