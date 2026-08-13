@@ -28,16 +28,21 @@ public class EntityAnalyzer : IEntityAnalyzer
             : options.Orm;
         options.ResolvedOrm = ormType;
 
-        foreach (var file in csFiles)
-        {
-            var source = File.ReadAllText(file);
-            var tree = CSharpSyntaxTree.ParseText(source, path: file);
-            var root = tree.GetRoot();
+        // Parsed once and kept, because the DbSet roster has to be known before the first class is
+        // classified and re-parsing every file to build it costs more than holding the trees.
+        var parsedFiles = csFiles
+            .Select(file => (File: file, Root: CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot()))
+            .ToList();
 
+        var registeredTypes = CollectDbSetTypeNames(parsedFiles.Select(parsed => parsed.Root));
+
+        foreach (var (file, root) in parsedFiles)
+        {
             var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
             foreach (var classDecl in classDeclarations)
             {
-                if (IsXafBusinessObject(classDecl, options.BaseTypeNames))
+                if (IsXafBusinessObject(classDecl, options.BaseTypeNames)
+                    || registeredTypes.Contains(classDecl.Identifier.Text))
                 {
                     var entity = ExtractEntity(classDecl, file, options);
                     entities.Add(entity);
@@ -468,6 +473,43 @@ public class EntityAnalyzer : IEntityAnalyzer
                 return OrmType.EfCore;
         }
         return OrmType.Xpo;
+    }
+
+    /// <summary>
+    /// Collects the type names an application registers as <c>DbSet&lt;T&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// Under EF Core this is the application's own statement of what it persists, and it has to be
+    /// right for the application to run at all — which makes it a better signal than a base class.
+    /// An XAF project mapped onto an existing schema routinely has no XAF base class to match: the
+    /// tables bring their own keys, so the project writes its own base, or maps a plain POCO.
+    /// <para>
+    /// Only classes declared in the analyzed source become entities. A DbContext also registers
+    /// framework tables (<c>ModuleInfo</c>, <c>FileData</c>, <c>ModelDifference</c>) whose types
+    /// are declared in DevExpress assemblies and are therefore never seen here, so they drop out
+    /// without needing a list of names to exclude.
+    /// </para>
+    /// </remarks>
+    private static HashSet<string> CollectDbSetTypeNames(IEnumerable<SyntaxNode> roots)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var root in roots)
+        {
+            foreach (var generic in root.DescendantNodes().OfType<GenericNameSyntax>())
+            {
+                if (generic.Identifier.Text != "DbSet" || generic.TypeArgumentList.Arguments.Count != 1)
+                    continue;
+
+                var argument = generic.TypeArgumentList.Arguments[0].ToString();
+                var simpleName = argument[(argument.LastIndexOf('.') + 1)..];
+
+                if (simpleName.Length > 0)
+                    names.Add(simpleName);
+            }
+        }
+
+        return names;
     }
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)

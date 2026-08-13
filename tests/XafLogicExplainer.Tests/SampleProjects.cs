@@ -28,6 +28,9 @@ internal static class SampleProjects
     /// <summary>Path to the EF Core fixture module.</summary>
     public static string EfCorePath => Path.Combine(FixturesRoot, "EfCoreSolution", "SampleEf.Module");
 
+    /// <summary>Path to the legacy EF Core fixture module.</summary>
+    public static string LegacyEfPath => Path.Combine(FixturesRoot, "LegacyEfSolution", "SampleLegacy.Module");
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 
@@ -79,12 +82,23 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyXpo = new(() => Extract(XpoPath));
     private static readonly Lazy<ExtractedProject> LazyDemo = new(() => Extract(DemoPath));
     private static readonly Lazy<ExtractedProject> LazyEfCore = new(() => Extract(EfCorePath));
+    private static readonly Lazy<ExtractedProject> LazyLegacyEf = new(() => Extract(LegacyEfPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
 
     /// <summary>The EF Core sample: Product and Category.</summary>
     public static ExtractedProject EfCore => LazyEfCore.Value;
+
+    /// <summary>
+    /// The legacy EF Core sample: entities on an existing schema, known only from the DbContext.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="EfCore"/> because that fixture asserts its exact entity set, and
+    /// because the two shapes are genuinely different applications: one is a greenfield XAF model
+    /// deriving from <c>BaseObject</c>, this one is mapped onto tables that were already there.
+    /// </remarks>
+    public static ExtractedProject LegacyEf => LazyLegacyEf.Value;
 
     /// <summary>
     /// The fourteen-entity demo, with a custom editor in a sibling platform project.
