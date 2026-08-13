@@ -1,0 +1,89 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from the video sits beside
+   them without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+/* Column rather than absolute placement: the content block centres itself in whatever room is
+   left between the eyebrow and the closing line, so a scene with two rows and one with three
+   do not both leave a hole in the middle of the frame. */
+.stage {
+  position: relative; width: 100%; height: 100%; padding: 52px 72px 62px;
+  display: flex; flex-direction: column;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #64707e;
+}
+.head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+.pill {
+  display: inline-block; padding: 7px 15px; border-radius: 999px;
+  border: 1px solid #232b36; color: #8794a4; font-size: 15px; margin-right: 10px;
+}
+.pill--accent { border-color: #ff8a3d; color: #ff8a3d; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
+  cubic-bezier(.2,.7,.3,1); }
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-rise { animation-name: rise; }
+.anim-fade { animation-name: fade; }
+.anim-dim  { animation-name: dim; }
+.anim-wipe { animation-name: wipe; }
+.anim-grow { animation-name: grow; transform-origin: left center; }
+
+
+.term {
+  border:1px solid #232b36; background:#10151d; border-radius:14px;
+  padding:30px 32px; font-size:21px; line-height:2.05;
+}
+.term .p { color:#ff8a3d; }
+.term .c { color:#f2f5f8; }
+.files { margin-top:34px; display:flex; gap:16px; }
+.file {
+  border:1px solid #ff8a3d; background:rgba(255,138,61,.10); border-radius:10px;
+  padding:15px 20px; font-size:19px; color:#ff8a3d;
+}
+.close { font-size:25px; color:#8794a4; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.15s both fade">DOS MINUTOS, DE PRINCIPIO A FIN</div>
+  <div class="main">
+    <div>
+      <div class="term mono"><div style="animation:0.9s cubic-bezier(.2,.7,.3,1) 0.5s both wipe"><span class="p">$</span> <span class="c">dotnet tool install -g XafLogicExplainer.Cli</span></div>
+<div style="animation:0.9s cubic-bezier(.2,.7,.3,1) 2.9s both wipe"><span class="p">$</span> <span class="c">xaflogic agents --project MiApp.Module</span></div></div>
+      <div class="files"><div class="file mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 6.0s both rise">AGENTS.md</div>
+<div class="file mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 6.5s both rise">CLAUDE.md</div>
+<div class="file mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 7.0s both rise">.github/copilot-instructions.md</div></div>
+    </div>
+  </div>
+  <div class="close" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.6s both rise">Sin cuenta. Sin API key. Sin subir nada.</div>
+</div>
+</body></html>

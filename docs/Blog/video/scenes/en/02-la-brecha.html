@@ -1,0 +1,98 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from the video sits beside
+   them without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+/* Column rather than absolute placement: the content block centres itself in whatever room is
+   left between the eyebrow and the closing line, so a scene with two rows and one with three
+   do not both leave a hole in the middle of the frame. */
+.stage {
+  position: relative; width: 100%; height: 100%; padding: 52px 72px 62px;
+  display: flex; flex-direction: column;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #64707e;
+}
+.head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+.pill {
+  display: inline-block; padding: 7px 15px; border-radius: 999px;
+  border: 1px solid #232b36; color: #8794a4; font-size: 15px; margin-right: 10px;
+}
+.pill--accent { border-color: #ff8a3d; color: #ff8a3d; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
+  cubic-bezier(.2,.7,.3,1); }
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-rise { animation-name: rise; }
+.anim-fade { animation-name: fade; }
+.anim-dim  { animation-name: dim; }
+.anim-wipe { animation-name: wipe; }
+.anim-grow { animation-name: grow; transform-origin: left center; }
+
+
+.rows { display:flex; flex-direction:column; gap:20px; }
+.row {
+  display:flex; align-items:center; gap:26px; padding:24px 28px;
+  border:1px solid #232b36; background:#10151d; border-radius:14px;
+}
+.row .what { flex:1; font-size:25px; color:#737f8f; }
+.row .tool { font-size:20px; color:#8794a4; }
+.row .tick { font-size:22px; color:#46505e; }
+.row--yours { border-color:#ff8a3d; background:rgba(255,138,61,.10); }
+.row--yours .what { color:#f2f5f8; font-weight:640; }
+.row--yours .tool { color:#ff8a3d; font-weight:640; }
+.close { font-size:24px; color:#8794a4; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.15s both fade">THREE THINGS AN AGENT NEEDS TO KNOW</div>
+  <div class="main">
+    <div class="rows">
+      <div class="row" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.7s both rise">
+              <div class="what">How XAF works</div>
+              <div class="tool">DevExpress agent-skills</div>
+              <div class="tick">&#10003;</div>
+            </div>
+<div class="row" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 1.8s both rise">
+              <div class="what">What the documentation says</div>
+              <div class="tool">DevExpress Docs MCP</div>
+              <div class="tick">&#10003;</div>
+            </div>
+      <div class="row row--yours" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 3.6s both rise">
+        <div class="what">What YOUR application does</div>
+        <div class="tool" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 5.6s both fade">XAF Logic Explainer</div>
+      </div>
+    </div>
+  </div>
+  <div class="close" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.6s both rise">They compose. None of them replaces the others.</div>
+</div>
+</body></html>

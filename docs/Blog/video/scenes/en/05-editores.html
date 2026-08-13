@@ -1,0 +1,101 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from the video sits beside
+   them without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+/* Column rather than absolute placement: the content block centres itself in whatever room is
+   left between the eyebrow and the closing line, so a scene with two rows and one with three
+   do not both leave a hole in the middle of the frame. */
+.stage {
+  position: relative; width: 100%; height: 100%; padding: 52px 72px 62px;
+  display: flex; flex-direction: column;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #64707e;
+}
+.head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+.pill {
+  display: inline-block; padding: 7px 15px; border-radius: 999px;
+  border: 1px solid #232b36; color: #8794a4; font-size: 15px; margin-right: 10px;
+}
+.pill--accent { border-color: #ff8a3d; color: #ff8a3d; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
+  cubic-bezier(.2,.7,.3,1); }
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-rise { animation-name: rise; }
+.anim-fade { animation-name: fade; }
+.anim-dim  { animation-name: dim; }
+.anim-wipe { animation-name: wipe; }
+.anim-grow { animation-name: grow; transform-origin: left center; }
+
+
+/* min-width:0, or a grid column sizes itself to the longest unwrappable code line and pushes
+   the whole scene off the right of the frame. */
+.src { border:1px solid #232b36; background:#10151d; border-radius:13px; overflow:hidden;
+       min-width:0; }
+.src__path {
+  padding:11px 18px; font-size:14px; color:#64707e;
+  border-bottom:1px solid #232b36; background:#07090c;
+}
+.src__code { padding:18px 20px; line-height:1.66; color:#737f8f; position:relative; }
+.src__code .ln { white-space:pre; }
+/* Real code has real long lines -- the RuleCriteria on Prescription is one of them. A hard cut
+   mid-token reads as a broken render; a fade reads as "this line continues", which is true. */
+.src__code::after {
+  content:""; position:absolute; top:0; right:0; bottom:0; width:58px; pointer-events:none;
+  background:linear-gradient(to right, rgba(16,21,29,0), #10151d 82%);
+}
+.src__code .hit { color:#ff8a3d; font-weight:600; }
+
+/* Stacked, not side by side. The path is the argument here -- the editor lives in the platform
+   project, not the module -- so it cannot be shortened to fit a half-width column. */
+.note { font-size:18px; color:#8794a4; margin-top:13px; line-height:1.45; }
+.stack { display:flex; flex-direction:column; gap:26px; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.15s both fade">A STRING THAT RENDERS AS A SCANNER</div>
+  <div class="main">
+    <div class="stack">
+      <div>
+        <div class="src"><div class="src__path mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.4s both fade">PharmacyDemo.Blazor.Server/Editors/BarcodeScannerPropertyEditor.cs</div><div class="src__code mono" style="font-size:15px"><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 0.9s both wipe">[<span class="hit">PropertyEditor</span>(typeof(string), CustomEditorAliases.BarcodeScannerPropertyEditor, false)]</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.1800000000000002s both wipe">public class BarcodeScannerPropertyEditor : <span class="hit">BlazorPropertyEditorBase</span></div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.46s both wipe">{</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.7400000000000002s both wipe">    private readonly IJSRuntime _js;</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 2.02s both wipe">&nbsp;</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 2.3000000000000003s both wipe">    public BarcodeScannerPropertyEditor(Type objectType, IModelMemberViewItem model, IJSRuntime js)</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 2.58s both wipe">        : base(objectType, model)</div></div></div>
+        <div class="note" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 4.6s both rise">In the platform project, beside the module. Nobody reading the business objects meets it.</div>
+      </div>
+      <div>
+        <div class="src"><div class="src__path mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 6.2s both fade">PharmacyDemo.Blazor.Server/wwwroot/js/barcode-scanner.js</div><div class="src__code mono" style="font-size:15px"><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 6.7s both wipe">// Loaded by BarcodeScannerPropertyEditor. Behaviour in neither C# nor XML.</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 6.98s both wipe">export function start(element, onScanned) { /* camera setup */ }</div></div></div>
+        <div class="note" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.4s both rise">Behaviour in neither C# nor XML — and your agent reads neither of these.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

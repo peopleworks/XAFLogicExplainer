@@ -1,0 +1,101 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 720px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from the video sits beside
+   them without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+/* Column rather than absolute placement: the content block centres itself in whatever room is
+   left between the eyebrow and the closing line, so a scene with two rows and one with three
+   do not both leave a hole in the middle of the frame. */
+.stage {
+  position: relative; width: 100%; height: 100%; padding: 52px 72px 62px;
+  display: flex; flex-direction: column;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #64707e;
+}
+.head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+.pill {
+  display: inline-block; padding: 7px 15px; border-radius: 999px;
+  border: 1px solid #232b36; color: #8794a4; font-size: 15px; margin-right: 10px;
+}
+.pill--accent { border-color: #ff8a3d; color: #ff8a3d; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
+  cubic-bezier(.2,.7,.3,1); }
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-rise { animation-name: rise; }
+.anim-fade { animation-name: fade; }
+.anim-dim  { animation-name: dim; }
+.anim-wipe { animation-name: wipe; }
+.anim-grow { animation-name: grow; transform-origin: left center; }
+
+
+.chip {
+  position:absolute; left:72px; top:38px; z-index:3;
+  border:1px solid #ff8a3d; background:#07090c; border-radius:999px;
+  padding:11px 20px; font-size:19px; color:#ff8a3d;
+}
+/* Top right, out of the callouts' way: it is a provenance note, not a line anyone reads aloud. */
+.foot { position:absolute; right:72px; top:48px; font-size:13px; color:#64707e; z-index:3; }
+.window {
+  position:absolute; left:72px; right:72px; top:98px; bottom:112px;
+  border:1px solid #232b36; border-radius:14px; overflow:hidden; background:#10151d;
+}
+.window img { display:block; width:100%; }
+
+.window { display:flex; align-items:center; justify-content:center; }
+.window .roll { height:100%; display:flex; align-items:center; }
+.window .roll img { width:auto; height:100%; }
+@keyframes drift { from { transform:scale(1); } to { transform:scale(1.07); } }
+.window .roll { animation: drift 16.0s linear 1.2s both; }
+
+.window::after {
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: linear-gradient(#07090c 0%, transparent 9%, transparent 91%, #07090c 100%);
+}
+/* Both callouts occupy the same line. The first has to leave before the second arrives --
+   stacking them was how the first render put two sentences on top of each other. */
+.callout {
+  position:absolute; left:72px; right:72px; bottom:52px; font-size:25px; color:#f2f5f8;
+}
+
+</style></head>
+<body>
+<div class="stage" style="padding:0">
+  <div class="chip" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 0.2s both rise">The same extraction, for a person</div>
+  <div class="foot mono" style="animation:0.8s cubic-bezier(.2,.7,.3,1) 1.4s both fade">Real output — PharmacyDemo, the repository's synthetic fixture</div>
+  <div class="window" style="animation:0.7s cubic-bezier(.2,.7,.3,1) 0.5s both fade">
+    <div class="roll"><img src="../../stills/map.png" alt=""></div>
+  </div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.2s both rise, 0.5s cubic-bezier(.2,.7,.3,1) 9.36s both out">A map of your domain model that most teams have never seen.</div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 9.86s both rise">It lives in one person's head — which is what leaves when they do.</div>
+</div>
+</body></html>

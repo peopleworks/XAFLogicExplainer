@@ -83,7 +83,37 @@ usarla no hace falta licencia de DevExpress.
 
 ---
 
-## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · ~2:39 · 1280×720 · voz Rachel)
+## 2b. CÓMO SE CONSTRUYEN LAS ESCENAS
+
+`python docs/Blog/video/build-scenes.py` escribe las once escenas de cada idioma en
+`video/scenes/<lang>/`, más un **póster PNG** de cada una en `video/posters/` para poder juzgar
+un cambio de texto sin renderizar. Con `--video` saca los mp4 (no se commitean: se rehacen).
+
+Dos clases de escena, y la diferencia es el proyecto entero:
+
+- **Escenas de argumento** (01, 02, 03, 09, 11) — dibujadas, porque no hay nada real que filmar.
+- **Escenas de evidencia** (07, 10) — la salida real de `xaflogic explain` sobre el fixture
+  `PharmacyDemo`, capturada y recorrida. Maquetar el informe se vería mejor y valdría menos.
+- **Escenas de código** (04, 05, 06, 08) — el código **se lee de los ficheros del fixture** al
+  construir, anclado por texto. Si el fixture cambia, o la escena sigue cuadrando o falla el
+  build; nunca enseña líneas equivocadas en silencio.
+
+Tres cosas fallan la construcción a propósito, y las tres han saltado ya:
+
+1. **Narración que no cabe.** Por encima de 225 palabras/minuto no es una elección de ritmo, es
+   una toma inservible — y enterarse después de grabar cuesta una sesión de grabación.
+2. **Contenido fuera del cuadro.** Un fotograma recorta en silencio y en vídeo nadie hace scroll.
+3. **Números inventados.** La cifra de pruebas de la escena 08 se lee del README, que tiene un
+   test que la mantiene cierta.
+
+**El tiempo de cada escena sale de la voz, no al revés.** Mientras no haya audio,
+`--retime` estima desde el número de palabras; en cuanto exista `video/audio/<lang>/<escena>.mp3`
+usa su duración medida con ffprobe. Después de grabar: `--retime`, y pegar aquí los capítulos
+que imprime.
+
+---
+
+## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · ~3:13 · 1280×720 · voz Rachel)
 
 **Título:**
 ```
@@ -110,16 +140,16 @@ Free and open source (MIT). Built with .NET 10.
 
 CHAPTERS
 00:00  It knows XAF, not your XAF
-00:16  DevExpress closed part of the gap
-00:29  Two minutes: AGENTS.md, CLAUDE.md, Copilot
-00:41  Where behaviour actually hides
-00:55  Custom editors, and their JavaScript
-01:10  Migrations that run once per database
-01:26  What runs when you open a screen
-01:43  Roslyn: no compile, no licence
-01:57  Why most docs are NOT in AGENTS.md
-02:11  The domain map nobody has seen
-02:26  Try it on your application
+00:20  DevExpress closed part of the gap
+00:34  Two minutes: AGENTS.md, CLAUDE.md, Copilot
+00:48  Where behaviour actually hides
+01:02  Custom editors, and their JavaScript
+01:20  Migrations that run once per database
+01:42  What runs when you open a screen
+02:06  Roslyn: no compile, no licence
+02:24  Why most docs are NOT in AGENTS.md
+02:40  The domain map nobody has seen
+02:58  Try it on your application
 
 #DevExpress #XAF #dotnet #AI #OpenSource
 ```
@@ -131,7 +161,7 @@ xaf, devexpress, devexpress xaf, expressapp framework, xpo, ef core, dotnet, .ne
 
 ---
 
-## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · ~2:39 · 1280×720 · voz Marcela)
+## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · ~3:35 · 1280×720 · voz Marcela)
 
 **Título:**
 ```
@@ -158,16 +188,16 @@ Gratis y de código abierto (MIT). Hecho con .NET 10.
 
 CAPÍTULOS
 00:00  Sabe XAF, pero no tu XAF
-00:16  DevExpress cerró parte de la brecha
-00:29  Dos minutos: AGENTS.md, CLAUDE.md, Copilot
-00:41  Dónde se esconde el comportamiento
-00:55  Editores propios, y su JavaScript
-01:10  Migraciones: como mucho una vez por base de datos
-01:26  Qué se ejecuta cuando abres una pantalla
-01:43  Roslyn: sin compilar, sin licencia
-01:57  Por qué la mayoría de la documentación NO está en AGENTS.md
-02:11  El mapa de dominio que nadie ha visto
-02:26  Pruébalo en tu aplicación
+00:20  DevExpress cerró parte de la brecha
+00:34  Dos minutos: AGENTS.md, CLAUDE.md, Copilot
+00:49  Dónde se esconde el comportamiento
+01:05  Editores propios, y su JavaScript
+01:28  Migraciones: como mucho una vez por base de datos
+01:54  Qué se ejecuta cuando abres una pantalla
+02:22  Roslyn: sin compilar, sin licencia
+02:39  Por qué la mayoría de la documentación NO está en AGENTS.md
+02:58  El mapa de dominio que nadie ha visto
+03:19  Pruébalo en tu aplicación
 
 #DevExpress #XAF #dotnet #IA #OpenSource
 ```
@@ -204,7 +234,7 @@ grande y una sola idea por short. Cada uno debe entenderse **sin sonido**.
 [4.5s]  La tercera entra en naranja, con retardo:
         Qué hace TU aplicación   → ¿?
 [7.0s]  Se rellena:              XAF Logic Explainer
-[9.0s]  Texto:                   Se complementan. No compiten.
+[9.0s]  Texto:                   Se complementan. Ninguna sustituye a las otras.
 ```
 
 ### Short 3 — «La migración fantasma» · ~14 s

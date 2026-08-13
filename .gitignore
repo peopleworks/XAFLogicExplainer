@@ -90,3 +90,14 @@ docs/xaflogic-cli-guide.html
 # ---------------------------------------------------------------------------
 site/assets/
 site/.report.html
+
+# ---------------------------------------------------------------------------
+# Rendered video, and the scratch that produces it.
+#
+# The scenes, their posters and the captured still ARE committed: a poster is
+# how a copy change gets reviewed, and the still saves every reader a dotnet
+# run. The mp4s are not — they are megabytes that rebuild from those three in
+# one command, and every wording tweak would commit them all again.
+# ---------------------------------------------------------------------------
+docs/Blog/video/render/
+docs/Blog/video/.report.html
