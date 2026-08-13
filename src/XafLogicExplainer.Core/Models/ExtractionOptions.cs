@@ -18,7 +18,17 @@ public enum OrmType
     /// <summary>
     /// Treat project as Entity Framework Core-based.
     /// </summary>
-    EfCore
+    EfCore,
+    /// <summary>
+    /// No evidence of either ORM was found in the analyzed source.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Auto"/>, which is a request to look. This is the answer: a module
+    /// that persists nothing, or whose context lives in a project that was not scanned, is
+    /// evidence for neither — and naming one anyway puts a guess in front of the agent in the
+    /// same voice as everything the extractor actually read.
+    /// </remarks>
+    Unknown
 }
 
 /// <summary>

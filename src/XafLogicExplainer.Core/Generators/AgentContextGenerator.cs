@@ -183,7 +183,20 @@ public sealed class AgentContextGenerator
         // Rule 1: the ORM. Mixing XPO and EF Core idioms is the most frequent way generated XAF
         // code turns out wrong, because both are legitimate XAF and the class names collide --
         // BaseObject exists in both, in different namespaces.
-        if (isEfCore)
+        //
+        // Which is why it is not written at all when the source never said. The rule forbids one
+        // ORM outright, so stating it on a default would forbid whichever one the application
+        // actually uses -- worse than silence, because the agent cannot tell a guess from a
+        // reading.
+        if (IsOrmUnknown(project.OrmType))
+        {
+            sb.AppendLine($"**{rule++}. The ORM this application uses could not be determined.**");
+            sb.AppendLine("No `DbSet<T>` registration, `DbContext`, XPO base class or ORM `using` directive was");
+            sb.AppendLine("found in the analyzed source — so neither persistence style is ruled out here. Check");
+            sb.AppendLine("what the project actually references before suggesting `Session`/`XPCollection` or");
+            sb.AppendLine("`DbContext`/`DbSet<T>`, and do not infer one from the other files in this document.");
+        }
+        else if (isEfCore)
         {
             sb.AppendLine($"**{rule++}. Persistence is Entity Framework Core, not XPO.**");
             sb.AppendLine("`Session`, `XPObject`, `XPCollection`, `UnitOfWork` and `XPO` criteria APIs do not exist");
@@ -728,8 +741,15 @@ public sealed class AgentContextGenerator
     private static bool IsEfCore(string? ormType) =>
         ormType is not null && ormType.Contains("EF", StringComparison.OrdinalIgnoreCase);
 
-    private static string OrmDisplayName(string? ormType) =>
-        IsEfCore(ormType) ? "Entity Framework Core" : "XPO";
+    private static bool IsOrmUnknown(string? ormType) =>
+        ormType is null || ormType.Equals("Unknown", StringComparison.OrdinalIgnoreCase);
+
+    private static string OrmDisplayName(string? ormType) => ormType switch
+    {
+        _ when IsOrmUnknown(ormType) => "an undetermined ORM",
+        _ when IsEfCore(ormType) => "Entity Framework Core",
+        _ => "XPO",
+    };
 
     private static string PropertyMarkers(ExtractedProperty property)
     {

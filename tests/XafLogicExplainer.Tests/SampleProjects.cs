@@ -31,6 +31,12 @@ internal static class SampleProjects
     /// <summary>Path to the legacy EF Core fixture module.</summary>
     public static string LegacyEfPath => Path.Combine(FixturesRoot, "LegacyEfSolution", "SampleLegacy.Module");
 
+    /// <summary>Path to the EF Core fixture that names no DevExpress persistence type.</summary>
+    public static string PocoEfPath => Path.Combine(FixturesRoot, "PocoEfSolution", "SamplePoco.Module");
+
+    /// <summary>Path to the fixture that persists nothing at all.</summary>
+    public static string NoOrmPath => Path.Combine(FixturesRoot, "NoOrmSolution", "SampleNoOrm.Module");
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 
@@ -83,6 +89,8 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyDemo = new(() => Extract(DemoPath));
     private static readonly Lazy<ExtractedProject> LazyEfCore = new(() => Extract(EfCorePath));
     private static readonly Lazy<ExtractedProject> LazyLegacyEf = new(() => Extract(LegacyEfPath));
+    private static readonly Lazy<ExtractedProject> LazyPocoEf = new(() => Extract(PocoEfPath));
+    private static readonly Lazy<ExtractedProject> LazyNoOrm = new(() => Extract(NoOrmPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -99,6 +107,12 @@ internal static class SampleProjects
     /// deriving from <c>BaseObject</c>, this one is mapped onto tables that were already there.
     /// </remarks>
     public static ExtractedProject LegacyEf => LazyLegacyEf.Value;
+
+    /// <summary>An EF Core application that names no DevExpress persistence type anywhere.</summary>
+    public static ExtractedProject PocoEf => LazyPocoEf.Value;
+
+    /// <summary>A module that persists nothing, and is evidence for neither ORM.</summary>
+    public static ExtractedProject NoOrm => LazyNoOrm.Value;
 
     /// <summary>
     /// The fourteen-entity demo, with a custom editor in a sibling platform project.

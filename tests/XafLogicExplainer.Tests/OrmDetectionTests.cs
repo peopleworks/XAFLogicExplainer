@@ -19,6 +19,14 @@ public class OrmDetectionTests
         Assert.Contains("EF", SampleProjects.EfCore.OrmType, StringComparison.OrdinalIgnoreCase);
 
     [Fact]
+    public void DetectsEfCoreFromTheDbContextWhenNoDevExpressEfTypeIsNamed() =>
+        Assert.Contains("EF", SampleProjects.PocoEf.OrmType, StringComparison.OrdinalIgnoreCase);
+
+    [Fact]
+    public void ReportsUnknownRatherThanGuessingWhenNothingPersists() =>
+        Assert.Equal("Unknown", SampleProjects.NoOrm.OrmType, ignoreCase: true);
+
+    [Fact]
     public void FindsEfCoreEntitiesDespiteTheSharedBaseClassName()
     {
         var names = SampleProjects.EfCore.Entities.Select(e => e.ClassName).OrderBy(n => n).ToList();
