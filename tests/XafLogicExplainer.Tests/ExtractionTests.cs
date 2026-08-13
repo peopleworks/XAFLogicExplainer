@@ -12,7 +12,7 @@ public class ExtractionTests
     {
         var names = SampleProjects.Xpo.Entities.Select(e => e.ClassName).OrderBy(n => n).ToList();
 
-        Assert.Equal(["Customer", "Order", "OrderLine"], names);
+        Assert.Equal(["AuditEntry", "Customer", "Order", "OrderLine", "SequenceCounter"], names);
     }
 
     [Fact]

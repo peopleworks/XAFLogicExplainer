@@ -7,6 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`ExtractionOptions.BaseTypeNames` is the single source of the list.** The CLI, the MCP server
+  and the test harness each passed their own copy, so the default in `Core` was four names while
+  every caller passed five — four copies with three chances to disagree about what an entity is.
+  The callers now use the default.
+
 ### Fixed
 
 - **`Unknown` now reaches every place the ORM is reported.** The agent files learned it; the HTML
@@ -39,6 +46,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   26.1: `FeatureCenter.NET.XPO` 43 → 140 entities, `MainDemo.NET.XPO` 14 → 17, and
   `OutlookInspiredDemo.NET.EFCore` 23 → 24 — the last of which is an EF Core application, where an
   entity that is not registered as a `DbSet<T>` had no fallback either.
+
+- **`PersistentBase` and `XPBaseObject` are recognised as persistent bases.** The XPO hierarchy is
+  `PersistentBase` → `XPBaseObject` → `XPCustomObject` → `XPObject`, with `XPLiteObject` also under
+  `XPBaseObject`. The list held the three leaves and neither of the classes above them, so a hole
+  sat in the middle of a documented API — DevExpress names all five as bases a persistent class may
+  derive from, and recommends `PersistentBase`. Deriving from the higher bases is what you do when
+  the table brings its own key, which is the same population as the legacy schemas the DbSet roster
+  was added for. `FeatureCenter.NET.XPO` gains `OidGenerator`, `NoKeyPropertyNamedBaseObject` and
+  `LayoutDemoObject`.
 
 ## [0.12.1] — 2026-08-13
 

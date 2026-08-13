@@ -123,7 +123,7 @@ public class HtmlExplainerTests
     {
         var graph = EntityGraph.Build(SampleProjects.Xpo);
 
-        Assert.Equal(3, graph.Nodes.Count);
+        Assert.Equal(5, graph.Nodes.Count);
         Assert.All(graph.Nodes, n => Assert.InRange(n.X, 0, graph.Width));
         Assert.All(graph.Nodes, n => Assert.InRange(n.Y, 0, graph.Height));
     }
