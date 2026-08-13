@@ -30,7 +30,15 @@ public class EntityAnalyzer : IEntityAnalyzer
 
         // Parsed once and kept, because the DbSet roster has to be known before the first class is
         // classified and re-parsing every file to build it costs more than holding the trees.
+        //
+        // Ordered, because the directory hands them over in whatever order the file system keeps
+        // them, and that is not the same order on two machines: NTFS compares names without case,
+        // ext4 by byte, so `Shipment.Generated.cs` sorts after `Shipment.cs` on one and before it
+        // on the other. Anything downstream that takes the first of something then answers
+        // differently on a laptop than in CI, in a document whose value is that it can be
+        // regenerated and compared.
         var parsedFiles = csFiles
+            .OrderBy(file => file, StringComparer.Ordinal)
             .Select(file => (File: file, Root: CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot()))
             .ToList();
 
@@ -654,44 +662,62 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// </remarks>
     private static List<ExtractedEntity> MergePartialDeclarations(List<ExtractedEntity> entities)
     {
-        var merged = new List<ExtractedEntity>();
-        var seen = new Dictionary<(string Namespace, string ClassName), ExtractedEntity>();
+        var parts = new Dictionary<(string Namespace, string ClassName), List<ExtractedEntity>>();
+        var order = new List<(string Namespace, string ClassName)>();
 
         foreach (var entity in entities)
         {
             var key = (entity.Namespace, entity.ClassName);
-            if (!seen.TryGetValue(key, out var primary))
+            if (!parts.TryGetValue(key, out var group))
             {
-                seen[key] = entity;
-                merged.Add(entity);
-                continue;
+                parts[key] = group = [];
+                order.Add(key);
             }
+            group.Add(entity);
+        }
 
-            primary.Description ??= entity.Description;
-            primary.NavigationGroup ??= entity.NavigationGroup;
-            primary.DefaultProperty ??= entity.DefaultProperty;
-            primary.ModelCaption ??= entity.ModelCaption;
-            primary.SourceProject ??= entity.SourceProject;
-            primary.IsDefaultClassOptions |= entity.IsDefaultClassOptions;
-            primary.IsCloneable |= entity.IsCloneable;
+        var merged = new List<ExtractedEntity>();
 
-            // Non-persistent anywhere means non-persistent: one part saying so is the whole class.
-            primary.IsPersistent &= entity.IsPersistent;
+        foreach (var key in order)
+        {
+            var group = parts[key];
 
-            if (primary.BaseType is "object" or "" && entity.BaseType is not ("object" or ""))
-                primary.BaseType = entity.BaseType;
+            // The part declaring the base list is the hand-written one, and it is where the class
+            // attributes live. Taking whichever half came first instead would make the reported
+            // file, and the order of the columns, depend on the file system doing the listing.
+            var primary = group.Find(part => part.BaseTypes.Count > 0) ?? group[0];
+            merged.Add(primary);
 
-            foreach (var baseType in entity.BaseTypes.Where(name => !primary.BaseTypes.Contains(name)))
-                primary.BaseTypes.Add(baseType);
+            foreach (var entity in group)
+            {
+                if (ReferenceEquals(entity, primary)) continue;
 
-            var known = primary.Properties.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-            primary.Properties.AddRange(entity.Properties.Where(property => known.Add(property.Name)));
+                primary.Description ??= entity.Description;
+                primary.NavigationGroup ??= entity.NavigationGroup;
+                primary.DefaultProperty ??= entity.DefaultProperty;
+                primary.ModelCaption ??= entity.ModelCaption;
+                primary.SourceProject ??= entity.SourceProject;
+                primary.IsDefaultClassOptions |= entity.IsDefaultClassOptions;
+                primary.IsCloneable |= entity.IsCloneable;
 
-            primary.Relationships.AddRange(entity.Relationships);
-            primary.ValidationRules.AddRange(entity.ValidationRules);
-            primary.AppearanceRules.AddRange(entity.AppearanceRules);
-            primary.InferredBusinessRules.AddRange(entity.InferredBusinessRules);
-            primary.SourceComments.AddRange(entity.SourceComments);
+                // Non-persistent anywhere means non-persistent: one part saying so is the class.
+                primary.IsPersistent &= entity.IsPersistent;
+
+                if (primary.BaseType is "object" or "" && entity.BaseType is not ("object" or ""))
+                    primary.BaseType = entity.BaseType;
+
+                foreach (var baseType in entity.BaseTypes.Where(name => !primary.BaseTypes.Contains(name)))
+                    primary.BaseTypes.Add(baseType);
+
+                var known = primary.Properties.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+                primary.Properties.AddRange(entity.Properties.Where(property => known.Add(property.Name)));
+
+                primary.Relationships.AddRange(entity.Relationships);
+                primary.ValidationRules.AddRange(entity.ValidationRules);
+                primary.AppearanceRules.AddRange(entity.AppearanceRules);
+                primary.InferredBusinessRules.AddRange(entity.InferredBusinessRules);
+                primary.SourceComments.AddRange(entity.SourceComments);
+            }
         }
 
         return merged;

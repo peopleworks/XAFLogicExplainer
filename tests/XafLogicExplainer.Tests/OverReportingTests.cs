@@ -213,6 +213,12 @@ public class OverReportingTests
 
         // The attributes live on the hand-written part; the merge must not lose them either.
         Assert.Equal("Sales", shipments[0].NavigationGroup);
+
+        // And the entity is reported against that part, not against whichever half the file system
+        // listed first -- NTFS compares without case and ext4 by byte, so the two disagree about
+        // whether Shipment.Generated.cs comes before Shipment.cs. This assertion failed on Linux
+        // and passed on Windows before the file order was pinned.
+        Assert.EndsWith("Shipment.cs", shipments[0].FilePath, StringComparison.Ordinal);
     }
 
     [Fact]
