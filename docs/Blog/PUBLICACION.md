@@ -275,9 +275,25 @@ enteros sin sonido, que es la prueba que importa.*
 
 ## 6. ORDEN DE PUBLICACIÓN SUGERIDO
 
-1. **Artículo en inglés** en el blog propio (fija el `canonical_url`).
+**Publicado el 2026-08-13, en los blogs propios. Estos son los canónicos definitivos:**
+
+| | URL |
+| --- | --- |
+| EN | https://peopleworksgpt.com/your-coding-agent-knows-xaf-it-has-never-seen-your-application/ |
+| ES | https://peopleworks.com.do/2026/08/13/tu-agente-de-codigo-sabe-xaf-nunca-ha-visto-tu-aplicacion/ |
+
+Están puestos en el `canonical_url` de cada `.md` y enlazados desde el README y desde el README
+del paquete MCP. **Dominios distintos**: el inglés en `peopleworksgpt.com`, el español en
+`peopleworks.com.do` — copiar el de al lado es el error fácil.
+
+Al republicar en dev.to o LinkedIn, el canónico tiene que ser esa URL exacta. Un `rel="canonical"`
+que apunta a una página que no existe es peor que no poner ninguno: el buscador descarta la copia
+sin que el original gane nada.
+
+1. ~~**Artículo en inglés** en el blog propio (fija el `canonical_url`).~~ ✅
 2. **Short 1** en LinkedIn/X/YouTube Shorts, enlazando al artículo.
-3. **Artículo en español**, 2–3 días después, para no solapar audiencias.
+3. ~~**Artículo en español**, 2–3 días después, para no solapar audiencias.~~ ✅ *(mismo día, al
+   estar en dominios y audiencias separadas)*
 4. **Vídeo grande EN**, enlazado desde el README y desde los dos artículos.
 5. **Shorts 3 y 5** repartidos en la semana siguiente. El 5 es el más compartible.
 6. **Vídeo grande ES**.

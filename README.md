@@ -323,6 +323,17 @@ applications. The agent-facing surface is what is landing now, in the open.
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the
 destination everything was built around. The outputs that matter most need no server at all.
 
+## The long version
+
+Why a third of an XAF application's behaviour lives outside its business classes, the four places
+it hides, and what the extracted output actually looks like:
+
+- **[Your coding agent knows XAF. It has never seen your application.](https://peopleworksgpt.com/your-coding-agent-knows-xaf-it-has-never-seen-your-application/)**
+- **[Tu agente de código sabe XAF. Nunca ha visto tu aplicación.](https://peopleworks.com.do/2026/08/13/tu-agente-de-codigo-sabe-xaf-nunca-ha-visto-tu-aplicacion/)** — *en español*
+
+Each is written in its own language rather than translated from the other. Sources in
+[`docs/Blog/`](docs/Blog/).
+
 ## Repository layout
 
 ```

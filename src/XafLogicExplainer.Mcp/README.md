@@ -77,6 +77,9 @@ An agent with only the first two writes correct XAF against entities you do not 
 ## Links
 
 - [Repository](https://github.com/peopleworks/XAFLogicExplainer) · [Site](https://peopleworks.github.io/XAFLogicExplainer/)
+- The long version, on why so much XAF behaviour lives outside the business classes:
+  [English](https://peopleworksgpt.com/your-coding-agent-knows-xaf-it-has-never-seen-your-application/) ·
+  [español](https://peopleworks.com.do/2026/08/13/tu-agente-de-codigo-sabe-xaf-nunca-ha-visto-tu-aplicacion/)
 - MIT licensed. An independent community project: not affiliated with, endorsed by, or supported
   by Developer Express Inc.
 
