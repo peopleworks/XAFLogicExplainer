@@ -2,7 +2,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Catalog;
+using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Models;
+using XafLogicExplainer.Mcp;
+using XafLogicExplainer.Mcp.Tools;
 
 namespace XafLogicExplainer.Tests;
 
@@ -244,6 +247,44 @@ public class OverReportingTests
         var names = SampleProjects.LegacyEf.Entities.Select(entity => entity.ClassName);
 
         Assert.DoesNotContain("AuditEntry", names);
+    }
+
+    [Fact]
+    public void DoesNotNameAnOrmTheSourceNeverNamed()
+    {
+        // Three renderers each decided this separately, in a binary with no third answer, so a
+        // project whose ORM could not be determined was reported as XPO by two of them. The defect
+        // was not the wrong answer -- it was that three places were each entitled to one.
+        Assert.Equal("Not determined", Orm.Label("Unknown"));
+        Assert.Equal("an undetermined ORM", Orm.DisplayName("Unknown"));
+
+        // A null has not learned XPO either. Anything that never ran detection is unknown.
+        Assert.True(Orm.IsUnknown(null));
+        Assert.False(Orm.IsEfCore("Unknown"));
+    }
+
+    [Fact]
+    public void TheHtmlExplainerDoesNotClaimXpoForAnUndeterminedProject()
+    {
+        var page = new HtmlExplainerGenerator("0.0.0").Generate(SampleProjects.NoOrm);
+
+        Assert.DoesNotContain("<strong>XPO</strong>", page);
+        Assert.Contains("Not determined", page);
+    }
+
+    [Fact]
+    public async Task TheMcpOverviewDoesNotClaimXpoForAnUndeterminedProject()
+    {
+        // The surface that speaks with the most authority: `xaf_overview` prints the ORM two lines
+        // above "These lists are complete, not sampled", from a tool whose description tells the
+        // agent that anything absent does not exist in the application.
+        var tools = new XafDiscoveryTools(new XafProjectContext(
+            [new XafProjectSource { Name = "SampleNoOrm", Path = SampleProjects.NoOrmPath, Language = "en" }]));
+
+        var overview = await tools.OverviewAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("**XPO**", overview);
+        Assert.Contains("Not determined", overview);
     }
 
     private static ControllerTargeting Read(string source) =>

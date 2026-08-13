@@ -91,7 +91,7 @@ public sealed class HtmlExplainerGenerator
     private static void WriteHeader(StringBuilder sb, ExtractedProject project)
     {
         var actions = project.Controllers.Sum(c => c.Actions.Count);
-        var orm = IsEfCore(project.OrmType) ? "Entity Framework Core" : "XPO";
+        var orm = Orm.Label(project.OrmType);
         var rules = project.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count);
 
         sb.AppendLine("<header><div class=\"wrap\">");
@@ -959,8 +959,6 @@ public sealed class HtmlExplainerGenerator
 
     // --------------------------------------------------------------- helpers
 
-    private static bool IsEfCore(string? orm) =>
-        orm is not null && orm.Contains("EF", StringComparison.OrdinalIgnoreCase);
 
     private static string Describe(RelationshipType type) => type switch
     {

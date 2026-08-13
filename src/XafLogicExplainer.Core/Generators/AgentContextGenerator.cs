@@ -126,7 +126,7 @@ public sealed class AgentContextGenerator
     private static void WriteSummary(StringBuilder sb, ExtractedProject project)
     {
         var actionCount = project.Controllers.Sum(c => c.Actions.Count);
-        var orm = OrmDisplayName(project.OrmType);
+        var orm = Orm.DisplayName(project.OrmType);
 
         sb.Append($"A DevExpress XAF application: **{project.Entities.Count} business ");
         sb.Append(Plural(project.Entities.Count, "entity", "entities"));
@@ -177,7 +177,7 @@ public sealed class AgentContextGenerator
             sb.AppendLine();
         }
 
-        var isEfCore = IsEfCore(project.OrmType);
+        var isEfCore = Orm.IsEfCore(project.OrmType);
         var rule = 1;
 
         // Rule 1: the ORM. Mixing XPO and EF Core idioms is the most frequent way generated XAF
@@ -188,7 +188,7 @@ public sealed class AgentContextGenerator
         // ORM outright, so stating it on a default would forbid whichever one the application
         // actually uses -- worse than silence, because the agent cannot tell a guess from a
         // reading.
-        if (IsOrmUnknown(project.OrmType))
+        if (Orm.IsUnknown(project.OrmType))
         {
             sb.AppendLine($"**{rule++}. The ORM this application uses could not be determined.**");
             sb.AppendLine("No `DbSet<T>` registration, `DbContext`, XPO base class or ORM `using` directive was");
@@ -737,19 +737,6 @@ public sealed class AgentContextGenerator
     }
 
     // --------------------------------------------------------------- helpers
-
-    private static bool IsEfCore(string? ormType) =>
-        ormType is not null && ormType.Contains("EF", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsOrmUnknown(string? ormType) =>
-        ormType is null || ormType.Equals("Unknown", StringComparison.OrdinalIgnoreCase);
-
-    private static string OrmDisplayName(string? ormType) => ormType switch
-    {
-        _ when IsOrmUnknown(ormType) => "an undetermined ORM",
-        _ when IsEfCore(ormType) => "Entity Framework Core",
-        _ => "XPO",
-    };
 
     private static string PropertyMarkers(ExtractedProperty property)
     {
