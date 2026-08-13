@@ -7,6 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-08-13
+
+Entities the application declares, rather than the ones that inherit from the right class.
+
+The first release that came from outside. [@MBrekhof](https://github.com/MBrekhof) reported an XAF
+application of 221 entities over a legacy LIMS schema, of which this tool found **three** — and
+filed it against the argument the project is built on: a class that is never seen cannot be
+reported as missing, and `AGENTS.md` goes on to tell the agent its inventory is complete. That is
+not a gap in a document, it is an agent confidently wrong about which tables exist.
+
+The fix and the three defects found reviewing it are all downstream of one rule, which is worth
+saying plainly because it cuts both ways: **a name is not an identity.** Reading entities from a
+roster of bare names finds the classes a base list misses, and then also finds a DTO that merely
+shares a name, every half of a `partial` class, and a type mentioned in a method body.
+
 ### Fixed
 
 - **EF Core entities are found by their `DbSet<T>` registration**, not only by their base class.
@@ -496,7 +511,9 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.1
+[0.12.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.0
 [0.11.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.11.0
 [0.10.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.1
 [0.10.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.10.0
