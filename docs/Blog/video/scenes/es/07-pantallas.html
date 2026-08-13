@@ -10,6 +10,8 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none;
   background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
@@ -64,7 +66,7 @@ body::before {
 
 /* The capture is taller than the window, so the scene reads it rather than showing it. */
 @keyframes pan { from { transform: translateY(0); } to { transform: translateY(-7806.9px); } }
-.window .roll { animation: pan 25.6s linear 1.2s both; }
+.window .roll { animation: pan 31.0s linear 1.2s both; }
 
 .window::after {
   content:""; position:absolute; inset:0; pointer-events:none;
@@ -84,7 +86,7 @@ body::before {
   <div class="window" style="animation:0.7s cubic-bezier(.2,.7,.3,1) 0.5s both fade">
     <div class="roll"><img src="../../stills/screens.png" alt=""></div>
   </div>
-  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.2s both rise, 0.5s cubic-bezier(.2,.7,.3,1) 14.664s both out">Las pantallas las genera XAF. No están en ningún fichero.</div>
-  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 15.164s both rise">Qué controladores se cargan son cuatro condiciones, en ejecución.</div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.2s both rise, 0.5s cubic-bezier(.2,.7,.3,1) 17.472s both out">Las pantallas las genera XAF. No están en ningún fichero.</div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 17.972s both rise">Qué controladores se cargan son cuatro condiciones, en ejecución.</div>
 </div>
 </body></html>

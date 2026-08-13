@@ -10,6 +10,8 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none;
   background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
@@ -66,7 +68,7 @@ body::before {
 .window .roll { height:100%; display:flex; align-items:center; }
 .window .roll img { width:auto; height:100%; }
 @keyframes drift { from { transform:scale(1); } to { transform:scale(1.07); } }
-.window .roll { animation: drift 16.0s linear 1.2s both; }
+.window .roll { animation: drift 15.9s linear 1.2s both; }
 
 .window::after {
   content:""; position:absolute; inset:0; pointer-events:none;
@@ -86,7 +88,7 @@ body::before {
   <div class="window" style="animation:0.7s cubic-bezier(.2,.7,.3,1) 0.5s both fade">
     <div class="roll"><img src="../../stills/map.png" alt=""></div>
   </div>
-  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.2s both rise, 0.5s cubic-bezier(.2,.7,.3,1) 9.36s both out">A map of your domain model that most teams have never seen.</div>
-  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 9.86s both rise">It lives in one person's head — which is what leaves when they do.</div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.2s both rise, 0.5s cubic-bezier(.2,.7,.3,1) 9.308s both out">A map of your domain model that most teams have never seen.</div>
+  <div class="callout" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 9.808s both rise">It lives in one person's head — which is what leaves when they do.</div>
 </div>
 </body></html>

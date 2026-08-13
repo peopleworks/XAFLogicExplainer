@@ -106,14 +106,30 @@ Tres cosas fallan la construcción a propósito, y las tres han saltado ya:
 3. **Números inventados.** La cifra de pruebas de la escena 08 se lee del README, que tiene un
    test que la mantiene cierta.
 
-**El tiempo de cada escena sale de la voz, no al revés.** Mientras no haya audio,
-`--retime` estima desde el número de palabras; en cuanto exista `video/audio/<lang>/<escena>.mp3`
-usa su duración medida con ffprobe. Después de grabar: `--retime`, y pegar aquí los capítulos
-que imprime.
+**El tiempo de cada escena sale de la voz, no al revés.** `--narrate` graba con ElevenLabs, con
+la voz que nombra el guion, y se salta lo ya grabado (se factura por carácter). Luego `--retime`
+mide las tomas con ffprobe y esa duración manda; imprime los capítulos ya calculados.
+
+```
+python docs/Blog/video/build-scenes.py --narrate    # Rachel / Marcela, ~5.600 caracteres
+python docs/Blog/video/build-scenes.py --retime     # duraciones y capítulos desde el audio
+python docs/Blog/video/build-scenes.py --video --assemble
+```
+
+La clave sale de `ELEVENLABS_API_KEY` o de `video/.elevenlabs.key` (ignorado por git). **Rachel ya
+no aparece en el listado de voces de la cuenta** — ElevenLabs escondió las «premade» — pero sigue
+funcionando por ID, que es lo que hace el guion. Marcela sí está en la biblioteca.
+
+**Imagen y sonido se montan por separado y se casan al final.** Lo natural sería muxear cada
+escena con su toma y luego concatenar: eso perdía **segundo y medio por escena**, porque `apad`
+rellena con silencio el hueco entre la toma y su escena, y concatenar las pistas AAC con
+`-c copy` recorta justo ese relleno. Once escenas después, la voz terminaba diecisiete segundos
+antes que la imagen — y cada segmento medido por separado salía correcto. Ahora el sonido se
+construye una vez en PCM, y `--assemble` falla si la pista no llega al final del vídeo.
 
 ---
 
-## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · ~3:13 · 1280×720 · voz Rachel)
+## 3. VÍDEO GRANDE — Inglés (`xaflogic-explainer-en.mp4` · **3:29** · 1280×720 · voz Rachel)
 
 **Título:**
 ```
@@ -140,16 +156,16 @@ Free and open source (MIT). Built with .NET 10.
 
 CHAPTERS
 00:00  It knows XAF, not your XAF
-00:20  DevExpress closed part of the gap
-00:34  Two minutes: AGENTS.md, CLAUDE.md, Copilot
-00:48  Where behaviour actually hides
-01:02  Custom editors, and their JavaScript
-01:20  Migrations that run once per database
-01:42  What runs when you open a screen
-02:06  Roslyn: no compile, no licence
-02:24  Why most docs are NOT in AGENTS.md
-02:40  The domain map nobody has seen
-02:58  Try it on your application
+00:21  DevExpress closed part of the gap
+00:36  Two minutes: AGENTS.md, CLAUDE.md, Copilot
+00:52  Where behaviour actually hides
+01:06  Custom editors, and their JavaScript
+01:25  Migrations that run once per database
+01:49  What runs when you open a screen
+02:16  Roslyn: no compile, no licence
+02:34  Why most docs are NOT in AGENTS.md
+02:54  The domain map nobody has seen
+03:12  Try it on your application
 
 #DevExpress #XAF #dotnet #AI #OpenSource
 ```
@@ -161,7 +177,7 @@ xaf, devexpress, devexpress xaf, expressapp framework, xpo, ef core, dotnet, .ne
 
 ---
 
-## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · ~3:35 · 1280×720 · voz Marcela)
+## 4. VÍDEO GRANDE — Español (`xaflogic-explainer-es.mp4` · **3:47** · 1280×720 · voz Marcela)
 
 **Título:**
 ```
@@ -188,16 +204,16 @@ Gratis y de código abierto (MIT). Hecho con .NET 10.
 
 CAPÍTULOS
 00:00  Sabe XAF, pero no tu XAF
-00:20  DevExpress cerró parte de la brecha
-00:34  Dos minutos: AGENTS.md, CLAUDE.md, Copilot
-00:49  Dónde se esconde el comportamiento
-01:05  Editores propios, y su JavaScript
-01:28  Migraciones: como mucho una vez por base de datos
-01:54  Qué se ejecuta cuando abres una pantalla
-02:22  Roslyn: sin compilar, sin licencia
-02:39  Por qué la mayoría de la documentación NO está en AGENTS.md
-02:58  El mapa de dominio que nadie ha visto
-03:19  Pruébalo en tu aplicación
+00:22  DevExpress cerró parte de la brecha
+00:37  Dos minutos: AGENTS.md, CLAUDE.md, Copilot
+00:56  Dónde se esconde el comportamiento
+01:10  Editores propios, y su JavaScript
+01:30  Migraciones: como mucho una vez por base de datos
+01:59  Qué se ejecuta cuando abres una pantalla
+02:33  Roslyn: sin compilar, sin licencia
+02:51  Por qué la mayoría de la documentación NO está en AGENTS.md
+03:10  El mapa de dominio que nadie ha visto
+03:32  Pruébalo en tu aplicación
 
 #DevExpress #XAF #dotnet #IA #OpenSource
 ```

@@ -28,10 +28,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from xml.sax.saxutils import escape
 
 from PIL import Image
@@ -814,6 +817,147 @@ def check_pacing(guion: dict, lang: str) -> list[str]:
     return problems
 
 
+def eleven_key() -> str:
+    """The key, from the environment or a gitignored file beside this script.
+
+    Same convention as the other video tools in this workshop, so nobody has to re-export a
+    variable every shell session -- and so the key never has a reason to be in a tracked file.
+    """
+    key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    if key:
+        return key
+    local = VIDEO / ".elevenlabs.key"
+    if local.exists():
+        for line in local.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return line
+    sys.exit("no ElevenLabs key: set ELEVENLABS_API_KEY, or put it in "
+             f"{local.relative_to(ROOT)} (gitignored)")
+
+
+# Premade voices still synthesise by id but no longer come back from /v1/voices against an
+# account, so a name lookup alone cannot find Rachel -- who is the English voice this workshop
+# has used from the start. Pinned rather than dropped, so the guion can keep naming her.
+PREMADE_VOICE_IDS = {"rachel": "21m00Tcm4TlvDq8ikWAM"}
+
+
+def resolve_voice(name: str, key: str) -> str:
+    """Look the voice up by name rather than pinning an id, so the guion stays readable."""
+    want = name.strip().lower()
+    request = urllib.request.Request("https://api.elevenlabs.io/v1/voices?show_legacy=true",
+                                     headers={"xi-api-key": key})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        voices = json.load(response).get("voices", [])
+
+    hit = (next((v for v in voices if v.get("name", "").lower() == want), None)
+           or next((v for v in voices if want in v.get("name", "").lower()), None))
+    if hit is not None:
+        return hit["voice_id"]
+    if want in PREMADE_VOICE_IDS:
+        return PREMADE_VOICE_IDS[want]
+
+    sys.exit(f"no voice called {name!r}. Available: "
+             f"{', '.join(sorted(v.get('name', '?') for v in voices))}")
+
+
+def narrate(guiones: dict) -> None:
+    """Record every scene that has no take yet.
+
+    Skips what already exists: the call is billed per character, and a re-run to fix one line
+    should not pay for the other twenty-one.
+    """
+    key = eleven_key()
+    for lang, guion in guiones.items():
+        voice_name = guion.get("voice") or "Rachel"
+        voice_id = resolve_voice(voice_name, key)
+        print(f"  {lang}: voice {voice_name}")
+        (AUDIO / lang).mkdir(parents=True, exist_ok=True)
+
+        for scene in guion["scenes"]:
+            out = AUDIO / lang / f"{scene['id']}.mp3"
+            if audio_take(lang, scene["id"]) is not None:
+                print(f"    {scene['id']:<16} already recorded — skipped")
+                continue
+
+            body = json.dumps({
+                "text": scene["narration"],
+                "model_id": "eleven_multilingual_v2",
+                # Between the two settings already in use here: steadier than the twenty-second
+                # ads (style .25 / stability .42), livelier than the how-to series (.12 / .55).
+                # This is a technical explainer that still has to hold a cold viewer.
+                "voice_settings": {"stability": 0.50, "similarity_boost": 0.80,
+                                   "style": 0.18, "use_speaker_boost": True},
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}", data=body,
+                headers={"xi-api-key": key, "Content-Type": "application/json",
+                         "Accept": "audio/mpeg"})
+            try:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    out.write_bytes(response.read())
+            except urllib.error.HTTPError as error:
+                sys.exit(f"ElevenLabs {error.code} on {lang}/{scene['id']}: "
+                         f"{error.read()[:200].decode('utf-8', 'replace')}")
+
+            seconds = recorded_seconds(lang, scene["id"]) or 0
+            print(f"    {scene['id']:<16} {seconds:>5.1f}s  {out.stat().st_size:,} bytes")
+    print()
+
+
+def write_scripts(guiones: dict) -> None:
+    """One sheet per language: what to read, and the exact name to save each take under.
+
+    The pipeline finds a take by filename and nothing else, so a session that gets the names
+    wrong silently produces a film that is still silent. Generated from the guion, so the sheet
+    cannot drift from the narration the scenes were timed against.
+    """
+    for lang, guion in guiones.items():
+        voice = guion.get("voice", "?")
+        lines = [
+            f"# Recording sheet — {lang}   (voice: {voice})",
+            "",
+            f"Save each take as `audio/{lang}/<id>.mp3` — the id is the heading, exactly as",
+            "written. `.wav`, `.m4a` and `.ogg` work too; the extension is not the part that",
+            "matters, the stem is.",
+            "",
+            "The scene lengths in the guion are an estimate from the word count until a take",
+            "exists. Once these files are here:",
+            "",
+            "```",
+            "python docs/Blog/video/build-scenes.py --retime    # lengths from the real audio",
+            "python docs/Blog/video/build-scenes.py --video     # re-render at the new lengths",
+            "python docs/Blog/video/build-scenes.py --assemble  # one film, with the voice on it",
+            "```",
+            "",
+            "`--retime` prints the chapter list to paste into PUBLICACION.md. Nothing here is",
+            "read aloud except the quoted line: the heading is a filename, not a cue.",
+            "",
+            "---",
+            "",
+            "## intro",
+            "",
+            f"*No narration — {guion['intro']['seconds']}s of title card. Skip it.*",
+            "",
+        ]
+        for scene in guion["scenes"]:
+            words = len(scene["narration"].split())
+            lines += [
+                f"## {scene['id']}",
+                "",
+                f"*{words} words · about {words / WPM_NATURAL * 60:.0f}s at a normal pace*",
+                "",
+                scene["narration"],
+                "",
+            ]
+
+        out = AUDIO / lang / "SCRIPT.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("\n".join(lines), encoding="utf-8")
+        print(f"  {out.relative_to(VIDEO)}   {len(guion['scenes'])} takes")
+    print()
+
+
 def retime(guiones: dict) -> None:
     """Rewrite every scene's length from the recorded take, or from the words until one exists.
 
@@ -892,6 +1036,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", nargs="*", default=None, metavar="SCENE",
                         help="render mp4s; with no ids, every scene")
+    parser.add_argument("--narrate", action="store_true",
+                        help="record any scene with no take yet, with the voice the guion "
+                             "names, into audio/<lang>/. Billed per character; skips what "
+                             "already exists")
+    parser.add_argument("--script", action="store_true",
+                        help="write the recording sheets: every line to read, under the exact "
+                             "filename --assemble will look for")
     parser.add_argument("--assemble", action="store_true",
                         help="join the rendered scenes into one film per language, carrying "
                              "each scene's narration if audio/<lang>/<scene>.mp3 exists")
@@ -902,6 +1053,14 @@ def main() -> None:
 
     guiones = {lang: json.loads((VIDEO / f"guion.video.{lang}.json").read_text(encoding="utf-8"))
                for lang in COPY}
+
+    if args.narrate:
+        print("narrating")
+        narrate(guiones)
+
+    if args.script:
+        print("recording sheets")
+        write_scripts(guiones)
 
     if args.retime:
         print("retiming")
@@ -961,7 +1120,9 @@ def main() -> None:
     if args.assemble:
         print("\nassembling")
         for lang, g in guiones.items():
-            assemble(lang, ["intro"] + [s["id"] for s in g["scenes"]])
+            lengths = {"intro": g["intro"]["seconds"]}
+            lengths.update({s["id"]: s["minSeconds"] for s in g["scenes"]})
+            assemble(lang, ["intro"] + [s["id"] for s in g["scenes"]], lengths)
 
     if pacing:
         sys.exit("\nnarration that does not fit its scene:\n  " + "\n  ".join(pacing))
@@ -975,12 +1136,24 @@ def audio_take(lang: str, scene_id: str) -> pathlib.Path | None:
     return None
 
 
-def assemble(lang: str, order: list[str]) -> None:
+def concat_list(work: pathlib.Path, name: str, files: list[pathlib.Path]) -> pathlib.Path:
+    listing = work / name
+    listing.write_text("".join(f"file '{f.as_posix()}'\n" for f in files), encoding="utf-8")
+    return listing
+
+
+def assemble(lang: str, order: list[str], seconds: dict) -> None:
     """Join the scene mp4s into one film, carrying each scene's narration if it is recorded.
 
-    Every segment gets an audio stream -- the real take, or silence -- because concat with
-    `-c copy` needs the streams to match, and a video that is silent until scene four would
-    otherwise concat into a file whose audio starts halfway through.
+    Picture and sound are built separately and married at the end, which is not the obvious
+    way round. The obvious way -- mux each scene with its own take, then concat the results --
+    loses about a second and a half per scene: `apad` fills the gap between a take and its
+    scene with silence, and concatenating the AAC tracks with `-c copy` trims exactly that
+    trailing padding back off. Eleven scenes in, the voice finished seventeen seconds before
+    the picture did, and every individual segment measured correct.
+
+    So the sound is assembled once, as PCM, where there is no encoder priming or edit list for
+    a concat to trim. One encode at the end, against a video track that was only ever copied.
     """
     parts = RENDER / lang
     missing = [s for s in order if not (parts / f"{s}.mp4").exists()]
@@ -994,31 +1167,51 @@ def assemble(lang: str, order: list[str]) -> None:
     work.mkdir(parents=True)
 
     voiced = 0
+    tracks = []
     for scene_id in order:
-        clip, segment = parts / f"{scene_id}.mp4", work / f"{scene_id}.mp4"
+        track = work / f"{scene_id}.wav"
         take = audio_take(lang, scene_id)
+        length = str(seconds[scene_id])
         if take is None:
-            command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(clip),
-                       "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-                       "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac",
-                       "-b:a", "160k", "-shortest", str(segment)]
+            command = ["ffmpeg", "-y", "-loglevel", "error",
+                       "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", length]
         else:
             voiced += 1
-            # apad with -shortest, so the take ends exactly where the picture does instead of
-            # leaving a stream shorter than its scene for concat to trip over.
-            command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(clip), "-i", str(take),
-                       "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac",
-                       "-b:a", "160k", "-af", "apad", "-shortest", str(segment)]
-        subprocess.run(command, check=True)
+            # apad then -t: the take is shorter than its scene by design, and the difference
+            # has to be real silence in the track, not padding a later step can reclaim.
+            command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(take),
+                       "-af", "apad", "-t", length]
+        subprocess.run(command + ["-ac", "2", "-ar", "48000", "-c:a", "pcm_s16le",
+                                  str(track)], check=True)
+        tracks.append(track)
 
-    listing = work / "concat.txt"
-    listing.write_text("".join(f"file '{work / f'{s}.mp4'}'\n".replace("\\", "/")
-                               for s in order), encoding="utf-8")
+    sound = work / "sound.wav"
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+                    "-i", str(concat_list(work, "sound.txt", tracks)), "-c", "copy",
+                    str(sound)], check=True)
+
+    picture = work / "picture.mp4"
+    clips = [parts / f"{s}.mp4" for s in order]
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+                    "-i", str(concat_list(work, "picture.txt", clips)), "-c", "copy",
+                    str(picture)], check=True)
 
     out = RENDER / f"xaflogic-explainer-{lang}.mp4"
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
-                    "-i", str(listing), "-c", "copy", str(out)], check=True)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(picture), "-i", str(sound),
+                    "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+                    str(out)], check=True)
     shutil.rmtree(work)
+
+    # The failure this replaced was invisible in every per-segment check, so the assembled
+    # file is measured against itself: sound has to reach the end of the picture.
+    streams = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration",
+         "-of", "csv=p=0", str(out)], capture_output=True, text=True).stdout
+    lengths = {kind: float(value) for kind, value in
+               (line.split(",") for line in streams.strip().splitlines())}
+    drift = abs(lengths.get("video", 0) - lengths.get("audio", 0))
+    if drift > 0.5:
+        sys.exit(f"{out.name}: sound runs {drift:.1f}s short of the picture")
 
     length = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                              "-of", "csv=p=0", str(out)], capture_output=True, text=True)

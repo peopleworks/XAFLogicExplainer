@@ -10,77 +10,77 @@
     {
       "id": "01-gancho",
       "html": "scenes/en/01-gancho.html",
-      "minSeconds": 17.3,
+      "minSeconds": 17.7,
       "voice": "Rachel",
       "narration": "You ask your A I assistant to add a rule to Invoice. It writes perfect X A F. And then it references a property your class doesn't have. It isn't hallucinating X A F. It knows X A F. It has just never seen yours."
     },
     {
       "id": "02-la-brecha",
       "html": "scenes/en/02-la-brecha.html",
-      "minSeconds": 13.6,
+      "minSeconds": 15.4,
       "voice": "Rachel",
       "narration": "DevExpress already closed part of this. There are official agent skills for how the framework works, and a docs server for the reference. Both are good. Neither has read a single line of your codebase."
     },
     {
       "id": "03-dos-minutos",
       "html": "scenes/en/03-dos-minutos.html",
-      "minSeconds": 14.0,
+      "minSeconds": 15.9,
       "voice": "Rachel",
       "narration": "So: install the tool, point it at your module, and it writes AGENTS dot M D, CLAUDE dot M D and Copilot instructions at your solution root. No account, no A P I key, nothing uploaded."
     },
     {
       "id": "04-oculto",
       "html": "scenes/en/04-oculto.html",
-      "minSeconds": 13.6,
+      "minSeconds": 13.7,
       "voice": "Rachel",
       "narration": "But here's what surprised me. The valuable part isn't the entities. It's everything that is not in your business classes — and an X A F application keeps a remarkable amount of itself outside them."
     },
     {
       "id": "05-editores",
       "html": "scenes/en/05-editores.html",
-      "minSeconds": 18.7,
+      "minSeconds": 19.2,
       "voice": "Rachel",
       "narration": "A string property that renders as a barcode scanner. The custom editor lives in the platform project, beside the module, so nobody reading the business objects ever meets it. Neither does your agent. And the JavaScript it can't work without is in neither C sharp nor X M L."
     },
     {
       "id": "06-migraciones",
       "html": "scenes/en/06-migraciones.html",
-      "minSeconds": 21.6,
+      "minSeconds": 24.0,
       "voice": "Rachel",
       "narration": "And this one. A block guarded by current D B version ran once, on somebody's production database, three years ago, and never again. Reading today's code cannot recover what it did. So when you ask why a column holds that value, the agent invents a reason. The tool keeps the migration — and the comment explaining why."
     },
     {
       "id": "07-pantallas",
       "html": "scenes/en/07-pantallas.html",
-      "minSeconds": 24.5,
+      "minSeconds": 27.0,
       "voice": "Rachel",
       "narration": "And then the question nothing in the repository answers: what runs when you open this screen. X A F generates a list, a detail and a lookup view for every business class, so the screens are in no file either. Fourteen classes, fifty four screens, none of them written down. And which controllers load onto one is four conditions the framework decides at run time."
     },
     {
       "id": "08-roslyn",
       "html": "scenes/en/08-roslyn.html",
-      "minSeconds": 17.6,
+      "minSeconds": 17.8,
       "voice": "Rachel",
       "narration": "All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its two hundred and seventy tests run free on a public runner."
     },
     {
       "id": "09-niveles",
       "html": "scenes/en/09-niveles.html",
-      "minSeconds": 16.2,
+      "minSeconds": 20.1,
       "voice": "Rachel",
       "narration": "AGENTS dot M D is read on every single request, so most of the documentation is deliberately not in it. Eleven kilobytes always loaded, seventy opened on demand. And the smallest part matters most: if it isn't listed, it does not exist."
     },
     {
       "id": "10-mapa",
       "html": "scenes/en/10-mapa.html",
-      "minSeconds": 18.0,
+      "minSeconds": 17.9,
       "voice": "Rachel",
       "narration": "The same extraction also writes one self-contained page for a person — whoever just inherited the application. Including a map of your domain model that most teams have never seen, because it lives in one person's head. Which is exactly the knowledge that leaves when they do."
     },
     {
       "id": "11-cierre",
       "html": "scenes/en/11-cierre.html",
-      "minSeconds": 15.1,
+      "minSeconds": 17.3,
       "voice": "Rachel",
       "narration": "It's free, M I T, and on NuGet. Point it at your X A F application, and when it misreads a pattern yours uses, open an issue. Your agent already knows X A F. Let's teach it your application."
     }

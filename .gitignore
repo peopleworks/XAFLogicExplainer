@@ -103,3 +103,6 @@ docs/Blog/video/render/
 docs/Blog/video/.report.html
 __pycache__/
 *.pyc
+
+# The ElevenLabs key, if it is kept beside the video tools rather than in the environment.
+docs/Blog/video/.elevenlabs.key
