@@ -105,7 +105,7 @@ public class McpToolTests
         var result = await Detail.EntityAsync("PurchaseOrder", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("There is no entity called 'PurchaseOrder'", result);
-        Assert.Contains("complete list of 3 entities", result);
+        Assert.Contains("complete list of 5 entities", result);
         Assert.Contains("Customer", result);
         Assert.Contains("has not been created yet", result);
     }

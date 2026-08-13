@@ -15,6 +15,19 @@ public class OrmDetectionTests
         Assert.Equal("XPO", SampleProjects.Xpo.OrmType, ignoreCase: true);
 
     [Fact]
+    public void FindsEntitiesOnEveryDocumentedXpoBase()
+    {
+        // The hierarchy is PersistentBase -> XPBaseObject -> XPCustomObject -> XPObject, with
+        // XPLiteObject also under XPBaseObject. Recognising the leaves and not the two classes
+        // above them leaves a hole in the middle of a documented API: DevExpress names all five
+        // as bases you may derive persistent classes from, and recommends PersistentBase.
+        var names = SampleProjects.Xpo.Entities.Select(entity => entity.ClassName);
+
+        Assert.Contains("AuditEntry", names);       // : XPBaseObject
+        Assert.Contains("SequenceCounter", names);  // : PersistentBase
+    }
+
+    [Fact]
     public void DetectsEfCoreFromItsNamespace() =>
         Assert.Contains("EF", SampleProjects.EfCore.OrmType, StringComparison.OrdinalIgnoreCase);
 

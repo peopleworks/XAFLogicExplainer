@@ -64,11 +64,28 @@ public class ExtractionOptions
     /// <summary>
     /// Known business object base types used to classify entity classes.
     /// </summary>
+    /// <remarks>
+    /// The XPO names are the whole documented hierarchy —
+    /// <c>PersistentBase</c> → <c>XPBaseObject</c> → <c>XPCustomObject</c> → <c>XPObject</c>, with
+    /// <c>XPLiteObject</c> also under <c>XPBaseObject</c> — because DevExpress names all five as
+    /// bases a persistent class may derive from, and recommends <c>PersistentBase</c>. Listing the
+    /// leaves and not the two classes above them leaves a hole in the middle of an API that is
+    /// used: mapping onto a table that brings its own key is exactly when the higher bases are the
+    /// right choice.
+    /// <para>
+    /// Callers are expected to use this list rather than pass their own. It was previously
+    /// duplicated in the CLI, the MCP server and the test harness, which is three chances for the
+    /// four copies to disagree about what an entity is.
+    /// </para>
+    /// </remarks>
     public string[] BaseTypeNames { get; set; } = [
+        "PersistentBase",
+        "XPBaseObject",
         "XPCustomObject",
-        "BaseObject",
         "XPObject",
-        "XPLiteObject"
+        "XPLiteObject",
+        "BaseObject",
+        "PermissionPolicyUser",
     ];
 
     /// <summary>

@@ -159,7 +159,6 @@ internal static class SampleProjects
 
         var options = new ExtractionOptions
         {
-            BaseTypeNames = ["XPCustomObject", "BaseObject", "XPObject", "XPLiteObject", "PermissionPolicyUser"],
             IncludeSourceCode = true,
             IncludeMethodBodies = true,
             IncludeComments = true,
