@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **EF Core entities are found by their `DbSet<T>` registration**, not only by their base class.
+  An application mapped onto an existing schema rarely derives from `BaseObject` — the tables
+  bring their own keys, so the project writes its own base class or maps a plain POCO — and every
+  one of those was dropped, silently, while `AGENTS.md` went on describing its inventory as
+  complete. Only classes declared in the analyzed source qualify, so the framework tables a
+  DbContext also registers (`ModuleInfo`, `FileData`, `ModelDifference`) stay out. On a
+  221-entity application over a legacy LIMS schema this moves extraction from 3 entities to 210.
+
 ## [0.12.0] — 2026-08-11
 
 What runs when you open this screen.
