@@ -28,6 +28,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   omitted rather than guessed. Reading text also counted a *mention*: a comment naming the
   namespace was enough, which is how the fixture for this fix first passed against the old code.
 
+- **Entities are found through a base class the project wrote itself.** Classification matched a
+  class's own base list against the root names and stopped there, so an application with a shared
+  base — auditing, a key convention, a display-name property — lost every business object below it.
+  The inversion is what makes it severe: the abstract base *is* matched, so the inventory reported
+  the one class that is not a table and omitted the ones that are. Selection now repeats until a
+  round changes nothing, exactly as `SelectControllers` does, and resolves a base name through the
+  deriving file's own scope rather than by simple name, so a `Contracts.Order` beside a
+  `BusinessObjects.Order` still resolves to the base it actually named. On the demos shipped with
+  26.1: `FeatureCenter.NET.XPO` 43 → 140 entities, `MainDemo.NET.XPO` 14 → 17, and
+  `OutlookInspiredDemo.NET.EFCore` 23 → 24 — the last of which is an EF Core application, where an
+  entity that is not registered as a `DbSet<T>` had no fallback either.
+
 ## [0.12.1] — 2026-08-13
 
 Entities the application declares, rather than the ones that inherit from the right class.

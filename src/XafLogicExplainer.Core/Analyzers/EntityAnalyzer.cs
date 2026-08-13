@@ -45,13 +45,14 @@ public class EntityAnalyzer : IEntityAnalyzer
             : options.Orm;
         options.ResolvedOrm = ormType;
 
+        var persistent = SelectPersistentClasses(parsedFiles.Select(parsed => parsed.Root), roster, options);
+
         foreach (var (file, root) in parsedFiles)
         {
             var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
             foreach (var classDecl in classDeclarations)
             {
-                if (IsXafBusinessObject(classDecl, options.BaseTypeNames)
-                    || roster.Registers(GetNamespace(classDecl), classDecl.Identifier.Text))
+                if (persistent.Contains((GetNamespace(classDecl), classDecl.Identifier.Text)))
                 {
                     var entity = ExtractEntity(classDecl, file, options);
                     entities.Add(entity);
@@ -472,6 +473,159 @@ public class EntityAnalyzer : IEntityAnalyzer
     }
 
     #region Helper Methods
+
+    /// <summary>
+    /// Decides which classes are persistent, following base classes to a fixed point.
+    /// </summary>
+    /// <remarks>
+    /// Matching a class's own base list against a list of root names stops one hop short. An
+    /// application that writes a shared base — auditing, a key convention, a display name — puts
+    /// every business object below it out of reach, and the loss is silent in the worst way: the
+    /// abstract base is extracted in their place, so the inventory reports the one class that is
+    /// not a table and omits the ones that are.
+    /// <para>
+    /// Repeating until a round changes nothing is what the controller side already does in
+    /// <c>SelectControllers</c>, and for the same reason: a base class may be read after the class
+    /// deriving from it, and a chain can be any depth.
+    /// </para>
+    /// <para>
+    /// A base name is resolved through the deriving file's own scope rather than by simple name,
+    /// because a name is not an identity — the reason the DbSet roster carries scopes. An
+    /// application may keep a <c>Contracts.Order</c> beside its <c>BusinessObjects.Order</c>, each
+    /// deriving from a different <c>NamedBaseObject</c>, and only one of those is a table.
+    /// </para>
+    /// <para>
+    /// Acceptance is keyed on <c>(namespace, name)</c>, so every part of a <c>partial</c> class is
+    /// selected once any part of it is — the hand-written part that carries the base list and the
+    /// generated part that carries the mapping are the same class.
+    /// </para>
+    /// </remarks>
+    private static HashSet<(string Namespace, string Name)> SelectPersistentClasses(
+        IEnumerable<SyntaxNode> roots, DbSetRoster roster, ExtractionOptions options)
+    {
+        var trees = roots.ToList();
+        var globalUsings = GlobalUsings(trees);
+
+        var candidates = new List<(ClassDeclarationSyntax Declaration, string Namespace, string Name, HashSet<string> Scopes)>();
+
+        foreach (var root in trees)
+        {
+            var fileScopes = new HashSet<string>(globalUsings, StringComparer.Ordinal);
+
+            foreach (var directive in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+            {
+                if (directive.Alias is null && directive.Name is not null)
+                    fileScopes.Add(directive.Name.ToString());
+            }
+
+            foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+            {
+                var @namespace = GetNamespace(classDecl);
+                var scopes = new HashSet<string>(fileScopes, StringComparer.Ordinal);
+
+                // Its own namespace and every one enclosing it: C# resolves an unqualified name
+                // outwards, so a base one level up needs no using directive.
+                for (var scope = @namespace; ; )
+                {
+                    scopes.Add(scope);
+                    var dot = scope.LastIndexOf('.');
+                    if (dot < 0) break;
+                    scope = scope[..dot];
+                }
+
+                candidates.Add((classDecl, @namespace, classDecl.Identifier.Text, scopes));
+            }
+        }
+
+        var accepted = new HashSet<(string Namespace, string Name)>();
+
+        foreach (var candidate in candidates)
+        {
+            if (IsXafBusinessObject(candidate.Declaration, options.BaseTypeNames)
+                || roster.Registers(candidate.Namespace, candidate.Name))
+                accepted.Add((candidate.Namespace, candidate.Name));
+        }
+
+        // Each round can accept a class whose base was accepted in the previous one, so it repeats
+        // until a round changes nothing. Bounded by the number of classes.
+        bool changed;
+
+        do
+        {
+            changed = false;
+
+            foreach (var candidate in candidates)
+            {
+                if (accepted.Contains((candidate.Namespace, candidate.Name)))
+                    continue;
+
+                if (!DerivesFromAccepted(candidate.Declaration, candidate.Scopes, accepted))
+                    continue;
+
+                accepted.Add((candidate.Namespace, candidate.Name));
+                changed = true;
+            }
+        }
+        while (changed);
+
+        return accepted;
+    }
+
+    /// <summary>
+    /// Whether any name in this class's base list resolves to a class already accepted.
+    /// </summary>
+    /// <remarks>
+    /// Every entry is tried rather than the first, because syntax cannot tell a base class from an
+    /// interface. An interface name only matches if a class of that name was itself accepted, which
+    /// an interface never is.
+    /// </remarks>
+    private static bool DerivesFromAccepted(
+        ClassDeclarationSyntax classDecl,
+        HashSet<string> scopes,
+        HashSet<(string Namespace, string Name)> accepted)
+    {
+        foreach (var baseType in classDecl.BaseList?.Types ?? default)
+        {
+            var written = baseType.Type.ToString();
+
+            var generic = written.IndexOf('<');
+            if (generic > 0) written = written[..generic];
+
+            var dot = written.LastIndexOf('.');
+            var simpleName = dot < 0 ? written : written[(dot + 1)..];
+
+            foreach (var (@namespace, name) in accepted)
+            {
+                if (!string.Equals(name, simpleName, StringComparison.Ordinal)) continue;
+
+                if (dot < 0)
+                {
+                    // Unqualified: it named something this file can actually see.
+                    if (scopes.Contains(@namespace)) return true;
+                    continue;
+                }
+
+                // Qualified: the tail it wrote is more specific than any using directive.
+                var qualifier = written[..dot];
+                if (@namespace.Equals(qualifier, StringComparison.Ordinal)
+                    || @namespace.EndsWith("." + qualifier, StringComparison.Ordinal))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The <c>global using</c> namespaces, which reach every file however they are declared.
+    /// </summary>
+    private static HashSet<string> GlobalUsings(IEnumerable<SyntaxNode> trees) => trees
+        .SelectMany(root => root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+        .Where(directive => !directive.GlobalKeyword.IsKind(SyntaxKind.None))
+        .Select(directive => directive.Name?.ToString())
+        .Where(name => name is not null)
+        .Select(name => name!)
+        .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// Detects ORM mode by scanning file contents for EF-specific namespaces.
