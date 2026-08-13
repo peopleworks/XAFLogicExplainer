@@ -9,7 +9,8 @@ namespace SampleLegacy.Module.BusinessObjects;
 /// </summary>
 /// <remarks>
 /// Two of these types are supplied by the framework and declared nowhere in this project;
-/// only <see cref="Invoice"/> and <see cref="Warehouse"/> are the application's own.
+/// only <see cref="Invoice"/>, <see cref="Warehouse"/> and <see cref="Shipment"/> are the
+/// application's own.
 /// </remarks>
 public class LegacyDbContext : DbContext
 {
@@ -22,4 +23,6 @@ public class LegacyDbContext : DbContext
     public DbSet<Invoice> Invoices { get; set; }
 
     public DbSet<Warehouse> Warehouses { get; set; }
+
+    public DbSet<Shipment> Shipments { get; set; }
 }

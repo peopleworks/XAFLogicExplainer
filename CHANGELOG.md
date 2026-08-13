@@ -16,6 +16,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   complete. Only classes declared in the analyzed source qualify, so the framework tables a
   DbContext also registers (`ModuleInfo`, `FileData`, `ModelDifference`) stay out. On a
   221-entity application over a legacy LIMS schema this moves extraction from 3 entities to 210.
+  Thanks to [@MBrekhof](https://github.com/MBrekhof).
+
+- **A `partial` class is one entity, not one per file.** Matching by base class could only ever
+  match once, because one part declares the base list; matching by the `DbSet` roster matches on
+  the name, so every part matched — and the scaffolded split that produces two parts is exactly
+  what the roster is for. The class came out twice, each copy holding half its columns: two
+  incomplete truths with nothing to say they were the same class. The parts are now folded into
+  one entity, which also recovers the members XPO extraction had always dropped where a
+  hand-written part carries `: BaseObject` and a generated part carries the mapping.
+
+- **The `DbSet` roster no longer matches on a bare name.** A name is not an identity: an
+  application may keep a `Contracts.Invoice` DTO beside its `BusinessObjects.Invoice` entity, and
+  the roster turned the DTO into a table. Registrations now carry the namespaces they could have
+  been naming — the registering file's usings, its own namespace, and the namespaces enclosing it
+  — which is ordinary C# lookup, the part of it syntax can see.
+
+- **Business object files are read in a fixed order.** The directory hands them over in whatever
+  order the file system keeps them, and that is not the same order on two machines: NTFS compares
+  names without case, ext4 by byte, so `Shipment.Generated.cs` sorts after `Shipment.cs` on one and
+  before it on the other. Extraction is now ordered by path, so a document regenerated on a laptop
+  and in CI can be compared — which is most of what regenerating it is for.
+
+- **Only a `DbContext`'s own properties count as registrations.** `DbSet<T>` written as a local or
+  a parameter is a type name in a method body, not the application declaring a table. Contexts are
+  found through their base chain as well, so an application whose contexts derive from a shared
+  `AuditedDbContext` still registers everything.
 
 ## [0.12.0] — 2026-08-11
 

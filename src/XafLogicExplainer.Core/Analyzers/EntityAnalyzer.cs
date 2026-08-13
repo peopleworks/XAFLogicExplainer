@@ -30,11 +30,19 @@ public class EntityAnalyzer : IEntityAnalyzer
 
         // Parsed once and kept, because the DbSet roster has to be known before the first class is
         // classified and re-parsing every file to build it costs more than holding the trees.
+        //
+        // Ordered, because the directory hands them over in whatever order the file system keeps
+        // them, and that is not the same order on two machines: NTFS compares names without case,
+        // ext4 by byte, so `Shipment.Generated.cs` sorts after `Shipment.cs` on one and before it
+        // on the other. Anything downstream that takes the first of something then answers
+        // differently on a laptop than in CI, in a document whose value is that it can be
+        // regenerated and compared.
         var parsedFiles = csFiles
+            .OrderBy(file => file, StringComparer.Ordinal)
             .Select(file => (File: file, Root: CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot()))
             .ToList();
 
-        var registeredTypes = CollectDbSetTypeNames(parsedFiles.Select(parsed => parsed.Root));
+        var roster = DbSetRoster.Read(parsedFiles.Select(parsed => parsed.Root));
 
         foreach (var (file, root) in parsedFiles)
         {
@@ -42,13 +50,16 @@ public class EntityAnalyzer : IEntityAnalyzer
             foreach (var classDecl in classDeclarations)
             {
                 if (IsXafBusinessObject(classDecl, options.BaseTypeNames)
-                    || registeredTypes.Contains(classDecl.Identifier.Text))
+                    || roster.Registers(GetNamespace(classDecl), classDecl.Identifier.Text))
                 {
                     var entity = ExtractEntity(classDecl, file, options);
                     entities.Add(entity);
                 }
             }
         }
+
+        // One entity per class, not per declaration -- a partial split across files is one thing.
+        entities = MergePartialDeclarations(entities);
 
         // Post-extraction: infer EF Core relationships from navigation properties
         if (ormType == OrmType.EfCore)
@@ -476,7 +487,8 @@ public class EntityAnalyzer : IEntityAnalyzer
     }
 
     /// <summary>
-    /// Collects the type names an application registers as <c>DbSet&lt;T&gt;</c>.
+    /// The types an application registers as <c>DbSet&lt;T&gt;</c> on a <c>DbContext</c>, and the
+    /// namespaces each registration could have been naming.
     /// </summary>
     /// <remarks>
     /// Under EF Core this is the application's own statement of what it persists, and it has to be
@@ -489,27 +501,226 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// are declared in DevExpress assemblies and are therefore never seen here, so they drop out
     /// without needing a list of names to exclude.
     /// </para>
+    /// <para>
+    /// The roster carries a namespace scope rather than a bare name because a bare name is not an
+    /// identity: an application is free to have a <c>Contracts.Invoice</c> DTO beside its
+    /// <c>BusinessObjects.Invoice</c> entity, and telling an agent the DTO is persistent is worse
+    /// than the gap this roster exists to close. What is modelled here is ordinary C# lookup, the
+    /// part of it syntax can see: the registering file's usings, its own namespace, and the
+    /// namespaces enclosing it. Aliases, <c>using static</c> and extern aliases are not modelled —
+    /// a registration that needs one of those finds no class and is dropped, which is the safe
+    /// direction.
+    /// </para>
     /// </remarks>
-    private static HashSet<string> CollectDbSetTypeNames(IEnumerable<SyntaxNode> roots)
+    private sealed class DbSetRoster
     {
-        var names = new HashSet<string>(StringComparer.Ordinal);
+        private readonly List<(string Argument, HashSet<string> Scopes)> _registrations = [];
 
-        foreach (var root in roots)
+        /// <summary>
+        /// Reads every <c>DbSet&lt;T&gt;</c> property declared on a context in the parsed source.
+        /// </summary>
+        public static DbSetRoster Read(IEnumerable<SyntaxNode> roots)
         {
-            foreach (var generic in root.DescendantNodes().OfType<GenericNameSyntax>())
+            var roster = new DbSetRoster();
+            var trees = roots.ToList();
+
+            // `global using` reaches every file, so it has to be gathered before any one file is
+            // read -- including from a GlobalUsings.cs that declares nothing else.
+            var globalUsings = trees
+                .SelectMany(root => root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+                .Where(directive => !directive.GlobalKeyword.IsKind(SyntaxKind.None))
+                .Select(directive => directive.Name?.ToString())
+                .Where(name => name is not null)
+                .Select(name => name!)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var contexts = FindContextClasses(trees);
+
+            foreach (var context in contexts)
             {
-                if (generic.Identifier.Text != "DbSet" || generic.TypeArgumentList.Arguments.Count != 1)
+                var root = context.SyntaxTree.GetRoot();
+                var scopes = new HashSet<string>(globalUsings, StringComparer.Ordinal);
+
+                foreach (var directive in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
+                {
+                    if (directive.Alias is null && directive.Name is not null)
+                        scopes.Add(directive.Name.ToString());
+                }
+
+                // The context's own namespace, and every namespace enclosing it: C# resolves an
+                // unqualified name outwards, so an entity one level up needs no using directive.
+                var contextNamespace = GetNamespace(context);
+                for (var scope = contextNamespace; ; )
+                {
+                    scopes.Add(scope);
+                    var dot = scope.LastIndexOf('.');
+                    if (dot < 0) break;
+                    scope = scope[..dot];
+                }
+
+                foreach (var property in context.Members.OfType<PropertyDeclarationSyntax>())
+                {
+                    if (property.Type is not GenericNameSyntax generic) continue;
+                    if (generic.Identifier.Text != "DbSet") continue;
+                    if (generic.TypeArgumentList.Arguments.Count != 1) continue;
+
+                    var argument = generic.TypeArgumentList.Arguments[0].ToString();
+                    if (argument.Length > 0)
+                        roster._registrations.Add((argument, scopes));
+                }
+            }
+
+            return roster;
+        }
+
+        /// <summary>
+        /// Whether the application registers this class -- by name, and from somewhere that could
+        /// actually have been naming this one.
+        /// </summary>
+        public bool Registers(string @namespace, string className)
+        {
+            foreach (var (argument, scopes) in _registrations)
+            {
+                var dot = argument.LastIndexOf('.');
+                var simpleName = dot < 0 ? argument : argument[(dot + 1)..];
+                if (!string.Equals(simpleName, className, StringComparison.Ordinal)) continue;
+
+                if (dot < 0)
+                {
+                    if (scopes.Contains(@namespace)) return true;
                     continue;
+                }
 
-                var argument = generic.TypeArgumentList.Arguments[0].ToString();
-                var simpleName = argument[(argument.LastIndexOf('.') + 1)..];
+                // A qualified registration -- DbSet<Contracts.Invoice> -- names its own namespace
+                // tail, and that is more specific than anything the usings could tell us.
+                var qualifier = argument[..dot];
+                if (@namespace.Equals(qualifier, StringComparison.Ordinal)
+                    || @namespace.EndsWith("." + qualifier, StringComparison.Ordinal))
+                    return true;
+            }
 
-                if (simpleName.Length > 0)
-                    names.Add(simpleName);
+            return false;
+        }
+
+        /// <summary>
+        /// The classes that are a <c>DbContext</c>, following base classes declared in the source.
+        /// </summary>
+        /// <remarks>
+        /// Following the chain matters because an application that writes its own
+        /// <c>AuditedDbContext : DbContext</c> and derives every real context from it would
+        /// otherwise register nothing -- the same silent-empty failure this roster is here to fix.
+        /// <para>
+        /// The chain is walked by simple name, which cannot distinguish two same-named classes in
+        /// different namespaces. The cost of being wrong is small in this direction: a class only
+        /// contributes to the roster if it also declares <c>DbSet&lt;T&gt;</c> properties, which
+        /// something that is not a context does not do.
+        /// </para>
+        /// </remarks>
+        private static List<ClassDeclarationSyntax> FindContextClasses(List<SyntaxNode> trees)
+        {
+            var declared = trees
+                .SelectMany(root => root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+                .ToList();
+
+            var contextNames = new HashSet<string>(StringComparer.Ordinal) { "DbContext" };
+
+            // A fixed point, because a base class may be read after the class deriving from it.
+            bool grew;
+            do
+            {
+                grew = false;
+                foreach (var candidate in declared)
+                {
+                    if (contextNames.Contains(candidate.Identifier.Text)) continue;
+                    if (!GetBaseTypeNames(candidate).Any(contextNames.Contains)) continue;
+
+                    contextNames.Add(candidate.Identifier.Text);
+                    grew = true;
+                }
+            } while (grew);
+
+            return declared
+                .Where(candidate => GetBaseTypeNames(candidate).Any(contextNames.Contains))
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Folds the parts of a <c>partial</c> class into the one entity they describe.
+    /// </summary>
+    /// <remarks>
+    /// A class matched by its base list could only ever match once, because only one part declares
+    /// the base list. A class matched by the DbSet roster matches on its name, so every part
+    /// matches -- and a scaffolded legacy schema, which is exactly what the roster is for, splits
+    /// its classes as a matter of routine. Left alone that reports the entity twice, each copy
+    /// holding half its properties: two incomplete truths, and no way for a reader to tell they
+    /// are the same class.
+    /// <para>
+    /// Merging also recovers the members XPO extraction has always dropped, where a hand-written
+    /// part carries <c>: BaseObject</c> and a generated part carries half the columns.
+    /// </para>
+    /// </remarks>
+    private static List<ExtractedEntity> MergePartialDeclarations(List<ExtractedEntity> entities)
+    {
+        var parts = new Dictionary<(string Namespace, string ClassName), List<ExtractedEntity>>();
+        var order = new List<(string Namespace, string ClassName)>();
+
+        foreach (var entity in entities)
+        {
+            var key = (entity.Namespace, entity.ClassName);
+            if (!parts.TryGetValue(key, out var group))
+            {
+                parts[key] = group = [];
+                order.Add(key);
+            }
+            group.Add(entity);
+        }
+
+        var merged = new List<ExtractedEntity>();
+
+        foreach (var key in order)
+        {
+            var group = parts[key];
+
+            // The part declaring the base list is the hand-written one, and it is where the class
+            // attributes live. Taking whichever half came first instead would make the reported
+            // file, and the order of the columns, depend on the file system doing the listing.
+            var primary = group.Find(part => part.BaseTypes.Count > 0) ?? group[0];
+            merged.Add(primary);
+
+            foreach (var entity in group)
+            {
+                if (ReferenceEquals(entity, primary)) continue;
+
+                primary.Description ??= entity.Description;
+                primary.NavigationGroup ??= entity.NavigationGroup;
+                primary.DefaultProperty ??= entity.DefaultProperty;
+                primary.ModelCaption ??= entity.ModelCaption;
+                primary.SourceProject ??= entity.SourceProject;
+                primary.IsDefaultClassOptions |= entity.IsDefaultClassOptions;
+                primary.IsCloneable |= entity.IsCloneable;
+
+                // Non-persistent anywhere means non-persistent: one part saying so is the class.
+                primary.IsPersistent &= entity.IsPersistent;
+
+                if (primary.BaseType is "object" or "" && entity.BaseType is not ("object" or ""))
+                    primary.BaseType = entity.BaseType;
+
+                foreach (var baseType in entity.BaseTypes.Where(name => !primary.BaseTypes.Contains(name)))
+                    primary.BaseTypes.Add(baseType);
+
+                var known = primary.Properties.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+                primary.Properties.AddRange(entity.Properties.Where(property => known.Add(property.Name)));
+
+                primary.Relationships.AddRange(entity.Relationships);
+                primary.ValidationRules.AddRange(entity.ValidationRules);
+                primary.AppearanceRules.AddRange(entity.AppearanceRules);
+                primary.InferredBusinessRules.AddRange(entity.InferredBusinessRules);
+                primary.SourceComments.AddRange(entity.SourceComments);
             }
         }
 
-        return names;
+        return merged;
     }
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)
