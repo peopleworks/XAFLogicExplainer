@@ -214,6 +214,18 @@ xaf, devexpress, devexpress xaf, xpo, ef core, dotnet, .net 10, roslyn, mcp, age
 Mismo patrón que SignsOfAI: HTML animado con CSS, sin narración salvo donde se indique, texto
 grande y una sola idea por short. Cada uno debe entenderse **sin sonido**.
 
+**Construidos con `python docs/Blog/video/build-shorts.py`** (`--video` para los mp4), en los dos
+idiomas, a partir de estos guiones. Comparten paleta y animaciones con el vídeo largo a través de
+`scene_kit.py`: un short que no case con la película que promociona parece de otro.
+
+Lo específico del formato vertical es la **banda segura**. TikTok, Reels y Shorts ponen su propia
+interfaz sobre la parte de arriba y la de abajo, así que nada legible sale de los 300 px
+superiores ni de los 400 inferiores — y el chequeo de desbordamiento mide contra esa banda, no
+contra el fotograma. Ya cazó el short 5 metiéndose 40 px por debajo.
+
+Los números del short 8 (**14 clases → 54 pantallas**) se **cuentan en el informe** al construir,
+no se escriben aquí. El short 3 y el 4 muestran código y rutas reales del fixture.
+
 ### Short 1 — «Inventa una propiedad» (el gancho) · ~12 s
 ```
 [0.0s]  Prompt en pantalla:  "Add a validation rule to Invoice"

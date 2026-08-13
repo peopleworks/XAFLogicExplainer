@@ -1,0 +1,77 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.stage {
+  position:relative; width:100%; height:100%; padding:300px 60px 400px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:#64707e;
+  margin-bottom:38px;
+}
+.big { font-size:62px; font-weight:640; letter-spacing:-.02em; line-height:1.14; }
+.mid { font-size:40px; font-weight:600; line-height:1.28; }
+.body { font-size:33px; color:#8794a4; line-height:1.4; }
+.pill {
+  display:inline-block; padding:13px 24px; border-radius:999px;
+  border:1px solid #232b36; color:#8794a4; font-size:27px; margin:0 8px 12px 0;
+}
+.pill--accent { border-color:#ff8a3d; color:#ff8a3d; }
+.gap { height:44px; }
+
+
+.row {
+  padding:34px 32px; margin-bottom:26px; border:1px solid #232b36;
+  background:#10151d; border-radius:18px;
+}
+.row .what { font-size:36px; color:#737f8f; margin-bottom:12px; }
+.row .tool { font-size:29px; color:#8794a4; }
+.row--yours { border-color:#ff8a3d; background:rgba(255,138,61,.10); }
+.row--yours .what { color:#f2f5f8; font-weight:640; }
+.row--yours .tool { color:#ff8a3d; font-weight:640; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.2s both fade">TRES COSAS QUE UN AGENTE NECESITA</div>
+  <div class="row" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.6s both rise"><div class="what">Cómo funciona XAF</div><div class="tool">agent-skills de DevExpress &#10003;</div></div><div class="row" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 1.9s both rise"><div class="what">Qué dice la documentación</div><div class="tool">MCP de documentación &#10003;</div></div>
+  <div class="row row--yours" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 4.2s both rise">
+    <div class="what">Qué hace TU aplicación</div>
+    <div class="tool" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 6.6s both fade">XAF Logic Explainer</div>
+  </div>
+  <div class="gap"></div>
+  <div class="mid" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.8s both rise">Se complementan. Ninguna sustituye a las otras.</div>
+</div>
+</body></html>

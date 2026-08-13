@@ -1,0 +1,86 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.stage {
+  position:relative; width:100%; height:100%; padding:300px 60px 400px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:#64707e;
+  margin-bottom:38px;
+}
+.big { font-size:62px; font-weight:640; letter-spacing:-.02em; line-height:1.14; }
+.mid { font-size:40px; font-weight:600; line-height:1.28; }
+.body { font-size:33px; color:#8794a4; line-height:1.4; }
+.pill {
+  display:inline-block; padding:13px 24px; border-radius:999px;
+  border:1px solid #232b36; color:#8794a4; font-size:27px; margin:0 8px 12px 0;
+}
+.pill--accent { border-color:#ff8a3d; color:#ff8a3d; }
+.gap { height:44px; }
+
+
+.term {
+  border:1px solid #232b36; background:#10151d; border-radius:16px;
+  padding:28px; font-size:21px; line-height:1.9; margin-bottom:40px;
+}
+.term .cmd { color:#f2f5f8; white-space:pre-wrap; }
+.term .none { color:#737f8f; }
+.count { font-size:46px; font-weight:700; color:#ff8a3d; margin:34px 0 14px; }
+.window {
+  height:520px; border:1px solid #232b36; border-radius:16px; overflow:hidden;
+  background:#10151d; margin-top:34px; position:relative;
+}
+.window img { display:block; width:100%; }
+@keyframes pan8 { from { transform:translateY(0); } to { transform:translateY(-6508.4px); } }
+.window .roll { animation: pan8 5s linear 9.6s both; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.2s both fade">IN NO FILE AT ALL</div>
+  <div class="term mono">
+    <div class="cmd" style="animation:0.9s cubic-bezier(.2,.7,.3,1) 0.4s both wipe">$ grep -r "Patient_Prescriptions_ListView" .</div>
+    <div class="none" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 1.8s both fade">(no results)</div>
+  </div>
+  <div class="big" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 3.2s both rise">And your users open it every day.</div>
+  <div class="count mono" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 5.6s both rise">14 classes  →  54 screens</div>
+  <div class="body" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 7.2s both fade">none of them written down anywhere</div>
+  <div class="window" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 9.2s both fade">
+    <div class="roll"><img src="../../stills/screens.png" alt=""></div>
+  </div>
+  <div class="mid yours" style="margin-top:30px;animation:0.6s cubic-bezier(.2,.7,.3,1) 12.6s both rise">Now you know which controllers load onto each one.</div>
+</div>
+</body></html>

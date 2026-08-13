@@ -1,0 +1,104 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.stage {
+  position:relative; width:100%; height:100%; padding:300px 60px 400px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:#64707e;
+  margin-bottom:38px;
+}
+.big { font-size:62px; font-weight:640; letter-spacing:-.02em; line-height:1.14; }
+.mid { font-size:40px; font-weight:600; line-height:1.28; }
+.body { font-size:33px; color:#8794a4; line-height:1.4; }
+.pill {
+  display:inline-block; padding:13px 24px; border-radius:999px;
+  border:1px solid #232b36; color:#8794a4; font-size:27px; margin:0 8px 12px 0;
+}
+.pill--accent { border-color:#ff8a3d; color:#ff8a3d; }
+.gap { height:44px; }
+
+
+/* min-width:0, or a grid column sizes itself to the longest unwrappable code line and pushes
+   the whole scene off the side of the frame. */
+.src { border:1px solid #232b36; background:#10151d; border-radius:13px; overflow:hidden;
+       min-width:0; }
+.src__path {
+  padding:11px 18px; font-size:14px; color:#64707e;
+  border-bottom:1px solid #232b36; background:#07090c;
+}
+.src__code { padding:18px 20px; line-height:1.66; color:#737f8f; position:relative; }
+.src__code .ln { white-space:pre; }
+.src__code .hit { color:#ff8a3d; font-weight:600; }
+/* Real code has real long lines. A hard cut mid-token reads as a broken render; a fade reads
+   as "this line continues", which is true. */
+.src__code::after {
+  content:""; position:absolute; top:0; right:0; bottom:0; width:58px; pointer-events:none;
+  background:linear-gradient(to right, rgba(16,21,29,0), #10151d 82%);
+}
+
+.wrap { position:relative; }
+@keyframes stampdown {
+  from { opacity:0; transform:rotate(-9deg) scale(1.6); }
+  to   { opacity:1; transform:rotate(-9deg) scale(1); }
+}
+.stamp {
+  position:absolute; right:-8px; bottom:-26px; transform:rotate(-9deg);
+  border:4px solid #ff8a3d; color:#ff8a3d; border-radius:12px;
+  padding:14px 26px; font-size:32px; font-weight:700; letter-spacing:.05em;
+}
+.qa { margin-top:64px; }
+.q { font-size:34px; color:#f2f5f8; margin-bottom:20px; }
+.aline { font-size:34px; color:#737f8f; text-decoration:line-through; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.2s both fade">LA MIGRACIÓN FANTASMA</div>
+  <div class="wrap">
+    <div class="src"><div class="src__path mono" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.4s both fade">PharmacyUpdater.cs</div><div class="src__code mono" style="font-size:22px"><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 0.9s both wipe">// Runs once, when an existing 1.0 database is upgraded. Prescriptions before this release</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.24s both wipe">// had no expiry, and a null one would block dispensing on every legacy row.</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.58s both wipe">if (<span class="hit">CurrentDBVersion</span> &lt; new Version("1.1.0.0") &amp;&amp; <span class="hit">CurrentDBVersion</span> &gt; new Version("0.0.0.0"))</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 1.92s both wipe">{</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 2.2600000000000002s both wipe">    BackfillPrescriptionExpiry();</div><div class="ln" style="animation:0.4s cubic-bezier(.2,.7,.3,1) 2.6s both wipe">}</div></div></div>
+    <div class="stamp mono" style="animation:0.45s cubic-bezier(.2,.7,.3,1) 3.6s both stampdown">SE EJECUTÓ UNA VEZ</div>
+  </div>
+  <div class="gap"></div>
+  <div class="body" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 5.2s both rise">En la base de datos de producción de alguien. Hace tres años.</div>
+  <div class="qa">
+    <div class="q" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 7.0s both rise">&ldquo;¿por qué esta columna tiene ese valor?&rdquo;</div>
+    <div class="aline" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.8s both rise">el agente se lo inventa</div>
+  </div>
+  <div class="gap"></div>
+  <div class="mid yours" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 11.0s both rise">El comentario suele ser el único registro del porqué.</div>
+</div>
+</body></html>

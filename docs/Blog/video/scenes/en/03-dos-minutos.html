@@ -10,13 +10,26 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-/* The same barely-there grid the covers use, so a still lifted from the video sits beside
-   them without looking like it came from somewhere else. */
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none;
   background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
   background-size: 26px 26px; opacity: .035;
 }
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
 /* Column rather than absolute placement: the content block centres itself in whatever room is
    left between the eyebrow and the closing line, so a scene with two rows and one with three
    do not both leave a hole in the middle of the frame. */
@@ -24,38 +37,16 @@ body::before {
   position: relative; width: 100%; height: 100%; padding: 52px 72px 62px;
   display: flex; flex-direction: column;
 }
-.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
 .cap {
   font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
   font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #64707e;
 }
 .head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
-.yours { color: #ff8a3d; }
-.grey { color: #737f8f; }
-.mut { color: #8794a4; }
-
 .pill {
   display: inline-block; padding: 7px 15px; border-radius: 999px;
   border: 1px solid #232b36; color: #8794a4; font-size: 15px; margin-right: 10px;
 }
 .pill--accent { border-color: #ff8a3d; color: #ff8a3d; }
-
-/* Every animation is `both` and starts at zero, because frames are captured by setting
-   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
-[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
-  cubic-bezier(.2,.7,.3,1); }
-@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
-@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
-@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.anim-rise { animation-name: rise; }
-.anim-fade { animation-name: fade; }
-.anim-dim  { animation-name: dim; }
-.anim-wipe { animation-name: wipe; }
-.anim-grow { animation-name: grow; transform-origin: left center; }
 
 
 .term {

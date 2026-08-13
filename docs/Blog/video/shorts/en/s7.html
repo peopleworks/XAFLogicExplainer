@@ -1,0 +1,78 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; }
+body {
+  background: #07090c;
+  color: #f2f5f8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* The same barely-there grid the covers use, so a still lifted from a frame sits beside them
+   without looking like it came from somewhere else. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, #f2f5f8 1px, transparent 0);
+  background-size: 26px 26px; opacity: .035;
+}
+.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+.yours { color: #ff8a3d; }
+.grey { color: #737f8f; }
+.mut { color: #8794a4; }
+
+/* Every animation is `both` and starts at zero, because frames are captured by setting
+   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
+@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
+@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes wipe  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.stage {
+  position:relative; width:100%; height:100%; padding:300px 60px 400px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.cap {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:#64707e;
+  margin-bottom:38px;
+}
+.big { font-size:62px; font-weight:640; letter-spacing:-.02em; line-height:1.14; }
+.mid { font-size:40px; font-weight:600; line-height:1.28; }
+.body { font-size:33px; color:#8794a4; line-height:1.4; }
+.pill {
+  display:inline-block; padding:13px 24px; border-radius:999px;
+  border:1px solid #232b36; color:#8794a4; font-size:27px; margin:0 8px 12px 0;
+}
+.pill--accent { border-color:#ff8a3d; color:#ff8a3d; }
+.gap { height:44px; }
+
+
+.bar { height:96px; border-radius:14px; background:#10151d; border:1px solid #232b36;
+       overflow:hidden; margin-bottom:18px; }
+.bar span { display:block; height:100%; transform-origin:left center; }
+.bar--bad span { width:90%; background:#46505e; }
+.bar--good span { width:11%; background:#ff8a3d; }
+.lab { font-size:31px; margin-bottom:16px; }
+.note { font-size:28px; color:#8794a4; margin-bottom:58px; }
+.note--bad { color:#737f8f; }
+
+</style></head>
+<body>
+<div class="stage">
+  <div class="cap" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.2s both fade">THE AGENTS.MD TAX</div>
+  <div class="lab grey" style="animation:0.5s cubic-bezier(.2,.7,.3,1) 0.5s both fade">everything, dumped in</div>
+  <div class="bar bar--bad"><span style="animation:1.5s linear .8s both grow"></span></div>
+  <div class="note note--bad" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 2.6s both rise">Read on EVERY request. Forever.</div>
+
+  <div class="lab" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 4.6s both fade">an index — 11 KB</div>
+  <div class="bar bar--good"><span style="animation:.7s linear 4.9s both grow"></span></div>
+  <div class="note" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 6.0s both rise">the other 70 KB open only when the agent needs them</div>
+
+  <div class="mid yours" style="animation:0.6s cubic-bezier(.2,.7,.3,1) 8.4s both rise">The smallest part matters most: if it isn't listed, it does not exist.</div>
+</div>
+</body></html>

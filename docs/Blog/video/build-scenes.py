@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
-import re
 import shutil
 import subprocess
 import sys
@@ -38,17 +37,18 @@ from xml.sax.saxutils import escape
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-ROOT = pathlib.Path(__file__).resolve().parents[3]
-VIDEO = ROOT / "docs" / "Blog" / "video"
+from scene_kit import (
+    FIXTURE, FPS, PALETTE, ROOT, VIDEO, a, a2, base_css, build_report, code_block, CODE_CSS,
+    freeze, overflowing, page, render, snippet, test_count,
+)
+
 SCENES = VIDEO / "scenes"
 STILLS = VIDEO / "stills"        # real output, captured once and panned over
 POSTERS = VIDEO / "posters"      # one frame per scene, to judge a design without rendering
 RENDER = VIDEO / "render"
-FIXTURE = ROOT / "tests" / "XafLogicExplainer.Tests" / "Fixtures" / "DemoSolution" / "PharmacyDemo.Module"
 REPORT = VIDEO / ".report.html"
 
 W, H = 1280, 720
-FPS = 30
 
 # What a narration voice can actually deliver. Below `TIGHT` is comfortable, above `IMPOSSIBLE`
 # is not a pacing choice, it is an unusable take -- and finding that out after recording costs a
@@ -64,36 +64,7 @@ TAIL_SECONDS = 0.9
 AUDIO = VIDEO / "audio"
 AUDIO_EXTS = (".mp3", ".wav", ".m4a", ".ogg")
 
-PALETTE = {
-    "bg": "#07090c",
-    "panel": "#10151d",
-    "line": "#232b36",
-    "graphite": "#46505e",
-    "graphite_ink": "#737f8f",
-    "ink": "#f2f5f8",
-    "mute": "#8794a4",
-    "faint": "#64707e",
-    "yours": "#ff8a3d",
-    "yours_soft": "rgba(255,138,61,.10)",
-    "ok": "#4ade80",
-}
-
-BASE_CSS = """
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: %(W)dpx; height: %(H)dpx; overflow: hidden; }
-body {
-  background: %(bg)s;
-  color: %(ink)s;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-/* The same barely-there grid the covers use, so a still lifted from the video sits beside
-   them without looking like it came from somewhere else. */
-body::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none;
-  background-image: radial-gradient(circle at 1px 1px, %(ink)s 1px, transparent 0);
-  background-size: 26px 26px; opacity: .035;
-}
+BASE_CSS = base_css(W, H) + """
 /* Column rather than absolute placement: the content block centres itself in whatever room is
    left between the eyebrow and the closing line, so a scene with two rows and one with three
    do not both leave a hole in the middle of the frame. */
@@ -101,39 +72,17 @@ body::before {
   position: relative; width: 100%%; height: 100%%; padding: 52px 72px 62px;
   display: flex; flex-direction: column;
 }
-.main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.mono { font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
 .cap {
   font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
   font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: %(faint)s;
 }
 .head { font-size: 44px; font-weight: 640; letter-spacing: -.015em; line-height: 1.18; }
-.yours { color: %(yours)s; }
-.grey { color: %(graphite_ink)s; }
-.mut { color: %(mute)s; }
-
 .pill {
   display: inline-block; padding: 7px 15px; border-radius: 999px;
   border: 1px solid %(line)s; color: %(mute)s; font-size: 15px; margin-right: 10px;
 }
 .pill--accent { border-color: %(yours)s; color: %(yours)s; }
-
-/* Every animation is `both` and starts at zero, because frames are captured by setting
-   currentTime -- a negative delay would place a frame before the timeline and capture nothing. */
-[class*="anim-"] { animation-duration: .5s; animation-fill-mode: both; animation-timing-function:
-  cubic-bezier(.2,.7,.3,1); }
-@keyframes rise  { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes fade  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes dim   { from { opacity: 1; } to { opacity: .3; } }
-@keyframes out   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
-@keyframes wipe  { from { clip-path: inset(0 100%% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes grow  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.anim-rise { animation-name: rise; }
-.anim-fade { animation-name: fade; }
-.anim-dim  { animation-name: dim; }
-.anim-wipe { animation-name: wipe; }
-.anim-grow { animation-name: grow; transform-origin: left center; }
-""" % {**PALETTE, "W": W, "H": H}
+""" % PALETTE
 
 
 # ---------------------------------------------------------------------------------------------
@@ -317,81 +266,6 @@ COPY = {
         },
     },
 }
-
-
-FIXTURE_ROOT = ROOT / "tests" / "XafLogicExplainer.Tests" / "Fixtures" / "DemoSolution"
-
-
-def snippet(rel: str, anchor: str, lines: int, before: int = 0) -> list[str]:
-    """Lift real lines out of a fixture file, anchored on their text rather than their number.
-
-    Developers watching a technical video want to read actual code, and code invented for a
-    slide is the one thing on screen nothing keeps true. Anchoring on the text means a fixture
-    edit either still matches or fails the build here -- never silently shows the wrong lines.
-    """
-    source = (FIXTURE_ROOT / rel).read_text(encoding="utf-8").splitlines()
-    hits = [i for i, line in enumerate(source) if anchor in line]
-    if len(hits) != 1:
-        sys.exit(f"{rel}: {'no line' if not hits else f'{len(hits)} lines'} containing {anchor!r}")
-
-    start = max(0, hits[0] - before)
-    picked = source[start:start + lines]
-
-    # Dedent as a block, so relative indentation -- the only thing saying what is nested in
-    # what -- survives being taken out of its file.
-    pad = min((len(l) - len(l.lstrip()) for l in picked if l.strip()), default=0)
-    return [l[pad:] if l.strip() else "" for l in picked]
-
-
-def code_block(rel: str, code: list[str], delay: float, marks: tuple[str, ...] = (),
-               step: float = 0.28, size: int = 17) -> str:
-    """A file chip over its own lines, wiping in one at a time. `marks` get the accent."""
-    body = []
-    for i, line in enumerate(code):
-        text = escape(line)
-        for mark in marks:
-            # Whole tokens only. A bare replace lit up the "PropertyEditor" inside
-            # BarcodeScannerPropertyEditor and BlazorPropertyEditorBase, which reads as a
-            # rendering fault rather than as emphasis.
-            text = re.sub(rf"\b{re.escape(escape(mark))}\b",
-                          f'<span class="hit">{escape(mark)}</span>', text)
-        body.append(f'<div class="ln" {a("wipe", delay + 0.5 + i * step, 0.4)}>{text or "&nbsp;"}</div>')
-    return (f'<div class="src">'
-            f'<div class="src__path mono" {a("fade", delay, 0.5)}>{escape(rel)}</div>'
-            f'<div class="src__code mono" style="font-size:{size}px">{"".join(body)}</div></div>')
-
-
-CODE_CSS = """
-/* min-width:0, or a grid column sizes itself to the longest unwrappable code line and pushes
-   the whole scene off the right of the frame. */
-.src { border:1px solid %(line)s; background:%(panel)s; border-radius:13px; overflow:hidden;
-       min-width:0; }
-.src__path {
-  padding:11px 18px; font-size:14px; color:%(faint)s;
-  border-bottom:1px solid %(line)s; background:%(bg)s;
-}
-.src__code { padding:18px 20px; line-height:1.66; color:%(graphite_ink)s; position:relative; }
-.src__code .ln { white-space:pre; }
-/* Real code has real long lines -- the RuleCriteria on Prescription is one of them. A hard cut
-   mid-token reads as a broken render; a fade reads as "this line continues", which is true. */
-.src__code::after {
-  content:""; position:absolute; top:0; right:0; bottom:0; width:58px; pointer-events:none;
-  background:linear-gradient(to right, rgba(16,21,29,0), %(panel)s 82%%);
-}
-.src__code .hit { color:%(yours)s; font-weight:600; }
-""" % PALETTE
-
-
-def a(name: str, delay: float, dur: float = 0.5) -> str:
-    """The style attribute for one animation. Delays stagger; nothing is ever negative."""
-    return f'style="animation:{dur}s cubic-bezier(.2,.7,.3,1) {delay}s both {name}"'
-
-
-def a2(first: tuple[str, float, float], second: tuple[str, float, float]) -> str:
-    """Two animations on one element -- how a line leaves so the next one can have the space."""
-    parts = ", ".join(f"{dur}s cubic-bezier(.2,.7,.3,1) {delay}s both {name}"
-                      for name, delay, dur in (first, second))
-    return f'style="animation:{parts}"'
 
 
 # ---------------------------------------------------------------------------------------------
@@ -902,11 +776,6 @@ STILLS_WANTED = [
 
 # ---------------------------------------------------------------------------------------------
 
-def page(css: str, body: str) -> str:
-    return (f"<!doctype html>\n<html><head><meta charset=\"utf-8\">\n<style>\n{BASE_CSS}\n{css}\n"
-            f"</style></head>\n<body>{body}\n</body></html>\n")
-
-
 def recorded_seconds(lang: str, scene_id: str) -> float | None:
     """How long the take actually is, if one has been recorded."""
     for ext in AUDIO_EXTS:
@@ -973,19 +842,6 @@ def retime(guiones: dict) -> None:
         print()
 
 
-def test_count() -> str:
-    """Read the suite size off the README, which has a test of its own keeping it honest.
-
-    Typing it here would put a number on screen that nothing forces to stay true -- the exact
-    failure the video is about.
-    """
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    hits = set(re.findall(r"\*\*(\d[\d,]*) tests\*\*", readme))
-    if len(hits) != 1:
-        sys.exit(f"README.md: expected one '**N tests**' claim, found {sorted(hits) or 'none'}")
-    return hits.pop()
-
-
 def ensure_stills(page_obj) -> dict:
     """Capture the real report sections the evidence scenes pan over."""
     STILLS.mkdir(parents=True, exist_ok=True)
@@ -1030,48 +886,6 @@ def ensure_stills(page_obj) -> dict:
             stills[key] = {"width": image.width, "height": image.height,
                            "rel": path.relative_to(VIDEO).as_posix()}
     return stills
-
-
-def overflowing(page_obj) -> str:
-    """How far the scene's content runs past 1280x720, if it does.
-
-    A frame silently crops whatever does not fit, so a line of copy one word longer just goes
-    missing rather than looking wrong -- and it goes missing in a video, where nobody scrolls
-    back. The stage is a flex column, so the overflow lands on the stage, not on the body.
-    """
-    over = page_obj.evaluate(
-        """([w, h]) => {
-             const stage = document.querySelector('.stage');
-             // The evidence scene pans a capture that is deliberately taller than its window.
-             // Anything inside a clipping box is the design, not a spill, so skip those
-             // subtrees -- stopping the walk at the stage, since body itself hides overflow.
-             const clipped = e => {
-               for (let p = e.parentElement; p && p !== stage.parentElement; p = p.parentElement) {
-                 const o = getComputedStyle(p);
-                 if (o.overflow !== 'visible' || o.overflowY !== 'visible') return true;
-               }
-               return false;
-             };
-             let dx = 0, dy = 0;
-             for (const e of stage.querySelectorAll('*')) {
-               if (clipped(e)) continue;
-               const r = e.getBoundingClientRect();
-               dx = Math.max(dx, r.right - w);
-               dy = Math.max(dy, r.bottom - h);
-             }
-             return [Math.round(Math.max(0, dx)), Math.round(Math.max(0, dy))];
-           }""", [W, H])
-    dx, dy = over
-    bits = [f"{dx}px right"] if dx > 1 else []
-    bits += [f"{dy}px below"] if dy > 1 else []
-    return " and ".join(bits)
-
-
-def freeze(page_obj, seconds: float) -> None:
-    """Put every animation at exactly `seconds`, so a frame never depends on wall-clock time."""
-    page_obj.evaluate(
-        "t => document.getAnimations().forEach(a => { a.pause(); a.currentTime = t * 1000; })",
-        seconds)
 
 
 def main() -> None:
@@ -1123,7 +937,7 @@ def main() -> None:
                 ctx = {"seconds": seconds[scene_id], "stills": stills, "tests": tests}
                 css, body = build(COPY[lang][scene_id], ctx)
                 html = SCENES / lang / f"{scene_id}.html"
-                html.write_text(page(css, body), encoding="utf-8")
+                html.write_text(page(BASE_CSS, css, body), encoding="utf-8")
 
                 page_obj.goto(html.as_uri())
                 page_obj.wait_for_timeout(120)
@@ -1131,7 +945,7 @@ def main() -> None:
                 poster = POSTERS / lang / f"{scene_id}.png"
                 page_obj.screenshot(path=str(poster))
 
-                spill = overflowing(page_obj)
+                spill = overflowing(page_obj, W, H)
                 mark = f"  SPILLS {spill}" if spill else ""
                 print(f"  {scene_id:<16} {seconds[scene_id]:>3}s  "
                       f"{poster.relative_to(VIDEO)}{mark}")
@@ -1212,34 +1026,6 @@ def assemble(lang: str, order: list[str]) -> None:
     narration = f"{voiced}/{len(order)} scenes voiced" if voiced else "silent — no takes yet"
     print(f"  {out.relative_to(VIDEO)}  {int(total // 60)}:{total % 60:04.1f}  "
           f"{out.stat().st_size:,} bytes  ({narration})")
-
-
-def render(page_obj, html: pathlib.Path, out: pathlib.Path, seconds: float) -> None:
-    """Frame by frame, then ffmpeg. Slow on purpose: deterministic beats fast for an artefact
-    that gets re-rendered every time the copy changes."""
-    if shutil.which("ffmpeg") is None:
-        sys.exit("--video needs ffmpeg on PATH")
-
-    out.parent.mkdir(parents=True, exist_ok=True)
-    frames = out.parent / f".{out.stem}-frames"
-    if frames.exists():
-        shutil.rmtree(frames)
-    frames.mkdir()
-
-    page_obj.goto(html.as_uri())
-    page_obj.wait_for_timeout(120)
-    total = int(seconds * FPS)
-    for i in range(total):
-        freeze(page_obj, i / FPS)
-        page_obj.screenshot(path=str(frames / f"{i:05d}.png"))
-
-    subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS),
-         "-i", str(frames / "%05d.png"), "-c:v", "libx264", "-pix_fmt", "yuv420p",
-         "-crf", "17", "-preset", "slow", str(out)],
-        check=True)
-    shutil.rmtree(frames)
-    print(f"    -> {out.relative_to(VIDEO)}  {out.stat().st_size:,} bytes  ({total} frames)")
 
 
 if __name__ == "__main__":

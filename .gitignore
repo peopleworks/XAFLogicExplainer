@@ -101,3 +101,5 @@ site/.report.html
 # ---------------------------------------------------------------------------
 docs/Blog/video/render/
 docs/Blog/video/.report.html
+__pycache__/
+*.pyc
