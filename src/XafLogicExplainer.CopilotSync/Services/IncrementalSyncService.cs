@@ -68,7 +68,6 @@ public class IncrementalSyncService
         onProgress?.Invoke("Extracting project logic...");
         extractionOptions ??= new ExtractionOptions
         {
-            BaseTypeNames = ["XPCustomObject", "BaseObject", "XPObject", "XPLiteObject", "PermissionPolicyUser"],
             IncludeSourceCode = true,
             IncludeMethodBodies = true,
             IncludeComments = true,
