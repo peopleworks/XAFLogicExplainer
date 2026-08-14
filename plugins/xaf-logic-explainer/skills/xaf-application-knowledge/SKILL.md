@@ -17,7 +17,7 @@ compatibility: >-
   text and never compiles the target project.
 metadata:
   author: PeopleWorks
-  version: "0.12.1"
+  version: "0.13.0"
   repository: https://github.com/peopleworks/XAFLogicExplainer
 ---
 

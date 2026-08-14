@@ -7,7 +7,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-08-14
+
+The entities an application actually has, and all of the columns they actually persist.
+
+Every fix here came from outside. [@MBrekhof](https://github.com/MBrekhof) read the code before
+filing, separated the reports by *cause* rather than by symptom, and kept finding the next one in
+the review of the last — three issues and five pull requests, each of which turned out to be a
+different way of asking the same question: what is this tool entitled to call an entity, and what
+is it entitled to leave out.
+
+The number that measures it, against the demos DevExpress ships with 26.1 rather than against our
+own fixtures: `FeatureCenter.NET.XPO` **43 → 140** entities, `MainDemo.NET.XPO` 14 → 17,
+`OutlookInspiredDemo.NET.EFCore` 23 → 24. Anyone evaluating this tool by pointing it at
+FeatureCenter was seeing under a third of it — under an `AGENTS.md` telling their agent the
+inventory was complete. That shape is the one thing this project exists to prevent, and it was
+happening in the place a newcomer was most likely to look.
+
+A minor rather than a patch: `OrmType.Unknown` is a new member on a public enum and
+`ExtractionOptions.BaseTypeNames` changed its default. Neither affects the CLI or the MCP server;
+both are breaking for code calling `XafLogicExplainer.Core` directly.
+
 ### Changed
+
+- **`OrmType.Unknown` is a new member of a public enum**, returned whenever no evidence names an
+  ORM. Anyone consuming `XafLogicExplainer.Core` directly and switching exhaustively over
+  `OrmType` has a new case to handle; anyone using the CLI or the MCP server has nothing to do.
+  The same note `IControllerAnalyzer.AnalyzeControllerFile` got in 0.12.0, for the same reason —
+  on 0.x this is what a minor is for.
 
 - **`ExtractionOptions.BaseTypeNames` is the single source of the list.** The CLI, the MCP server
   and the test harness each passed their own copy, so the default in `Core` was four names while
@@ -580,7 +607,8 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.1
 [0.12.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.0
 [0.11.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.11.0
