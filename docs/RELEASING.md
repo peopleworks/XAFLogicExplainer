@@ -22,9 +22,19 @@ for that owner. All three IDs were free as of 2026-08-10.
 
 ## Cutting a release
 
-1. **Bump the version in two places.** They are checked against the tag and against each other:
-   - `Directory.Build.props` → `<Version>`
-   - `src/XafLogicExplainer.Mcp/.mcp/server.json` → `version` **and** `packages[0].version`
+1. **Bump the version in five files — six strings.** `StatesTheSameVersionEverywhereItIsWritten`
+   checks all of them against the built assembly, and the pack job checks the manifest against the
+   tag:
+   - `Directory.Build.props` → `<Version>` — the one everything else is compared to
+   - `src/XafLogicExplainer.Mcp/.mcp/server.json` → `version` **and** `packages[0].version`; the
+     second is what the MCP registry resolves to on nuget.org. Keep the file free of a BOM
+   - `plugins/xaf-logic-explainer/.claude-plugin/plugin.json` → `version`
+   - `plugins/xaf-logic-explainer/skills/xaf-application-knowledge/SKILL.md` → `version`
+   - `README.md` → the `**vx.y.z.**` that opens the Status section
+
+   The last three are neither built nor packed, so nothing but that test forces them to move. Both
+   plugin files sat at 0.9.0 through two releases, telling anyone who installed the plugin they had
+   a version that no longer existed.
 2. **Move the CHANGELOG's `[Unreleased]` content** under a new `## [x.y.z] — <date>` heading, and
    update the link definitions at the bottom.
 3. Merge to `main` and confirm CI is green.

@@ -29,13 +29,20 @@ public class ReadmeClaimsTests
         // or released — nothing has ever forced them to move. Both sat at 0.9.0 through two
         // releases, telling anyone who installed the plugin they had a version that no longer
         // existed.
+        //
+        // Every occurrence, not the first. `server.json` writes the version twice: once for the
+        // server and once for the NuGet package the registry resolves it to. Checking only the
+        // first passes a release whose registry entry advertises a package version that was never
+        // published — and it is the second one, further down a file nobody rereads.
         foreach (var (file, pattern) in Manifests)
         {
             var text = File.ReadAllText(Path.Combine(RepositoryRoot, file));
-            var match = Regex.Match(text, pattern);
+            var matches = Regex.Matches(text, pattern);
 
-            Assert.True(match.Success, $"No version found in {file}.");
-            Assert.Equal(actual, match.Groups[1].Value);
+            Assert.True(matches.Count > 0, $"No version found in {file}.");
+
+            foreach (var match in matches.Cast<Match>())
+                Assert.Equal(actual, match.Groups[1].Value);
         }
     }
 
