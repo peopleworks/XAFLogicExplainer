@@ -72,6 +72,16 @@ public class ExtractedEntity
     public bool IsPersistent { get; set; } = true;
 
     /// <summary>
+    /// Whether the class is declared <c>abstract</c>.
+    /// </summary>
+    /// <remarks>
+    /// An abstract base appears in the inventory because its descendants are found through it, but
+    /// it is not itself something a user opens. Once its properties are folded into every
+    /// descendant, a renderer needs this to say which heading is a table and which is a convention.
+    /// </remarks>
+    public bool IsAbstract { get; set; }
+
+    /// <summary>
     /// Scalar and collection properties discovered in source.
     /// </summary>
     public List<ExtractedProperty> Properties { get; set; } = [];
@@ -121,6 +131,31 @@ public class ExtractedProperty
     /// Property name.
     /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The class that declared this property, when it is not the entity listing it.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> for a property the entity declares itself. Knowing <c>ChangedOn</c> comes from
+    /// a shared audit base and not from the entity is worth something to a reader — it is usually
+    /// how they learn the property is not theirs to set.
+    /// </remarks>
+    public string? InheritedFrom { get; set; }
+
+    /// <summary>
+    /// A copy this property's declarer does not share.
+    /// </summary>
+    /// <remarks>
+    /// Folding lists the same declared property under every descendant, and each listing carries
+    /// its own <see cref="InheritedFrom"/>. Stamping that on a shared instance would rewrite the
+    /// declaring entity's own listing.
+    /// </remarks>
+    public ExtractedProperty Clone()
+    {
+        var copy = (ExtractedProperty)MemberwiseClone();
+        copy.CustomAttributes = [.. CustomAttributes];
+        return copy;
+    }
 
     /// <summary>
     /// Declared CLR type text.
