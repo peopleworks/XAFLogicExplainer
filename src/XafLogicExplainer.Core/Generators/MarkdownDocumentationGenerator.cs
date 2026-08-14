@@ -782,7 +782,16 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 if (!string.IsNullOrEmpty(entity.Description))
                     sb.AppendLine($"*{entity.Description}*");
                 sb.AppendLine();
-                sb.AppendLine($"- **{_l.MainProperties}:** {string.Join(", ", entity.Properties.Where(p => !p.IsCollection && p.VisibleInListView).Take(8).Select(p => p.Name))}");
+
+                // Own columns first: eight slots shared with a base the whole application derives
+                // from would otherwise name the base's columns under every entity in the menu.
+                var main = entity.Properties
+                    .Where(p => !p.IsCollection && p.VisibleInListView)
+                    .OrderByDescending(p => p.InheritedFrom is null)
+                    .Take(8)
+                    .Select(p => p.Name);
+
+                sb.AppendLine($"- **{_l.MainProperties}:** {string.Join(", ", main)}");
                 if (entity.Relationships.Count > 0)
                     sb.AppendLine($"- **{_l.Relationships}:** {string.Join(", ", entity.Relationships.Select(r => $"{r.PropertyName}→{r.RelatedEntity}"))}");
                 sb.AppendLine();

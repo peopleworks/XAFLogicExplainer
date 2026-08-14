@@ -40,6 +40,10 @@ internal static class SampleProjects
     /// <summary>Path to the XPO fixture whose entities derive through a shared base.</summary>
     public static string DeepXpoPath => Path.Combine(FixturesRoot, "DeepXpoSolution", "SampleDeep.Module");
 
+    /// <summary>Path to the XPO fixture whose audit base is wider than its entities.</summary>
+    public static string AuditedXpoPath =>
+        Path.Combine(FixturesRoot, "AuditedXpoSolution", "SampleAudited.Module");
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 
@@ -96,6 +100,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyNoOrm = new(() => Extract(NoOrmPath));
 
     private static readonly Lazy<ExtractedProject> LazyDeepXpo = new(() => Extract(DeepXpoPath));
+    private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -121,6 +126,16 @@ internal static class SampleProjects
 
     /// <summary>An XPO application whose entities reach BaseObject through a shared base.</summary>
     public static ExtractedProject DeepXpo => LazyDeepXpo.Value;
+
+    /// <summary>
+    /// An XPO application on an audit base wider than the entities that derive from it.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="DeepXpo"/>, which asserts exact property lists on a base holding
+    /// a single column. What this fixture is for is the opposite proportion — the one where a
+    /// summary of fixed width has to choose between an entity's columns and its base's.
+    /// </remarks>
+    public static ExtractedProject AuditedXpo => LazyAuditedXpo.Value;
 
     /// <summary>
     /// The fourteen-entity demo, with a custom editor in a sibling platform project.
