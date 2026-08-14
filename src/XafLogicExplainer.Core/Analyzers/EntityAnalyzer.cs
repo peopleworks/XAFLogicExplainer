@@ -45,7 +45,7 @@ public class EntityAnalyzer : IEntityAnalyzer
             : options.Orm;
         options.ResolvedOrm = ormType;
 
-        var persistent = SelectPersistentClasses(parsedFiles.Select(parsed => parsed.Root), roster, options);
+        var (persistent, parents) = SelectPersistentClasses(parsedFiles.Select(parsed => parsed.Root), roster, options);
 
         foreach (var (file, root) in parsedFiles)
         {
@@ -66,6 +66,11 @@ public class EntityAnalyzer : IEntityAnalyzer
         // Post-extraction: infer EF Core relationships from navigation properties
         if (ormType == OrmType.EfCore)
             InferEfCoreRelationships(entities);
+
+        // After the merge, so a parent's property set is complete before it is folded into anyone;
+        // after relationship inference, so inherited navigation properties do not repeat the
+        // parent's relationships under every descendant.
+        FoldInheritedProperties(entities, parents);
 
         return entities;
     }
@@ -90,6 +95,7 @@ public class EntityAnalyzer : IEntityAnalyzer
             IsPersistent = !HasAttribute(classDecl, "NonPersistent")
                            && !HasAttribute(classDecl, "DomainComponent")
                            && !HasAttribute(classDecl, "NotMapped"),
+            IsAbstract = classDecl.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.AbstractKeyword)),
         };
 
         // Extract properties
@@ -500,8 +506,9 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// generated part that carries the mapping are the same class.
     /// </para>
     /// </remarks>
-    private static HashSet<(string Namespace, string Name)> SelectPersistentClasses(
-        IEnumerable<SyntaxNode> roots, DbSetRoster roster, ExtractionOptions options)
+    private static (HashSet<(string Namespace, string Name)> Accepted,
+        Dictionary<(string Namespace, string Name), (string Namespace, string Name)> Parents)
+        SelectPersistentClasses(IEnumerable<SyntaxNode> roots, DbSetRoster roster, ExtractionOptions options)
     {
         var trees = roots.ToList();
         var globalUsings = GlobalUsings(trees);
@@ -559,7 +566,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                 if (accepted.Contains((candidate.Namespace, candidate.Name)))
                     continue;
 
-                if (!DerivesFromAccepted(candidate.Declaration, candidate.Scopes, accepted))
+                if (ResolveBase(candidate.Declaration, candidate.Scopes, accepted) is null)
                     continue;
 
                 accepted.Add((candidate.Namespace, candidate.Name));
@@ -568,18 +575,34 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
         while (changed);
 
-        return accepted;
+        // The walk just resolved every class's ancestry; keeping the edge is what lets inherited
+        // properties be folded later without resolving anything a second time. Computed after the
+        // fixed point, because a parent may be accepted rounds after the class deriving from it.
+        var parents = new Dictionary<(string Namespace, string Name), (string Namespace, string Name)>();
+
+        foreach (var candidate in candidates)
+        {
+            if (!accepted.Contains((candidate.Namespace, candidate.Name)))
+                continue;
+
+            // Only one part of a partial class declares the base list; the parts that declare
+            // none must not erase the edge that part resolved.
+            if (ResolveBase(candidate.Declaration, candidate.Scopes, accepted) is { } parent)
+                parents.TryAdd((candidate.Namespace, candidate.Name), parent);
+        }
+
+        return (accepted, parents);
     }
 
     /// <summary>
-    /// Whether any name in this class's base list resolves to a class already accepted.
+    /// The accepted class a name in this class's base list resolves to, if any.
     /// </summary>
     /// <remarks>
     /// Every entry is tried rather than the first, because syntax cannot tell a base class from an
     /// interface. An interface name only matches if a class of that name was itself accepted, which
     /// an interface never is.
     /// </remarks>
-    private static bool DerivesFromAccepted(
+    private static (string Namespace, string Name)? ResolveBase(
         ClassDeclarationSyntax classDecl,
         HashSet<string> scopes,
         HashSet<(string Namespace, string Name)> accepted)
@@ -601,7 +624,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                 if (dot < 0)
                 {
                     // Unqualified: it named something this file can actually see.
-                    if (scopes.Contains(@namespace)) return true;
+                    if (scopes.Contains(@namespace)) return (@namespace, name);
                     continue;
                 }
 
@@ -609,11 +632,11 @@ public class EntityAnalyzer : IEntityAnalyzer
                 var qualifier = written[..dot];
                 if (@namespace.Equals(qualifier, StringComparison.Ordinal)
                     || @namespace.EndsWith("." + qualifier, StringComparison.Ordinal))
-                    return true;
+                    return (@namespace, name);
             }
         }
 
-        return false;
+        return null;
     }
 
     /// <summary>
@@ -913,6 +936,8 @@ public class EntityAnalyzer : IEntityAnalyzer
                 primary.SourceProject ??= entity.SourceProject;
                 primary.IsDefaultClassOptions |= entity.IsDefaultClassOptions;
                 primary.IsCloneable |= entity.IsCloneable;
+                // `abstract` need only be written on one part to be true of the class.
+                primary.IsAbstract |= entity.IsAbstract;
 
                 // Non-persistent anywhere means non-persistent: one part saying so is the class.
                 primary.IsPersistent &= entity.IsPersistent;
@@ -935,6 +960,72 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
 
         return merged;
+    }
+
+    /// <summary>
+    /// Folds each ancestor's properties into the entities that inherit them.
+    /// </summary>
+    /// <remarks>
+    /// An entity holding only what it declares itself is an inventory with most of its columns
+    /// under other headings — or, for a shared audit base, missing from every entity at once. The
+    /// inherited properties are persisted, appear in views, and are readable from any code an
+    /// agent writes; a document that promises completeness has to carry them where the reader
+    /// looks.
+    /// <para>
+    /// Ancestors first, so the properties read in declaration order from the root down, the way
+    /// they do in the class. A property the class redeclares is its own: the inherited one is not
+    /// added beside it. Each fold works on a copy, because the same declared property is listed
+    /// under every descendant and each listing names its own declarer.
+    /// </para>
+    /// </remarks>
+    private static void FoldInheritedProperties(
+        List<ExtractedEntity> entities,
+        Dictionary<(string Namespace, string Name), (string Namespace, string Name)> parents)
+    {
+        var byClass = entities.ToDictionary(entity => (entity.Namespace, entity.ClassName));
+        var folded = new HashSet<(string Namespace, string Name)>();
+
+        foreach (var entity in entities)
+            Fold(entity, byClass, parents, folded);
+    }
+
+    /// <summary>
+    /// Folds one entity's ancestry into it, folding the parent first so a chain of any depth
+    /// arrives complete.
+    /// </summary>
+    private static void Fold(
+        ExtractedEntity entity,
+        Dictionary<(string Namespace, string Name), ExtractedEntity> byClass,
+        Dictionary<(string Namespace, string Name), (string Namespace, string Name)> parents,
+        HashSet<(string Namespace, string Name)> folded)
+    {
+        var key = (entity.Namespace, entity.ClassName);
+
+        // Marked before recursing, which both memoizes the walk and stops it if malformed source
+        // ever declares a circular base list.
+        if (!folded.Add(key))
+            return;
+
+        if (!parents.TryGetValue(key, out var parentKey) || !byClass.TryGetValue(parentKey, out var parent))
+            return;
+
+        Fold(parent, byClass, parents, folded);
+
+        var own = entity.Properties.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+        var inherited = new List<ExtractedProperty>();
+
+        foreach (var property in parent.Properties)
+        {
+            if (own.Contains(property.Name))
+                continue;
+
+            var copy = property.Clone();
+            // The declarer, not the parent: what the parent itself inherited keeps its origin.
+            copy.InheritedFrom ??= parent.ClassName;
+            inherited.Add(copy);
+        }
+
+        entity.Properties.InsertRange(0, inherited);
     }
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)
