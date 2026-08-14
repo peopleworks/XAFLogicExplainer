@@ -278,9 +278,15 @@ public sealed class AgentContextGenerator
 
         foreach (var entity in project.Entities.OrderBy(e => e.ClassName, StringComparer.Ordinal))
         {
+            // What the entity declares comes first. The full list keeps the order the class reads
+            // in, root down, but five slots shared with a shared base spend them all on the base:
+            // every row of an audited application then names the same audit columns and none of
+            // the columns that tell one entity from another. A row that cannot discriminate is
+            // what this table exists to do.
             var notable = entity.Properties
                 .Where(p => !p.IsCollection)
-                .OrderByDescending(p => p.IsKey)
+                .OrderByDescending(p => p.InheritedFrom is null)
+                .ThenByDescending(p => p.IsKey)
                 .ThenByDescending(p => p.IsRequired)
                 .ThenByDescending(p => p.IsComputed)
                 .Take(5)

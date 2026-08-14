@@ -56,6 +56,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   was added for. `FeatureCenter.NET.XPO` gains `OidGenerator`, `NoKeyPropertyNamedBaseObject` and
   `LayoutDemoObject`.
 
+- **An entity carries the properties it inherits.** A class found through a base declared in the
+  same project was reported with only the columns it declares itself: `PriorityOrder` listed
+  `Rank` and omitted the `Name` and `Number` it persists. Finding those classes at all is what
+  0.12.1 was about, and it converted a silent omission into a stated one — the entity now appeared
+  under a heading presenting the application's tables, with two thirds of its columns absent, in a
+  document that tells an agent its inventories are complete. At scale it is the shared base that
+  hurts: an application on an `AuditedObject` lost whatever that base holds from *every* entity,
+  which is normally the audit fields an agent most needs to know it must not set by hand. Each
+  entity now folds in its ancestors' properties in declaration order from the root down, each
+  marked with the class that declared it; a property the class redeclares stays its own, and the
+  abstract base is marked as abstract. `FeatureCenter.NET.XPO` folds 151 properties over 146
+  entities, `MainDemo.NET.XPO` 26 over 17 — where `Employee` reaches `Photo` through `Person` and
+  is correctly told it comes from `Party`.
+
+  Summaries of fixed width name an entity's **own** columns first. The full listings read root
+  down, the way the class does, but a five-slot table sharing its width with a six-column audit
+  base spends every slot on the base — and then every row of the entity table names the same
+  columns and none of the ones that tell one entity from another. Rules and associations an entity
+  inherits are still listed only under the class that declares them (#14).
+
 ## [0.12.1] — 2026-08-13
 
 Entities the application declares, rather than the ones that inherit from the right class.
