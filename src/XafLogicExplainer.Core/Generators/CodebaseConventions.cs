@@ -116,16 +116,24 @@ public sealed class CodebaseConventions
             // Both halves of a validation rule. The expression is what must be true; the target
             // criteria is when the rule applies at all -- and only the second was gathered, so the
             // expression a user actually hits was missing from the index.
-            foreach (var rule in entity.ValidationRules.Where(r => !string.IsNullOrWhiteSpace(r.Expression)))
+            //
+            // Where declared. The list is deduplicated by expression anyway, but it keeps one
+            // example each and names where it came from: taken from a folded rule, that name would
+            // be whichever descendant happened to sort first rather than the class that wrote it.
+            var declared = entity.ValidationRules.Where(r => r.InheritedFrom is null).ToList();
+
+            foreach (var rule in declared.Where(r => !string.IsNullOrWhiteSpace(r.Expression)))
                 found.Add(new CriteriaExample(rule.Expression!, $"{entity.ClassName} validation ({rule.RuleType})"));
 
-            foreach (var rule in entity.ValidationRules.Where(r => !string.IsNullOrWhiteSpace(r.TargetCriteria)))
+            foreach (var rule in declared.Where(r => !string.IsNullOrWhiteSpace(r.TargetCriteria)))
                 found.Add(new CriteriaExample(rule.TargetCriteria!, $"{entity.ClassName} validation applies when"));
 
-            foreach (var rule in entity.AppearanceRules.Where(r => !string.IsNullOrWhiteSpace(r.Criteria)))
+            foreach (var rule in entity.AppearanceRules.Where(r =>
+                         r.InheritedFrom is null && !string.IsNullOrWhiteSpace(r.Criteria)))
                 found.Add(new CriteriaExample(rule.Criteria!, $"{entity.ClassName} appearance ({rule.Id})"));
 
-            foreach (var prop in entity.Properties.Where(p => !string.IsNullOrWhiteSpace(p.DataSourceCriteria)))
+            foreach (var prop in entity.Properties.Where(p =>
+                         p.InheritedFrom is null && !string.IsNullOrWhiteSpace(p.DataSourceCriteria)))
                 found.Add(new CriteriaExample(prop.DataSourceCriteria!, $"{entity.ClassName}.{prop.Name} lookup filter"));
         }
 

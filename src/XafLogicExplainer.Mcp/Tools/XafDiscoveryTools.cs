@@ -141,7 +141,11 @@ public sealed class XafDiscoveryTools
 
             if (Wanted("property"))
             {
-                foreach (var property in entity.Properties.Where(p => Matches(p.Name) || Matches(p.Description)))
+                // Where declared, for the same reason as the rules below: since entities carry the
+                // columns they inherit, searching an audit base's column name returned one hit per
+                // class in the application and buried everything else in the result.
+                foreach (var property in entity.Properties.Where(p =>
+                             p.InheritedFrom is null && (Matches(p.Name) || Matches(p.Description))))
                 {
                     var computed = string.IsNullOrWhiteSpace(property.PersistentAlias)
                         ? ""
@@ -152,11 +156,19 @@ public sealed class XafDiscoveryTools
 
             if (Wanted("rule"))
             {
+                // Searched by identifier and by the condition too: a rule is usually looked for by
+                // the name an error message carried, or by the column an expression mentions.
+                //
+                // Where declared, so a search returns the rule and not the class hierarchy under
+                // it: one rule on an audit base would otherwise fill the results by itself.
                 foreach (var rule in entity.ValidationRules.Where(r =>
-                             Matches(r.RuleType) || Matches(r.TargetProperty) ||
-                             Matches(r.MessageTemplate) || Matches(r.TargetCriteria)))
+                             r.InheritedFrom is null &&
+                             (Matches(r.RuleType) || Matches(r.TargetProperty) ||
+                              Matches(r.MessageTemplate) || Matches(r.TargetCriteria) ||
+                              Matches(r.Id) || Matches(r.Expression))))
                 {
-                    hits.Add($"**rule** `{entity.ClassName}` {rule.RuleType} on `{rule.TargetProperty}` — {Compact(rule.MessageTemplate)}");
+                    var says = rule.MessageTemplate ?? rule.Expression;
+                    hits.Add($"**rule** `{entity.ClassName}` {rule.RuleType} on `{rule.TargetProperty}` — {Compact(says)}");
                 }
             }
         }

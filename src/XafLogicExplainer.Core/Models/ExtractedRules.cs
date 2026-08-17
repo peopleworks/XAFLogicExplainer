@@ -11,6 +11,28 @@ public class ExtractedValidationRule
     public string RuleType { get; set; } = string.Empty;
 
     /// <summary>
+    /// The rule's identifier, when the attribute was given one.
+    /// </summary>
+    /// <remarks>
+    /// It is how a rule is referred to everywhere outside the source — in the Model Editor, in a
+    /// validation error a user reports, in the sentence a developer writes about it. It was read,
+    /// but only into <see cref="Parameters"/> under the key <c>arg0</c>, which is where the
+    /// renderers found it and printed it that way.
+    /// </remarks>
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// The validation contexts the rule belongs to, as written.
+    /// </summary>
+    /// <remarks>
+    /// Almost always <c>DefaultContexts.Save</c>. The interesting case is the other one: a rule
+    /// declared in a context of the application's own fires only where that context is validated,
+    /// so a reader who assumes every rule runs on save is wrong about it in the direction that
+    /// matters — believing something is enforced when it is not.
+    /// </remarks>
+    public string? Contexts { get; set; }
+
+    /// <summary>
     /// Target property name when rule is property-scoped.
     /// </summary>
     public string? TargetProperty { get; set; }
@@ -41,6 +63,24 @@ public class ExtractedValidationRule
     /// Additional raw rule arguments captured as key/value pairs.
     /// </summary>
     public Dictionary<string, string> Parameters { get; set; } = [];
+
+    /// <summary>
+    /// The class that declared this rule, when it is not the entity listing it.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> for a rule the entity declares itself. A rule declared on a shared base is
+    /// enforced when any descendant is saved, so it belongs under each of them; where it was
+    /// written is what tells a reader that changing it changes the whole application.
+    /// </remarks>
+    public string? InheritedFrom { get; set; }
+
+    /// <summary>A copy this rule's declarer does not share.</summary>
+    public ExtractedValidationRule Clone()
+    {
+        var copy = (ExtractedValidationRule)MemberwiseClone();
+        copy.Parameters = new Dictionary<string, string>(Parameters);
+        return copy;
+    }
 }
 
 /// <summary>
@@ -87,6 +127,19 @@ public class ExtractedAppearanceRule
     /// Font color override value.
     /// </summary>
     public string? FontColor { get; set; }
+
+    /// <summary>
+    /// The class that declared this rule, when it is not the entity listing it.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> for a rule the entity declares itself. An appearance rule on a base greys the
+    /// same field on every screen below it, which is a thing a reader of one screen has no other
+    /// way to learn.
+    /// </remarks>
+    public string? InheritedFrom { get; set; }
+
+    /// <summary>A copy this rule's declarer does not share.</summary>
+    public ExtractedAppearanceRule Clone() => (ExtractedAppearanceRule)MemberwiseClone();
 }
 
 /// <summary>

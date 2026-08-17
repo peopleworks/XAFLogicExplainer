@@ -113,6 +113,64 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         return sections;
     }
 
+    /// <summary>Says which class a folded declaration came from, for a line that has room.</summary>
+    private string Declarer(string? inheritedFrom)
+        => inheritedFrom is { Length: > 0 } ? $" — {Inherited(inheritedFrom)}" : "";
+
+    /// <summary>Says which class a folded declaration came from, for a cell that has none.</summary>
+    private string Inherited(string declarer) => $"{L("heredado de", "inherited from")} `{declarer}`";
+
+    /// <summary>
+    /// Names a validation rule the way the rest of the application does, when it was named.
+    /// </summary>
+    /// <remarks>
+    /// The identifier is what a validation error carries and what the Model Editor lists it under,
+    /// so it is how a reader gets from this line back to the thing itself.
+    /// <para>
+    /// The contexts are shown only when they are not the ordinary save, because on the ordinary
+    /// save they are true of nearly every rule and say nothing. When they are anything else they
+    /// are the whole story: the rule does not run where a reader would assume it does.
+    /// </para>
+    /// </remarks>
+    private string RuleName(ExtractedValidationRule rule)
+    {
+        var id = rule.Id is { Length: > 0 } ? $" `{rule.Id}`" : "";
+
+        var unusualContext = rule.Contexts is { Length: > 0 } contexts
+                             && contexts is not ("DefaultContexts.Save" or "Save");
+
+        return unusualContext ? $"{id} ({L("contexto", "context")} `{rule.Contexts}`)" : id;
+    }
+
+    /// <summary>
+    /// Says what a validation rule enforces and what the user is told when it fires.
+    /// </summary>
+    /// <remarks>
+    /// This printed the attribute's raw arguments — <c>arg0=Sale_TotalNotNegative,
+    /// arg1=DefaultContexts.Save</c> — because those were the only fields the reader of an
+    /// attribute filled in. Anything still unrecognised is kept, by value: dropping it would trade
+    /// one unreadable rendering for a silently incomplete one, and <c>RuleRange</c>'s bounds are
+    /// exactly the kind of argument that lives there.
+    /// </remarks>
+    private string DescribeRule(ExtractedValidationRule rule)
+    {
+        var known = new[] { rule.Id, rule.Contexts, rule.Expression, rule.MessageTemplate, rule.TargetCriteria };
+        var parts = new List<string>();
+
+        if (rule.Expression is { Length: > 0 }) parts.Add($"`{rule.Expression}`");
+
+        parts.AddRange(rule.Parameters
+            .Where(p => !known.Contains(p.Value, StringComparer.Ordinal))
+            .Select(p => p.Key.StartsWith("arg", StringComparison.Ordinal) ? p.Value : $"{p.Key}={p.Value}"));
+
+        if (rule.MessageTemplate is { Length: > 0 }) parts.Add($"“{rule.MessageTemplate}”");
+        if (rule.TargetCriteria is { Length: > 0 }) parts.Add($"{_l.When} `{rule.TargetCriteria}`");
+
+        // Empty rather than "no arguments": a [RuleRequiredField] whose id and contexts are
+        // already on the line has nothing further to say, and saying so reads as a gap.
+        return parts.Count > 0 ? $": {string.Join(" — ", parts)}" : "";
+    }
+
     /// <summary>
     /// Says what an appearance rule actually does, and on which screen.
     /// </summary>
@@ -369,9 +427,14 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
 
         sb.AppendLine($"## {_l.EntityRelationshipMap}");
         sb.AppendLine();
-        foreach (var entity in project.Entities.Where(e => e.Relationships.Count > 0))
+
+        // The map draws what each class declares. An association on a shared base is inherited by
+        // every entity below it and listed under each of them, which is true of the objects and
+        // wrong about the schema: one association drawn two hundred times is a map of the base
+        // class, not of the application.
+        foreach (var entity in project.Entities)
         {
-            foreach (var rel in entity.Relationships)
+            foreach (var rel in entity.Relationships.Where(r => r.InheritedFrom is null))
             {
                 var relSymbol = rel.Type == RelationshipType.OneToMany ? "1:N" : "N:1";
                 var aggLabel = rel.IsAggregated ? $" ({_l.Composition})" : "";
@@ -436,6 +499,11 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                     if (!string.IsNullOrEmpty(prop.DisplayFormat)) notes.Add($"{_l.Format}:{prop.DisplayFormat}");
                     if (!string.IsNullOrEmpty(prop.DefaultValue)) notes.Add($"{_l.Default}:{prop.DefaultValue}");
                     if (!string.IsNullOrEmpty(prop.DataSourceCriteria)) notes.Add($"{_l.Filter}:{prop.DataSourceCriteria}");
+                    // Which class the column comes from. It has been recorded since inherited
+                    // properties began being folded and shown by nothing since, so every entity
+                    // read as if it declared all of them -- and a reader who edits `CreatedOn`
+                    // here is editing it for the whole application.
+                    if (prop.InheritedFrom is { Length: > 0 }) notes.Add($"{Inherited(prop.InheritedFrom)}");
 
                     sb.AppendLine($"| `{prop.Name}` | `{prop.TypeName}` | {prop.Description ?? ""} | {(prop.IsRequired ? _l.Yes : "")} | {string.Join(", ", notes)} |");
                 }
@@ -446,11 +514,11 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             {
                 sb.AppendLine($"### {_l.Relationships}");
                 sb.AppendLine();
-                foreach (var rel in entity.Relationships)
+                foreach (var rel in entity.Relationships.OrderByDescending(r => r.InheritedFrom is null))
                 {
                     var relType = rel.Type == RelationshipType.OneToMany ? _l.OneToMany : _l.ManyToOne;
                     var aggLabel = rel.IsAggregated ? $" ({_l.CompositionAggregation})" : "";
-                    sb.AppendLine($"- **{rel.PropertyName}** -> `{rel.RelatedEntity}` ({relType}){aggLabel}");
+                    sb.AppendLine($"- **{rel.PropertyName}** -> `{rel.RelatedEntity}` ({relType}){aggLabel}{Declarer(rel.InheritedFrom)}");
                 }
                 sb.AppendLine();
             }
@@ -459,10 +527,10 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             {
                 sb.AppendLine($"### {_l.ValidationRules}");
                 sb.AppendLine();
-                foreach (var rule in entity.ValidationRules)
+                foreach (var rule in entity.ValidationRules.OrderByDescending(r => r.InheritedFrom is null))
                 {
                     var target = !string.IsNullOrEmpty(rule.TargetProperty) ? $" in `{rule.TargetProperty}`" : "";
-                    sb.AppendLine($"- **{rule.RuleType}**{target}: {rule.MessageTemplate ?? string.Join(", ", rule.Parameters.Select(p => $"{p.Key}={p.Value}"))}");
+                    sb.AppendLine($"- **{rule.RuleType}**{target}{RuleName(rule)}{DescribeRule(rule)}{Declarer(rule.InheritedFrom)}");
                 }
                 sb.AppendLine();
             }
@@ -471,9 +539,9 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             {
                 sb.AppendLine($"### {_l.AppearanceRules}");
                 sb.AppendLine();
-                foreach (var rule in entity.AppearanceRules)
+                foreach (var rule in entity.AppearanceRules.OrderByDescending(r => r.InheritedFrom is null))
                 {
-                    sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}");
+                    sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}{Declarer(rule.InheritedFrom)}");
                 }
                 sb.AppendLine();
             }
@@ -602,24 +670,28 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         sb.AppendLine($"# {project.ProjectName} - {_l.BusinessRules}");
         sb.AppendLine();
 
+        // This index lists each rule under the class that wrote it, once. The entity sections
+        // carry the same rule under everything that inherits it, which is what a reader of one
+        // entity needs; repeating it here as well would turn the application's rule set into a
+        // list whose length is a fact about its class hierarchy.
         sb.AppendLine($"## {_l.ValidationRules}");
         sb.AppendLine();
-        foreach (var entity in project.Entities.Where(e => e.ValidationRules.Count > 0))
+        foreach (var entity in project.Entities.Where(e => e.ValidationRules.Any(r => r.InheritedFrom is null)))
         {
             sb.AppendLine($"### {entity.ClassName}");
-            foreach (var rule in entity.ValidationRules)
+            foreach (var rule in entity.ValidationRules.Where(r => r.InheritedFrom is null))
             {
-                sb.AppendLine($"- {rule.RuleType}: {rule.TargetProperty ?? _l.ClassLevel} - {string.Join(", ", rule.Parameters.Select(p => $"{p.Key}={p.Value}"))}");
+                sb.AppendLine($"- {rule.RuleType}{RuleName(rule)} {L("en", "on")} {rule.TargetProperty ?? _l.ClassLevel}{DescribeRule(rule)}");
             }
             sb.AppendLine();
         }
 
         sb.AppendLine($"## {_l.ConditionalBehaviorRules}");
         sb.AppendLine();
-        foreach (var entity in project.Entities.Where(e => e.AppearanceRules.Count > 0))
+        foreach (var entity in project.Entities.Where(e => e.AppearanceRules.Any(r => r.InheritedFrom is null)))
         {
             sb.AppendLine($"### {entity.ClassName}");
-            foreach (var rule in entity.AppearanceRules)
+            foreach (var rule in entity.AppearanceRules.Where(r => r.InheritedFrom is null))
             {
                 sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}");
             }
@@ -633,7 +705,13 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             // Collections are association ends, not calculations. An XPO collection property is
             // getter-only, so it satisfied IsComputed and was filed under derived logic -- inviting
             // a reader to treat a persistent relationship as a formula.
-            var computed = entity.Properties.Where(p => p.IsComputed && !p.IsCollection).ToList();
+            //
+            // Declared here, like the rules above: one [PersistentAlias] on a shared base is one
+            // formula, and listing it under every descendant would describe the application as
+            // having as many calculations as it has classes.
+            var computed = entity.Properties
+                .Where(p => p.IsComputed && !p.IsCollection && p.InheritedFrom is null)
+                .ToList();
             if (computed.Count == 0) continue;
 
             sb.AppendLine($"### {entity.ClassName}");

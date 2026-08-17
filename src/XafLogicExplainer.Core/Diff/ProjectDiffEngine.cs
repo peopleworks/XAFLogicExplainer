@@ -106,9 +106,9 @@ public class ProjectDiffEngine
                 diff.ModifiedProperties.Add(propDiff);
         }
 
-        // Relationships
-        var prevRels = ToSafeDictionary(prev.Relationships, r => r.PropertyName);
-        var currRels = ToSafeDictionary(curr.Relationships, r => r.PropertyName);
+        // Relationships, as declared, for the same reason.
+        var prevRels = ToSafeDictionary(prev.Relationships.Where(r => r.InheritedFrom is null), r => r.PropertyName);
+        var currRels = ToSafeDictionary(curr.Relationships.Where(r => r.InheritedFrom is null), r => r.PropertyName);
 
         foreach (var name in currRels.Keys.Except(prevRels.Keys))
             diff.AddedRelationships.Add($"{name} -> {currRels[name].RelatedEntity} ({currRels[name].Type})");
@@ -116,18 +116,21 @@ public class ProjectDiffEngine
         foreach (var name in prevRels.Keys.Except(currRels.Keys))
             diff.RemovedRelationships.Add($"{name} -> {prevRels[name].RelatedEntity} ({prevRels[name].Type})");
 
-        // Validation rules
-        var prevRules = prev.ValidationRules.Select(FormatValidationRule).ToHashSet();
-        var currRules = curr.ValidationRules.Select(FormatValidationRule).ToHashSet();
+        // Validation rules, as declared. An entity carries the ones it inherits so that reading it
+        // tells the whole truth, but a change has one author: editing a rule on an audit base
+        // would otherwise be reported again under every entity in the application, burying the one
+        // line that says where it was actually changed.
+        var prevRules = prev.ValidationRules.Where(r => r.InheritedFrom is null).Select(FormatValidationRule).ToHashSet();
+        var currRules = curr.ValidationRules.Where(r => r.InheritedFrom is null).Select(FormatValidationRule).ToHashSet();
 
         foreach (var rule in currRules.Except(prevRules))
             diff.AddedValidationRules.Add(rule);
         foreach (var rule in prevRules.Except(currRules))
             diff.RemovedValidationRules.Add(rule);
 
-        // Appearance rules
-        var prevAppRules = prev.AppearanceRules.Select(r => r.Id).ToHashSet();
-        var currAppRules = curr.AppearanceRules.Select(r => r.Id).ToHashSet();
+        // Appearance rules, on the same terms.
+        var prevAppRules = prev.AppearanceRules.Where(r => r.InheritedFrom is null).Select(r => r.Id).ToHashSet();
+        var currAppRules = curr.AppearanceRules.Where(r => r.InheritedFrom is null).Select(r => r.Id).ToHashSet();
 
         foreach (var id in currAppRules.Except(prevAppRules))
             diff.AddedAppearanceRules.Add(id);

@@ -292,7 +292,11 @@ public sealed class AgentContextGenerator
                 .Take(5)
                 .Select(p => $"`{p.Name}`{PropertyMarkers(p)}");
 
+            // Own associations first, for the reason the properties beside them are ordered that
+            // way: four slots shared with a base every entity derives from spend them on the
+            // base's associations, and the row stops telling this entity apart from any other.
             var relationships = entity.Relationships
+                .OrderByDescending(r => r.InheritedFrom is null)
                 .Take(4)
                 .Select(r => $"{RelationshipArrow(r.Type)} `{r.RelatedEntity}`{(r.IsAggregated ? " (owned)" : "")}");
 

@@ -68,9 +68,10 @@ public class EntityAnalyzer : IEntityAnalyzer
             InferEfCoreRelationships(entities);
 
         // After the merge, so a parent's property set is complete before it is folded into anyone;
-        // after relationship inference, so inherited navigation properties do not repeat the
-        // parent's relationships under every descendant.
-        FoldInheritedProperties(entities, parents);
+        // after relationship inference, so an inherited navigation property is not inferred a
+        // second time under the descendant that received a copy of it — the fold carries the
+        // parent's relationship down itself, marked with the class that declared it.
+        FoldInheritance(entities, parents);
 
         return entities;
     }
@@ -400,38 +401,79 @@ public class EntityAnalyzer : IEntityAnalyzer
                 rule.Expression = argValue;
             else if (argName.Equals("TargetPropertyName", StringComparison.OrdinalIgnoreCase))
                 rule.TargetProperty = argValue;
+            else if (argName.Equals("Id", StringComparison.OrdinalIgnoreCase))
+                rule.Id = argValue;
+            else if (argName.Equals("TargetContextIDs", StringComparison.OrdinalIgnoreCase))
+                rule.Contexts = argValue;
         }
 
-        rule.Expression ??= PositionalCriteria(rule, args);
+        // After the named ones, which win: every assignment below is a fallback.
+        ApplyPositionalArguments(rule, args);
     }
 
     /// <summary>
-    /// The expression a <c>RuleCriteria</c> enforces, when it was passed positionally.
+    /// Reads the arguments a rule attribute was given by position into the fields they name.
     /// </summary>
     /// <remarks>
-    /// Its overloads put the criteria in different positions — <c>("Total &gt;= 0")</c>,
-    /// <c>("id", DefaultContexts.Save, "Total &gt;= 0")</c> — so the position cannot be hardcoded.
-    /// The last positional string <em>literal</em> is the criteria in every overload: the id comes
-    /// before it, and the contexts argument is an enum in the form people write.
+    /// Every <c>Rule*</c> overload that takes an identifier takes it first and the validation
+    /// contexts second, so those two slots can be read without knowing which attribute this is.
+    /// What follows them belongs to the rule itself.
+    /// <para>
+    /// Taking the last positional literal as the criteria — which is what this did — is right for
+    /// <c>("id", DefaultContexts.Save, "Total &gt;= 0")</c> and wrong for
+    /// <c>("id", DefaultContexts.Save, "Total &gt;= 0", "A sale total cannot be negative.")</c>:
+    /// the trailing literal there is the message shown to the user, so the field holding what the
+    /// rule enforces held the sentence explaining it instead, and the message field stayed empty.
+    /// Every fixture passed its message as <c>CustomMessageTemplate =</c>, so the whole suite
+    /// agreed with the wrong answer.
+    /// </para>
     /// </remarks>
-    private static string? PositionalCriteria(ExtractedValidationRule rule, SeparatedSyntaxList<AttributeArgumentSyntax> args)
+    private static void ApplyPositionalArguments(
+        ExtractedValidationRule rule, SeparatedSyntaxList<AttributeArgumentSyntax> args)
     {
-        if (!rule.RuleType.Contains("Criteria", StringComparison.Ordinal))
-            return null;
+        var positional = args.Where(arg => arg.NameEquals is null).ToList();
 
-        string? found = null;
-
-        foreach (var arg in args)
+        // One argument leaves no room for an identifier before it, so it is the rule's own.
+        if (positional.Count < 2)
         {
-            if (arg.NameEquals is not null)
-                break;
+            if (positional.Count == 1 && IsCriteriaRule(rule))
+                rule.Expression ??= StringLiteral(positional[0]);
 
-            if (arg.Expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
-                found = literal.Token.ValueText;
+            return;
         }
 
-        return found;
+        rule.Id ??= StringLiteral(positional[0]);
+
+        // Slot 1 is the contexts, written either as the enum or as a context name. Recorded as
+        // written: `DefaultContexts.Save` is not a string in the source and resolving it would
+        // mean compiling, which extraction deliberately never does.
+        rule.Contexts ??= SyntaxLiteral.ValueOf(positional[1].Expression);
+
+        var rest = positional.Skip(2).Select(StringLiteral).OfType<string>().ToList();
+
+        if (IsCriteriaRule(rule))
+        {
+            if (rest.Count > 0) rule.Expression ??= rest[0];
+            if (rest.Count > 1) rule.MessageTemplate ??= rest[1];
+            return;
+        }
+
+        // A rule with no criteria of its own takes only a message here — but only when the tail
+        // holds one literal. The attributes that put several there put values in them, the way
+        // RuleRange puts its bounds, and a confidently wrong message is worse than none.
+        if (rest.Count == 1)
+            rule.MessageTemplate ??= rest[0];
     }
+
+    private static bool IsCriteriaRule(ExtractedValidationRule rule)
+        => rule.RuleType.Contains("Criteria", StringComparison.Ordinal);
+
+    /// <summary>The argument's text when it was written as a string literal, else null.</summary>
+    private static string? StringLiteral(AttributeArgumentSyntax arg)
+        => arg.Expression is LiteralExpressionSyntax literal
+           && literal.IsKind(SyntaxKind.StringLiteralExpression)
+            ? literal.Token.ValueText
+            : null;
 
     /// <summary>
     /// Extracts appearance rules from class attributes.
@@ -963,7 +1005,7 @@ public class EntityAnalyzer : IEntityAnalyzer
     }
 
     /// <summary>
-    /// Folds each ancestor's properties into the entities that inherit them.
+    /// Folds what each ancestor declares into the entities that inherit it.
     /// </summary>
     /// <remarks>
     /// An entity holding only what it declares itself is an inventory with most of its columns
@@ -972,13 +1014,20 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// agent writes; a document that promises completeness has to carry them where the reader
     /// looks.
     /// <para>
+    /// The same holds for everything else an ancestor declares. A <c>RuleCriteria</c> on an audit
+    /// base is enforced every time any entity in the application is saved; an <c>[Appearance]</c>
+    /// greys a field on every screen below it; an association gives every descendant a collection
+    /// that really is populated. Carrying only the properties down fixed the inventory and left
+    /// the rules one door away, which is what issue #14 is about.
+    /// </para>
+    /// <para>
     /// Ancestors first, so the properties read in declaration order from the root down, the way
-    /// they do in the class. A property the class redeclares is its own: the inherited one is not
-    /// added beside it. Each fold works on a copy, because the same declared property is listed
-    /// under every descendant and each listing names its own declarer.
+    /// they do in the class. What the class redeclares is its own: the inherited one is not added
+    /// beside it. Each fold works on a copy, because the same declaration is listed under every
+    /// descendant and each listing names its own declarer.
     /// </para>
     /// </remarks>
-    private static void FoldInheritedProperties(
+    private static void FoldInheritance(
         List<ExtractedEntity> entities,
         Dictionary<(string Namespace, string Name), (string Namespace, string Name)> parents)
     {
@@ -1026,7 +1075,63 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
 
         entity.Properties.InsertRange(0, inherited);
+
+        // Everything else the entity inherits, on the same terms. What is written on a property
+        // travels with the property; what is written on the class does not, and stayed under the
+        // heading of a class the reader was not reading.
+        FoldInto(entity.ValidationRules, parent.ValidationRules, parent.ClassName, ValidationRuleKey,
+                 rule => rule.Clone(), (rule, declarer) => rule.InheritedFrom ??= declarer);
+
+        FoldInto(entity.AppearanceRules, parent.AppearanceRules, parent.ClassName, rule => rule.Id,
+                 rule => rule.Clone(), (rule, declarer) => rule.InheritedFrom ??= declarer);
+
+        FoldInto(entity.Relationships, parent.Relationships, parent.ClassName, rel => rel.PropertyName,
+                 rel => rel.Clone(), (rel, declarer) => rel.InheritedFrom ??= declarer);
     }
+
+    /// <summary>
+    /// Adds what the parent declared to the descendant, keeping the descendant's own where the two
+    /// name the same thing.
+    /// </summary>
+    /// <remarks>
+    /// Appended rather than inserted first, unlike properties: a class's properties read in
+    /// declaration order from the root down, but a rule or an association has no such order to
+    /// preserve, and what the entity declares itself is what a reader came for.
+    /// </remarks>
+    private static void FoldInto<T>(
+        List<T> target,
+        List<T> fromParent,
+        string parentClassName,
+        Func<T, string> keyOf,
+        Func<T, T> clone,
+        Action<T, string> markDeclarer)
+    {
+        var own = target.Select(keyOf).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var item in fromParent)
+        {
+            // Redeclaring wins: a descendant that reuses an identifier is replacing the rule, and
+            // listing both would show a reader two rules that contradict each other.
+            if (!own.Add(keyOf(item)))
+                continue;
+
+            var copy = clone(item);
+            markDeclarer(copy, parentClassName);
+            target.Add(copy);
+        }
+    }
+
+    /// <summary>
+    /// What makes two validation rules the same rule.
+    /// </summary>
+    /// <remarks>
+    /// Its identifier when it was given one, because that is what XAF itself keys on. Without one,
+    /// the attribute and the property it targets: a descendant that writes its own
+    /// <c>[RuleRequiredField]</c> over an inherited column has replaced the inherited one, and two
+    /// unnamed rules of the same kind on the same property cannot be told apart anyway.
+    /// </remarks>
+    private static string ValidationRuleKey(ExtractedValidationRule rule)
+        => rule.Id is { Length: > 0 } id ? id : $"{rule.RuleType} {rule.TargetProperty}";
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)
     {
