@@ -61,11 +61,17 @@ public class DeclaredRatherThanFoldedTests
     {
         var html = new HtmlExplainerGenerator("0.13.0").Generate(SampleProjects.AuditedXpo);
 
-        // Five validation rules and one appearance rule are written in this application. Counting
-        // the folded copies reports twelve and four, on six entities -- a number that grows when
-        // somebody adds a subclass and changes nothing about the validation.
+        // Five validation rules and three appearance rules are written in this application.
+        // Counting the folded copies reports twelve of each, on six entities -- a number that grows
+        // when somebody adds a subclass and changes nothing about the validation.
         Assert.Contains("<b>5</b><span>validation rules", Compact(html), StringComparison.Ordinal);
-        Assert.Contains("<b>1</b><span>appearance rules", Compact(html), StringComparison.Ordinal);
+        Assert.Contains("<b>3</b><span>appearance rules", Compact(html), StringComparison.Ordinal);
+
+        // The folded totals the paragraph above names, enforced rather than asserted in prose --
+        // they are the whole reason the page reports the declared numbers instead.
+        var entities = SampleProjects.AuditedXpo.Entities;
+        Assert.Equal(12, entities.Sum(e => e.ValidationRules.Count));
+        Assert.Equal(12, entities.Sum(e => e.AppearanceRules.Count));
     }
 
     /// <summary>The page with its line breaks removed, so a stat can be matched across them.</summary>

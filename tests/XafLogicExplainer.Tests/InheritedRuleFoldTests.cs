@@ -34,9 +34,9 @@ public class InheritedRuleFoldTests
     [Fact]
     public void AnEntityCarriesTheAppearanceRulesThatStyleIt()
     {
-        var appearance = Assert.Single(Receipt.AppearanceRules);
+        var appearance = Assert.Single(
+            Receipt.AppearanceRules, rule => rule.Id == "Audit_ReadOnlyOnceVersioned");
 
-        Assert.Equal("Audit_ReadOnlyOnceVersioned", appearance.Id);
         Assert.Equal("RowVersion > 0", appearance.Criteria);
     }
 
@@ -56,8 +56,12 @@ public class InheritedRuleFoldTests
     public void EachFoldedDeclarationNamesTheClassThatWroteIt()
     {
         Assert.Equal("AuditedObject", Receipt.ValidationRules.First().InheritedFrom);
-        Assert.Equal("AuditedObject", Assert.Single(Receipt.AppearanceRules).InheritedFrom);
         Assert.Equal("AuditedObject", Assert.Single(Receipt.Relationships).InheritedFrom);
+
+        // Every one of them, not just the first: Receipt declares no appearance rule of its own, so
+        // an unmarked one would be a rule the reader is told Receipt wrote.
+        Assert.All(Receipt.AppearanceRules,
+                   rule => Assert.Equal("AuditedObject", rule.InheritedFrom));
     }
 
     [Fact]

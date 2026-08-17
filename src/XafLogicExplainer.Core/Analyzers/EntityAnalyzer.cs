@@ -1117,7 +1117,7 @@ public class EntityAnalyzer : IEntityAnalyzer
         FoldInto(entity.ValidationRules, parent.ValidationRules, parent.ClassName, ValidationRuleKey,
                  rule => rule.Clone(), (rule, declarer) => rule.InheritedFrom ??= declarer);
 
-        FoldInto(entity.AppearanceRules, parent.AppearanceRules, parent.ClassName, rule => rule.Id,
+        FoldInto(entity.AppearanceRules, parent.AppearanceRules, parent.ClassName, AppearanceRuleKey,
                  rule => rule.Clone(), (rule, declarer) => rule.InheritedFrom ??= declarer);
 
         FoldInto(entity.Relationships, parent.Relationships, parent.ClassName, rel => rel.PropertyName,
@@ -1167,6 +1167,19 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// </remarks>
     private static string ValidationRuleKey(ExtractedValidationRule rule)
         => rule.Id is { Length: > 0 } id ? id : $"{rule.RuleType} {rule.TargetProperty}";
+
+    /// <summary>
+    /// What makes two appearance rules the same rule.
+    /// </summary>
+    /// <remarks>
+    /// Its identifier when it was given one, on the same terms as <see cref="ValidationRuleKey"/>.
+    /// An empty id is ordinary rather than an omission — a rule written on a property already says
+    /// what it governs, and the DevExpress non-persistent-objects demo writes
+    /// <c>[Appearance("", Enabled = false, TargetItems = "*")]</c> — so the targets stand in for a
+    /// name, and two unnamed rules over different properties stay two rules through the fold.
+    /// </remarks>
+    private static string AppearanceRuleKey(ExtractedAppearanceRule rule)
+        => rule.Id is { Length: > 0 } id ? id : $"Appearance {rule.TargetItems}";
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)
     {
