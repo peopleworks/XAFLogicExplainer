@@ -489,17 +489,15 @@ public class EntityAnalyzer : IEntityAnalyzer
     {
         var rules = new List<ExtractedAppearanceRule>();
 
-        foreach (var attr in AppearanceAttributesOf(classDecl.AttributeLists))
-        {
-            if (ReadAppearanceRule(attr) is { } rule) rules.Add(rule);
-        }
+        rules.AddRange(AppearanceAttributesOf(classDecl.AttributeLists)
+            .Select(attr => ReadAppearanceRule(attr))
+            .OfType<ExtractedAppearanceRule>());
 
         foreach (var prop in classDecl.Members.OfType<PropertyDeclarationSyntax>())
         {
-            foreach (var attr in AppearanceAttributesOf(prop.AttributeLists))
-            {
-                if (ReadAppearanceRule(attr, prop.Identifier.Text) is { } rule) rules.Add(rule);
-            }
+            rules.AddRange(AppearanceAttributesOf(prop.AttributeLists)
+                .Select(attr => ReadAppearanceRule(attr, prop.Identifier.Text))
+                .OfType<ExtractedAppearanceRule>());
         }
 
         return rules;
