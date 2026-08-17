@@ -476,48 +476,83 @@ public class EntityAnalyzer : IEntityAnalyzer
             : null;
 
     /// <summary>
-    /// Extracts appearance rules from class attributes.
+    /// Extracts appearance rules written on the class and on its properties.
     /// </summary>
+    /// <remarks>
+    /// <c>AppearanceAttribute</c> is usable on a class, a property, a method or an interface, and
+    /// the documentation teaches the property form first: a rule on <c>UnitPrice</c> and a rule on
+    /// the class naming <c>TargetItems = "UnitPrice"</c> are two spellings of one rule. Only the
+    /// class spelling was read here, while <see cref="ExtractValidationRules"/> had walked the
+    /// properties from the start.
+    /// </remarks>
     private static List<ExtractedAppearanceRule> ExtractAppearanceRules(ClassDeclarationSyntax classDecl)
     {
         var rules = new List<ExtractedAppearanceRule>();
 
-        var allAttributes = classDecl.AttributeLists
-            .SelectMany(al => al.Attributes)
-            .Where(a => a.Name.ToString().Contains("Appearance"));
-
-        foreach (var attr in allAttributes)
+        foreach (var attr in AppearanceAttributesOf(classDecl.AttributeLists))
         {
-            var rule = new ExtractedAppearanceRule();
-            if (attr.ArgumentList == null) continue;
+            if (ReadAppearanceRule(attr) is { } rule) rules.Add(rule);
+        }
 
-            var args = attr.ArgumentList.Arguments.ToList();
-
-            // First positional argument is typically the ID
-            if (args.Count > 0)
-                rule.Id = SyntaxLiteral.ValueOf(args[0].Expression);
-
-            foreach (var arg in args)
+        foreach (var prop in classDecl.Members.OfType<PropertyDeclarationSyntax>())
+        {
+            foreach (var attr in AppearanceAttributesOf(prop.AttributeLists))
             {
-                var name = arg.NameEquals?.Name.ToString();
-                var value = SyntaxLiteral.ValueOf(arg.Expression);
-
-                switch (name)
-                {
-                    case "TargetItems": rule.TargetItems = value; break;
-                    case "Criteria": rule.Criteria = value; break;
-                    case "Context": rule.Context = value; break;
-                    case "Visibility": rule.Visibility = value; break;
-                    case "Enabled": rule.Enabled = value; break;
-                    case "BackColor": rule.BackColor = value; break;
-                    case "FontColor": rule.FontColor = value; break;
-                }
+                if (ReadAppearanceRule(attr, prop.Identifier.Text) is { } rule) rules.Add(rule);
             }
-
-            rules.Add(rule);
         }
 
         return rules;
+    }
+
+    private static IEnumerable<AttributeSyntax> AppearanceAttributesOf(SyntaxList<AttributeListSyntax> attributeLists)
+        => attributeLists
+            .SelectMany(al => al.Attributes)
+            .Where(a => a.Name.ToString().Contains("Appearance"));
+
+    /// <summary>
+    /// Reads one <c>[Appearance]</c> attribute.
+    /// </summary>
+    /// <param name="attr">The attribute to read.</param>
+    /// <param name="targetProperty">
+    /// The property the attribute was written on, or <see langword="null"/> for a class-level rule.
+    /// A property rule that does not name its own <c>TargetItems</c> affects that property, which is
+    /// what the equivalent class-level spelling states outright; filling it in keeps the two forms
+    /// from documenting differently. An explicit <c>TargetItems</c> is left alone — overwriting it
+    /// would silently narrow a rule that names several targets.
+    /// </param>
+    private static ExtractedAppearanceRule? ReadAppearanceRule(AttributeSyntax attr, string? targetProperty = null)
+    {
+        if (attr.ArgumentList == null) return null;
+
+        var rule = new ExtractedAppearanceRule();
+        var args = attr.ArgumentList.Arguments.ToList();
+
+        // First positional argument is typically the ID
+        if (args.Count > 0)
+            rule.Id = SyntaxLiteral.ValueOf(args[0].Expression);
+
+        foreach (var arg in args)
+        {
+            var name = arg.NameEquals?.Name.ToString();
+            var value = SyntaxLiteral.ValueOf(arg.Expression);
+
+            switch (name)
+            {
+                case "TargetItems": rule.TargetItems = value; break;
+                case "Criteria": rule.Criteria = value; break;
+                case "Context": rule.Context = value; break;
+                case "Visibility": rule.Visibility = value; break;
+                case "Enabled": rule.Enabled = value; break;
+                case "BackColor": rule.BackColor = value; break;
+                case "FontColor": rule.FontColor = value; break;
+            }
+        }
+
+        if (targetProperty is { Length: > 0 } && string.IsNullOrEmpty(rule.TargetItems))
+            rule.TargetItems = targetProperty;
+
+        return rule;
     }
 
     #region Helper Methods

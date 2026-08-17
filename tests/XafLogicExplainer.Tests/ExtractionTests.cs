@@ -218,6 +218,6 @@ public class ExtractionTests
 
         Assert.Equal(14, demo.Entities.Count);
         Assert.Equal(24, demo.Entities.Sum(e => e.Relationships.Count));
-        Assert.Equal(9, demo.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count));
+        Assert.Equal(10, demo.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count));
     }
 }
