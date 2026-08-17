@@ -28,6 +28,7 @@ public class Product : XPCustomObject
     public string Barcode { get => _barcode; set => SetPropertyValue(nameof(Barcode), ref _barcode, value); }
 
     private decimal _unitPrice;
+    [Appearance("PriceLockedOnPrescriptionItems", Criteria = "RequiresPrescription", Enabled = false)]
     public decimal UnitPrice { get => _unitPrice; set => SetPropertyValue(nameof(UnitPrice), ref _unitPrice, value); }
 
     private bool _requiresPrescription;

@@ -44,6 +44,9 @@ public abstract class AuditedObject : BaseObject
         set => SetPropertyValue(nameof(CreatedOn), value);
     }
 
+    // Two rules written the way the DevExpress non-persistent-objects demo writes them: the id
+    // left empty, because a rule on a property already says what it governs.
+    [Appearance("", Enabled = false)]
     public string ChangedBy
     {
         get => GetPropertyValue<string>(nameof(ChangedBy));
@@ -62,6 +65,7 @@ public abstract class AuditedObject : BaseObject
         set => SetPropertyValue(nameof(RowVersion), value);
     }
 
+    [Appearance("", Visibility = "Hide")]
     public string AuditNotes
     {
         get => GetPropertyValue<string>(nameof(AuditNotes));
