@@ -7,6 +7,33 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-08-16
+
+Everything that governs an entity, under the entity.
+
+0.13.0 gave each entity the columns it persists and stopped one door short. What is written on a
+property travelled with the property — a folded `Number` row correctly said required — and what is
+written on the class did not. So an entity's section could say a column was required and, three
+headings later, document no rule requiring it: the two halves of the same page disagreeing, with
+the property half telling the truth.
+
+The rules were never missing from the application, only from the place a reader looks. A
+`RuleCriteria` on an audit base is enforced every time anything in the application is saved. An
+`[Appearance]` greys a field on every screen below it. An association gives every descendant a
+collection that really is populated. All three were documented under the base alone, which on a
+real application means documented nowhere anybody reads.
+
+The other half of [#14] was filed as genuinely debatable, and it turned out to be a question about
+scale rather than about relationships: an index, a count, a diagram and a search are answering
+*what does this application declare*, while an entity's section is answering *what governs this
+entity*. Following the fold everywhere would have made every total a measurement of the class
+hierarchy — one rule on a base shared by two hundred entities reported two hundred times. So each
+folded declaration carries the class that wrote it, and each rendering chooses.
+
+A minor rather than a patch: `ExtractedValidationRule` gains `Id` and `Contexts`, all three
+declaration types gain `InheritedFrom` and `Clone()`. Additive, and invisible to the CLI and the
+MCP server.
+
 ### Fixed
 
 - **A rule a class inherits is now listed under the class that inherits it** ([#14]). Folding
@@ -34,6 +61,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hundred entities is one rule; following the fold everywhere would have made every total, map and
   search result a measurement of the class hierarchy instead. This is the half of [#14] filed as
   debatable, and the answer is that the two readings are answering different questions.
+
+### Internal
+
+- **The workflows run current actions.** `actions/checkout` v4 → v7, `actions/setup-dotnet` v4 →
+  v6, `github/codeql-action` v3 → v4. Every run had been annotating that the first two target
+  Node 20 and were being *forced* onto Node 24; the third carries a deprecation dated December
+  2026. The jobs that would have broken first are `nuget.yml` and `mcp-registry.yml`, which
+  nothing exercises until a release is being published.
+
+- **`docs/RELEASING.md` records how a publish is verified.** Install with `--tool-path`, so
+  verifying cannot leave you on a version you did not choose to run, and read the nuget.org index
+  twice: it is cached per CDN edge, and during the 0.13.0 verification two requests seconds apart
+  returned `0.12.1` and `0.13.0` for the same package.
 
 [#14]: https://github.com/peopleworks/XAFLogicExplainer/issues/14
 
@@ -637,7 +677,8 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.1
 [0.12.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.0
