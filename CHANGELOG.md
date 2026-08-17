@@ -7,6 +7,36 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A rule a class inherits is now listed under the class that inherits it** ([#14]). Folding
+  carried what lives on a property — the folded `Number` row correctly said required — and left
+  everything recorded on the class behind. A `RuleCriteria` on an audit base is enforced every
+  time any entity in the application is saved, an `[Appearance]` greys a field on every screen
+  below it, and an association gives every descendant a collection that really is populated; all
+  three appeared under the base alone. A reader told the inventories were complete read an
+  entity's section and was told of no rule. Each folded declaration now names the class that wrote
+  it, in the entity's properties as well, where it had been recorded since 0.13.0 and shown
+  nowhere.
+
+- **A validation rule's positional arguments are read into the fields they name.** The four-
+  argument form — `[RuleCriteria("id", DefaultContexts.Save, "Total >= 0", "A sale total cannot be
+  negative.")]` — put the message in the field that holds what the rule enforces, and left the
+  message field empty. Every fixture in the suite passed its message as `CustomMessageTemplate =`,
+  so 299 tests agreed with the wrong answer. A rule now also carries its identifier and its
+  validation contexts, which were read as `arg0` and `arg1` and printed to the published
+  documentation that way.
+
+### Changed
+
+- **Counts, indexes, diagrams and searches report what the application declares**, while an
+  entity's own section reports everything that governs it. One rule on a base shared by two
+  hundred entities is one rule; following the fold everywhere would have made every total, map and
+  search result a measurement of the class hierarchy instead. This is the half of [#14] filed as
+  debatable, and the answer is that the two readings are answering different questions.
+
+[#14]: https://github.com/peopleworks/XAFLogicExplainer/issues/14
+
 ## [0.13.0] — 2026-08-14
 
 The entities an application actually has, and all of the columns they actually persist.

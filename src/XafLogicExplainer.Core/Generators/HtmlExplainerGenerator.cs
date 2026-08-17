@@ -92,7 +92,6 @@ public sealed class HtmlExplainerGenerator
     {
         var actions = project.Controllers.Sum(c => c.Actions.Count);
         var orm = Orm.Label(project.OrmType);
-        var rules = project.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count);
 
         sb.AppendLine("<header><div class=\"wrap\">");
         sb.AppendLine("  <div class=\"head\">");
@@ -116,9 +115,11 @@ public sealed class HtmlExplainerGenerator
         Stat(sb, project.Controllers.Count, "controllers");
         Stat(sb, actions, "actions");
         // Named for what they are. "9 rules" reads as a total, and it counted two of the six kinds
-        // of rule this page goes on to document.
-        Stat(sb, project.Entities.Sum(e => e.ValidationRules.Count), "validation rules");
-        Stat(sb, project.Entities.Sum(e => e.AppearanceRules.Count), "appearance rules");
+        // of rule this page goes on to document. Counted where declared, too: the cards below
+        // repeat an inherited rule under every entity it governs, which is right for a reader of
+        // one card and would make this number say how deep the class hierarchy is.
+        Stat(sb, project.Entities.Sum(e => e.ValidationRules.Count(r => r.InheritedFrom is null)), "validation rules");
+        Stat(sb, project.Entities.Sum(e => e.AppearanceRules.Count(r => r.InheritedFrom is null)), "appearance rules");
         if (project.Navigation.Count > 0) Stat(sb, project.Navigation.Count, "nav groups");
         if (project.SeedData.Count > 0) Stat(sb, project.SeedData.Count, "seed methods");
         sb.AppendLine("  </div>");
@@ -627,6 +628,10 @@ public sealed class HtmlExplainerGenerator
                     sb.Append(string.IsNullOrWhiteSpace(rule.MessageTemplate)
                         ? "<span class=\"empty\">default message</span>"
                         : $"“{E(rule.MessageTemplate)}”");
+                    // The condition the rule enforces, which this page never showed -- so a
+                    // class-level RuleCriteria appeared here as a row with a message and no rule.
+                    if (!string.IsNullOrWhiteSpace(rule.Expression))
+                        sb.Append($" <span class=\"t\">requires <code class=\"crit\">{E(rule.Expression)}</code></span>");
                     if (!string.IsNullOrWhiteSpace(rule.TargetCriteria))
                         sb.Append($" <span class=\"t\">when <code class=\"crit\">{E(rule.TargetCriteria)}</code></span>");
                     sb.AppendLine("</td></tr>");

@@ -287,6 +287,20 @@ public class ExtractedRelationship
     /// Indicates aggregate composition semantics.
     /// </summary>
     public bool IsAggregated { get; set; }
+
+    /// <summary>
+    /// The class that declared this relationship, when it is not the entity listing it.
+    /// </summary>
+    /// <remarks>
+    /// <c>null</c> for a relationship the entity declares itself. An association on a base is a
+    /// real association of every descendant — the rows exist, the collection is populated, code an
+    /// agent writes can traverse it — but only one class declares it, and a diagram that drew an
+    /// arrow per descendant would say the application has many associations where it has one.
+    /// </remarks>
+    public string? InheritedFrom { get; set; }
+
+    /// <summary>A copy this relationship's declarer does not share.</summary>
+    public ExtractedRelationship Clone() => (ExtractedRelationship)MemberwiseClone();
 }
 
 /// <summary>

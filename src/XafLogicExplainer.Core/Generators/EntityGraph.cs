@@ -64,7 +64,10 @@ public sealed class EntityGraph
 
         foreach (var entity in project.Entities)
         {
-            foreach (var relationship in entity.Relationships)
+            // What the class declares. A base's association belongs to every descendant and is
+            // listed under each, but the diagram is of the schema: one arrow from the class that
+            // wrote it, not one from each class that received it.
+            foreach (var relationship in entity.Relationships.Where(r => r.InheritedFrom is null))
             {
                 if (!names.Contains(relationship.RelatedEntity))
                     continue;

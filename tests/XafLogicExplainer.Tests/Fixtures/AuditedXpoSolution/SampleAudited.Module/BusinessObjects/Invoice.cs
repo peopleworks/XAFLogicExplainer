@@ -7,9 +7,14 @@ namespace SampleAudited.Module.BusinessObjects;
 /// <summary>An entity whose own columns are outnumbered by the ones it inherits.</summary>
 [DefaultClassOptions]
 [NavigationItem("Billing")]
+[RuleCriteria("Invoice_TotalPositive", DefaultContexts.Save, "Total > 0",
+    CustomMessageTemplate = "An invoice must total more than zero.")]
 public class Invoice : AuditedObject
 {
     public Invoice(Session session) : base(session) { }
+
+    [Association("Invoice-Lines"), Aggregated]
+    public XPCollection<InvoiceLine> Lines => GetCollection<InvoiceLine>(nameof(Lines));
 
     [RuleRequiredField("Invoice_Number_Required", DefaultContexts.Save)]
     public string Number

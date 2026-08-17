@@ -1517,8 +1517,14 @@ explainCommand.SetHandler(async (explainProject, explainLanguage, explainOrm, ex
     explainTable.AddRow("Entities", explained.Entities.Count.ToString());
     explainTable.AddRow("Controllers", explained.Controllers.Count.ToString());
     explainTable.AddRow("Actions", explainActions.ToString());
-    explainTable.AddRow("Relationships", explained.Entities.Sum(e => e.Relationships.Count).ToString());
-    explainTable.AddRow("Rules", explained.Entities.Sum(e => e.ValidationRules.Count + e.AppearanceRules.Count).ToString());
+    // Counted where they are declared. Entities carry what they inherit so that a reader of one
+    // is told the whole truth about it, but a count that follows the fold measures the depth of
+    // the class hierarchy: one rule on an audit base would report as one rule per entity.
+    explainTable.AddRow("Relationships",
+        explained.Entities.Sum(e => e.Relationships.Count(r => r.InheritedFrom is null)).ToString());
+    explainTable.AddRow("Rules",
+        explained.Entities.Sum(e => e.ValidationRules.Count(r => r.InheritedFrom is null)
+                                  + e.AppearanceRules.Count(r => r.InheritedFrom is null)).ToString());
     AnsiConsole.Write(explainTable);
 
     AnsiConsole.WriteLine();

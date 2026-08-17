@@ -1,4 +1,6 @@
+using DevExpress.Persistent.Base;
 using DevExpress.Persistent.BaseImpl;
+using DevExpress.Persistent.Validation;
 using DevExpress.Xpo;
 
 namespace SampleAudited.Module.BusinessObjects;
@@ -9,11 +11,27 @@ namespace SampleAudited.Module.BusinessObjects;
 /// <remarks>
 /// Wider than the columns of the entities below it, which is the ordinary shape: audit bases
 /// accumulate. It is what makes a fixed-size summary a decision about whose columns get named.
+/// <para>
+/// It also carries a rule, an appearance rule and an association, so that everything the base
+/// imposes on the whole application is imposed here from one declaration — the shape that decides
+/// whether a reader of any one entity is told the truth about it.
+/// </para>
+/// <para>
+/// Its message is passed by position rather than as <c>CustomMessageTemplate =</c>, which is the
+/// overload no other fixture writes.
+/// </para>
 /// </remarks>
+[RuleCriteria("Audit_ChangedNotBeforeCreated", DefaultContexts.Save, "ChangedOn >= CreatedOn",
+    "A record cannot be changed before it was created.")]
+[Appearance("Audit_ReadOnlyOnceVersioned", Criteria = "RowVersion > 0", Enabled = false)]
 public abstract class AuditedObject : BaseObject
 {
     public AuditedObject(Session session) : base(session) { }
 
+    [Association("AuditedObject-AuditEntries"), Aggregated]
+    public XPCollection<AuditEntry> AuditEntries => GetCollection<AuditEntry>(nameof(AuditEntries));
+
+    [RuleRequiredField("Audit_CreatedByRequired", DefaultContexts.Save)]
     public string CreatedBy
     {
         get => GetPropertyValue<string>(nameof(CreatedBy));

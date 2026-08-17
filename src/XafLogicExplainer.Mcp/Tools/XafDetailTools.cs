@@ -97,13 +97,16 @@ public sealed class XafDetailTools
             sb.AppendLine();
             sb.AppendLine("## Relationships");
             sb.AppendLine();
-            foreach (var relationship in entity.Relationships)
+            foreach (var relationship in entity.Relationships.OrderByDescending(r => r.InheritedFrom is null))
             {
                 var owned = relationship.IsAggregated ? ", aggregated (owns the children)" : "";
                 var association = string.IsNullOrWhiteSpace(relationship.AssociationName)
                     ? ""
                     : $", association \"{relationship.AssociationName}\"";
-                sb.AppendLine($"- `{relationship.PropertyName}` → **{relationship.RelatedEntity}** ({relationship.Type}{association}{owned})");
+                var declarer = relationship.InheritedFrom is { Length: > 0 } from
+                    ? $", inherited from `{from}`"
+                    : "";
+                sb.AppendLine($"- `{relationship.PropertyName}` → **{relationship.RelatedEntity}** ({relationship.Type}{association}{owned}{declarer})");
             }
         }
 
@@ -242,17 +245,28 @@ public sealed class XafDetailTools
         if (entities.Count == 0)
             return NotFound("entity", entity!, app.Entities.Select(e => e.ClassName));
 
-        var relevant = entities
-            .Where(e => e.ValidationRules.Count > 0
-                     || e.AppearanceRules.Count > 0
-                     || e.Properties.Any(p => !string.IsNullOrWhiteSpace(p.PersistentAlias)))
-            .ToList();
+        // Asked about one entity, the answer is everything that governs it — a rule on a base is
+        // enforced when this entity is saved, and the caller is standing in front of this entity.
+        // Asked about the application, the answer is its rule set: each rule once, under the class
+        // that wrote it. The same question at two scales wants two answers, which is the half of
+        // issue #14 that was filed as debatable.
+        var wholeApplication = string.IsNullOrWhiteSpace(entity);
+
+        bool Governs(ExtractedEntity e) => wholeApplication
+            ? e.ValidationRules.Any(r => r.InheritedFrom is null)
+              || e.AppearanceRules.Any(r => r.InheritedFrom is null)
+              || e.Properties.Any(p => p.InheritedFrom is null && !string.IsNullOrWhiteSpace(p.PersistentAlias))
+            : e.ValidationRules.Count > 0
+              || e.AppearanceRules.Count > 0
+              || e.Properties.Any(p => !string.IsNullOrWhiteSpace(p.PersistentAlias));
+
+        var relevant = entities.Where(Governs).ToList();
 
         if (relevant.Count == 0)
         {
-            return string.IsNullOrWhiteSpace(entity)
+            return wholeApplication
                 ? $"{app.ProjectName} declares no validation rules, appearance rules or calculated properties."
-                : $"`{entity}` declares no validation rules, appearance rules or calculated properties.";
+                : $"Nothing validates, styles or calculates on `{entity}`, and it inherits no such rule either.";
         }
 
         var sb = new StringBuilder();
@@ -262,7 +276,7 @@ public sealed class XafDetailTools
         {
             sb.AppendLine();
             sb.AppendLine($"## {target.ClassName}");
-            AppendRules(sb, target);
+            AppendRules(sb, target, declaredOnly: wholeApplication);
         }
 
         return sb.ToString();
@@ -733,31 +747,59 @@ public sealed class XafDetailTools
     }
 
     /// <summary>Writes an entity's validation, appearance and calculation rules.</summary>
-    private static void AppendRules(StringBuilder sb, ExtractedEntity entity)
+    /// <param name="sb">The buffer being written to.</param>
+    /// <param name="entity">The entity whose rules are written.</param>
+    /// <param name="declaredOnly">
+    /// Leaves out what the entity inherits, for a caller listing the whole application rather than
+    /// reading one entity.
+    /// </param>
+    private static void AppendRules(StringBuilder sb, ExtractedEntity entity, bool declaredOnly = false)
     {
-        if (entity.ValidationRules.Count > 0)
+        bool Wanted(string? inheritedFrom) => !declaredOnly || inheritedFrom is null;
+
+        var validation = entity.ValidationRules
+            .Where(r => Wanted(r.InheritedFrom))
+            .OrderByDescending(r => r.InheritedFrom is null)
+            .ToList();
+
+        var appearance = entity.AppearanceRules
+            .Where(r => Wanted(r.InheritedFrom))
+            .OrderByDescending(r => r.InheritedFrom is null)
+            .ToList();
+
+        if (validation.Count > 0)
         {
             sb.AppendLine();
             sb.AppendLine("### Validation");
             sb.AppendLine();
-            foreach (var rule in entity.ValidationRules)
+            foreach (var rule in validation)
             {
                 sb.Append($"- **{rule.RuleType}**");
                 if (!string.IsNullOrWhiteSpace(rule.TargetProperty)) sb.Append($" on `{rule.TargetProperty}`");
+                if (!string.IsNullOrWhiteSpace(rule.Id)) sb.Append($" — `{rule.Id}`");
+                if (rule.InheritedFrom is { Length: > 0 } from) sb.Append($" (inherited from `{from}`)");
                 sb.AppendLine();
+                // What the rule enforces. It was read and then shown nowhere, so an agent asking
+                // this tool for the rules got the message and never the condition behind it.
+                if (!string.IsNullOrWhiteSpace(rule.Expression)) sb.AppendLine($"  - must hold: `{rule.Expression}`");
                 if (!string.IsNullOrWhiteSpace(rule.TargetCriteria)) sb.AppendLine($"  - applies when: `{rule.TargetCriteria}`");
                 if (!string.IsNullOrWhiteSpace(rule.MessageTemplate)) sb.AppendLine($"  - message: \"{XafDiscoveryTools.Compact(rule.MessageTemplate)}\"");
+                // Only when it is not the ordinary save: everywhere else it is noise, and here it
+                // is the reason the rule does not fire where the reader expects it to.
+                if (rule.Contexts is { Length: > 0 } and not ("DefaultContexts.Save" or "Save"))
+                    sb.AppendLine($"  - validation context: `{rule.Contexts}`");
             }
         }
 
-        if (entity.AppearanceRules.Count > 0)
+        if (appearance.Count > 0)
         {
             sb.AppendLine();
             sb.AppendLine("### Conditional appearance");
             sb.AppendLine();
-            foreach (var rule in entity.AppearanceRules)
+            foreach (var rule in appearance)
             {
-                sb.AppendLine($"- **{rule.Id}** on {rule.TargetItems ?? "the whole object"}");
+                var declarer = rule.InheritedFrom is { Length: > 0 } from ? $" (inherited from `{from}`)" : "";
+                sb.AppendLine($"- **{rule.Id}** on {rule.TargetItems ?? "the whole object"}{declarer}");
                 if (!string.IsNullOrWhiteSpace(rule.Criteria)) sb.AppendLine($"  - when: `{rule.Criteria}`");
                 if (!string.IsNullOrWhiteSpace(rule.Visibility)) sb.AppendLine($"  - visibility: {rule.Visibility}");
                 if (!string.IsNullOrWhiteSpace(rule.Enabled)) sb.AppendLine($"  - enabled: {rule.Enabled}");
@@ -767,7 +809,8 @@ public sealed class XafDetailTools
         }
 
         var calculated = entity.Properties
-            .Where(p => !string.IsNullOrWhiteSpace(p.PersistentAlias))
+            .Where(p => Wanted(p.InheritedFrom) && !string.IsNullOrWhiteSpace(p.PersistentAlias))
+            .OrderByDescending(p => p.InheritedFrom is null)
             .ToList();
 
         if (calculated.Count > 0)
@@ -776,7 +819,10 @@ public sealed class XafDetailTools
             sb.AppendLine("### Calculated properties");
             sb.AppendLine();
             foreach (var property in calculated)
-                sb.AppendLine($"- `{property.Name}` = `{property.PersistentAlias}`");
+            {
+                var declarer = property.InheritedFrom is { Length: > 0 } from ? $" (inherited from `{from}`)" : "";
+                sb.AppendLine($"- `{property.Name}` = `{property.PersistentAlias}`{declarer}");
+            }
         }
     }
 
