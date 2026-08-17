@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # This job and the NuGet one both start from `release: published`, so they run in parallel —
       # and the registry rejects a server whose package it cannot download yet. NuGet's indexes

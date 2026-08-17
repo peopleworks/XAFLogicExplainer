@@ -64,6 +64,19 @@ The job then runs the tests, packs, and refuses to push if anything disagrees:
   ```
   A package that packs cleanly and fails to install is a real outcome; the pack job cannot catch it.
 
+  Install to a temporary directory when the machine is your own, so a verification cannot leave you
+  on a version you did not choose to run:
+  ```bash
+  dotnet tool install --tool-path /tmp/verify XafLogicExplainer.Cli
+  /tmp/verify/xaflogic --version   # stamps the commit, so the binary ties back to the merge
+  ```
+
+  **Do not trust one read of the feed.** `api.nuget.org/v3-flatcontainer/<id>/index.json` is cached
+  per CDN edge, and during the 0.13.0 verification two requests seconds apart returned `0.12.1` and
+  `0.13.0` for the same package. A single read can report the previous version and look exactly
+  like a push that failed. Check each package twice, and treat a successful install from the feed
+  as the proof rather than the index.
+
 ## Version policy
 
 `0.x` while the extractor is still meeting codebases we did not write. Extraction behaviour changed
