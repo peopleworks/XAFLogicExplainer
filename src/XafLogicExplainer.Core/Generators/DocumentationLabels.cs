@@ -85,6 +85,9 @@ public class DocumentationLabels
     public string ClassLevel { get; init; } = "";
     public string When { get; init; } = "";
 
+    /// <summary>How a rule that declares no criteria is described: in XAF it is always active.</summary>
+    public string Always { get; init; } = "";
+
     // Configuration
     public string MainModule { get; init; } = "";
     public string Class { get; init; } = "";
@@ -230,6 +233,7 @@ public class DocumentationLabels
         ExplicitBusinessRules = "Reglas de Negocio Explicitas",
         ClassLevel = "clase",
         When = "cuando",
+        Always = "siempre",
 
         MainModule = "Modulo Principal",
         Class = "Clase",
@@ -359,6 +363,7 @@ public class DocumentationLabels
         ExplicitBusinessRules = "Explicit Business Rules",
         ClassLevel = "class",
         When = "when",
+        Always = "always",
 
         MainModule = "Main Module",
         Class = "Class",

@@ -799,8 +799,16 @@ public sealed class XafDetailTools
             foreach (var rule in appearance)
             {
                 var declarer = rule.InheritedFrom is { Length: > 0 } from ? $" (inherited from `{from}`)" : "";
-                sb.AppendLine($"- **{rule.Id}** on {rule.TargetItems ?? "the whole object"}{declarer}");
-                if (!string.IsNullOrWhiteSpace(rule.Criteria)) sb.AppendLine($"  - when: `{rule.Criteria}`");
+                // An unnamed rule is ordinary rather than an omission -- a rule written on a property
+                // already says what it governs -- and it printed as an empty bold span, `****`.
+                var name = rule.Id is { Length: > 0 } id ? $"**{id}**" : "unnamed rule";
+                sb.AppendLine($"- {name} on {rule.TargetItems ?? "the whole object"}{declarer}");
+                // Said outright rather than by omission: a rule that declares no criteria is always
+                // active, and a reader met only by a missing line cannot tell that from a criteria
+                // that failed to extract.
+                sb.AppendLine(string.IsNullOrWhiteSpace(rule.Criteria)
+                    ? "  - applies: always"
+                    : $"  - when: `{rule.Criteria}`");
                 if (!string.IsNullOrWhiteSpace(rule.Visibility)) sb.AppendLine($"  - visibility: {rule.Visibility}");
                 if (!string.IsNullOrWhiteSpace(rule.Enabled)) sb.AppendLine($"  - enabled: {rule.Enabled}");
                 if (!string.IsNullOrWhiteSpace(rule.BackColor)) sb.AppendLine($"  - back colour: {rule.BackColor}");

@@ -129,13 +129,13 @@ public class ProjectDiffEngine
             diff.RemovedValidationRules.Add(rule);
 
         // Appearance rules, on the same terms.
-        var prevAppRules = prev.AppearanceRules.Where(r => r.InheritedFrom is null).Select(r => r.Id).ToHashSet();
-        var currAppRules = curr.AppearanceRules.Where(r => r.InheritedFrom is null).Select(r => r.Id).ToHashSet();
+        var prevAppRules = prev.AppearanceRules.Where(r => r.InheritedFrom is null).Select(FormatAppearanceRule).ToHashSet();
+        var currAppRules = curr.AppearanceRules.Where(r => r.InheritedFrom is null).Select(FormatAppearanceRule).ToHashSet();
 
-        foreach (var id in currAppRules.Except(prevAppRules))
-            diff.AddedAppearanceRules.Add(id);
-        foreach (var id in prevAppRules.Except(currAppRules))
-            diff.RemovedAppearanceRules.Add(id);
+        foreach (var rule in currAppRules.Except(prevAppRules))
+            diff.AddedAppearanceRules.Add(rule);
+        foreach (var rule in prevAppRules.Except(currAppRules))
+            diff.RemovedAppearanceRules.Add(rule);
 
         return diff;
     }
@@ -349,6 +349,37 @@ public class ProjectDiffEngine
 
     private static string FormatValidationRule(ExtractedValidationRule rule)
         => $"{rule.RuleType}:{rule.TargetProperty ?? "*"}:{rule.TargetCriteria ?? ""}";
+
+    /// <summary>
+    /// What makes two appearance rules the same rule, for the purpose of reporting a change.
+    /// </summary>
+    /// <remarks>
+    /// The identifier alone was the whole key, and it failed three ways. An empty identifier is
+    /// ordinary rather than a mistake — a rule written on a property already says what it governs —
+    /// so every unnamed rule in an application collapsed into one entry, and adding or removing one
+    /// of them was reported as no change at all. A rule whose criteria was edited kept its
+    /// identifier, so the edit reported as nothing. So did a rule that changed from disabling a
+    /// field to hiding it, which is the whole of what an appearance rule is for.
+    /// <para>
+    /// Written out as a phrase rather than a colon-separated key because this string is not only
+    /// compared — it is what the diff report prints.
+    /// </para>
+    /// </remarks>
+    private static string FormatAppearanceRule(ExtractedAppearanceRule rule)
+    {
+        var effects = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(rule.Visibility)) effects.Add($"visibility={rule.Visibility}");
+        if (!string.IsNullOrWhiteSpace(rule.Enabled)) effects.Add($"enabled={rule.Enabled}");
+        if (!string.IsNullOrWhiteSpace(rule.BackColor)) effects.Add($"back colour={rule.BackColor}");
+        if (!string.IsNullOrWhiteSpace(rule.FontColor)) effects.Add($"font colour={rule.FontColor}");
+
+        var name = rule.Id is { Length: > 0 } id ? id : "(unnamed)";
+        var when = rule.Criteria is { Length: > 0 } criteria ? $"when {criteria}" : "always";
+        var effect = effects.Count > 0 ? string.Join(", ", effects) : "no declared effect";
+
+        return $"{name} on {rule.TargetItems ?? "*"} {when}: {effect}";
+    }
 
     private static void CompareField(List<FieldChange> changes, string fieldName, string? oldVal, string? newVal)
     {
