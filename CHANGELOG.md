@@ -7,6 +7,45 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
+  `AppearanceAttribute` is usable on a class or on a property, and the documentation teaches the
+  property form first: a rule on `UnitPrice` and a rule on the class naming
+  `TargetItems = "UnitPrice"` are two spellings of one rule. Only the class spelling was read, so
+  the other produced nothing at all — and an entity's section is presented as its complete
+  inventory, so a rule governing a property and reported nowhere left the reader concluding the
+  property was unconditionally editable. A property rule that names no `TargetItems` of its own now
+  records the property it was written on, which is what the class spelling states outright; an
+  explicit `TargetItems` is left alone. Measured on a 196-entity application: 25 rules to 33.
+
+- **Two unnamed appearance rules stay two rules through the fold** ([#21], thanks [@MBrekhof]).
+  The fold keyed them on `Id` alone, so an empty identifier made them one rule and the second was
+  dropped in silence. An empty identifier is ordinary rather than an omission — a rule written on a
+  property already says what it governs.
+
+- **An appearance rule with no name, or no criteria, is rendered as what it is.** The Markdown and
+  the MCP tool printed `- **** — when ``:` — an empty bold span where the identifier goes, and a
+  condition that reads as though it failed to load. In XAF a rule that declares no criteria is
+  permanently active, which is the stronger of the two claims; the HTML explainer had already
+  settled on `always` and the other two never received it. Reachable before rules were read off
+  properties — one unnamed rule per class is enough — and made ordinary by reading them.
+
+- **The diff reports appearance rules that were added, removed, edited or repurposed.** It keyed
+  them on `Id` alone and collected them into a set, which failed three ways from the one key: every
+  unnamed rule in an application collapsed into a single entry, so adding or removing one reported
+  no change; a rewritten criteria kept its identifier, so the edit reported nothing; and a rule
+  changed from disabling a field to hiding it reported nothing either, which is the whole of what
+  an appearance rule does. Probed at the time: an application went from two declared rules to
+  three and the diff reported zero changes.
+
+### Internal
+
+- First tests over `ProjectDiffEngine`, which is why the key above survived. 337 tests.
+
+[#21]: https://github.com/peopleworks/XAFLogicExplainer/pull/21
+[@MBrekhof]: https://github.com/MBrekhof
+
 ## [0.14.0] — 2026-08-16
 
 Everything that governs an entity, under the entity.
