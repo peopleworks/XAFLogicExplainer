@@ -295,6 +295,19 @@ Documentation is generated in **English or Spanish** (`--lang en|es`).
 Useful flags: `--orm auto\|xpo\|efcore`, `--lang en\|es`, `--enrich` (AI-generated business-logic
 summaries per controller and action), `--force`, `--all`.
 
+`--enrich` needs a model, and **any of these is enough** — a key on the command line wins, then the
+environment, then a PeopleWorks Copilot account if you happen to have one:
+
+```bash
+xaflogic extract --enrich --api-key sk-...              # or any OpenAI-compatible endpoint:
+xaflogic extract --enrich --api-key ... --ai-base-url http://localhost:11434/v1 --ai-model qwen2.5-coder
+
+export OPENAI_API_KEY=sk-...        # picked up with no configuration at all
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Everything else in this tool runs with no key, no account and no network.
+
 Extraction is **incremental** — a SHA-256 over your `.cs` and `.xafml` files means an unchanged
 project is a no-op. There is an MSBuild `.targets` file if you want it to run on build.
 
@@ -317,7 +330,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 10 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **337 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **345 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

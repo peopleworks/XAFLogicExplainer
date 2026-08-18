@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using OpenAI;
+using XafLogicExplainer.CopilotSync.Ai;
 using XafLogicExplainer.CopilotSync.Models;
 using XafLogicExplainer.CopilotSync.Services;
 using XafLogicExplainer.DescriptionAnnotator.Services;
@@ -30,6 +31,13 @@ var copilotResource = GetArg(args, "--copilot-resource")
 var copilotUser = GetArg(args, "--copilot-user")
     ?? Environment.GetEnvironmentVariable("COPILOT_USER")
     ?? "xaf-logic-explainer";
+
+// The AI provider, on the same terms as the main CLI: a key given here, then the environment,
+// then the PeopleWorks Copilot account above. That account used to be the only route, which
+// made this tool unusable by anyone who did not have one.
+var aiApiKey = GetArg(args, "--api-key");
+var aiBaseUrl = GetArg(args, "--ai-base-url");
+var aiModel = GetArg(args, "--ai-model");
 
 // XAF base types to scan
 var baseTypes = new[] { "XPCustomObject", "BaseObject", "XPObject", "XPLiteObject", "PermissionPolicyUser" };
@@ -214,44 +222,31 @@ async Task RunApply(string? path, string[] baseTypeNames, string lang, string? o
 
 async Task<IChatClient?> CreateChatClient()
 {
-    if (string.IsNullOrEmpty(copilotToken))
+    var resolved = await AiClientResolver.ResolveAsync(new AiClientRequest
     {
-        Console.WriteLine("ERROR: Copilot API token is required for AI generation.");
-        Console.WriteLine("Set COPILOT_API_TOKEN env var or use --copilot-token <token>");
+        ApiKey = aiApiKey,
+        BaseUrl = aiBaseUrl,
+        Model = aiModel,
+        Copilot = new SyncConfiguration
+        {
+            CopilotApiBaseUrl = copilotBaseUrl,
+            CopilotApiToken = copilotToken,
+            ResourceName = copilotResource,
+            UserName = copilotUser,
+        },
+    });
+
+    if (!resolved.Succeeded)
+    {
+        Console.WriteLine(resolved.Problem ?? AiClientResolver.NothingConfigured);
         return null;
     }
 
-    Console.WriteLine("Fetching AI provider credentials from PeopleWorks Copilot...");
-
-    var config = new SyncConfiguration
-    {
-        CopilotApiBaseUrl = copilotBaseUrl,
-        CopilotApiToken = copilotToken,
-        ResourceName = copilotResource,
-        UserName = copilotUser
-    };
-
-    var syncService = new IncrementalSyncService();
-    var aiProvider = await syncService.GetAiProviderAsync(config);
-
-    if (aiProvider == null || string.IsNullOrEmpty(aiProvider.ApiKey))
-    {
-        Console.WriteLine("ERROR: Could not retrieve AI provider from PeopleWorks Copilot.");
-        Console.WriteLine("Ensure the Copilot token is valid and an AI provider is configured.");
-        return null;
-    }
-
-    var model = aiProvider.Parameters?.GetValueOrDefault("model")?.ToString() ?? "gpt-4o-mini";
-    var baseUrl = aiProvider.AiProviderBaseUrl ?? "https://api.openai.com/v1";
-
-    Console.WriteLine($"  Provider: {aiProvider.ProviderName}");
-    Console.WriteLine($"  Model: {model}");
+    Console.WriteLine($"  Provider: {resolved.ProviderName}");
+    Console.WriteLine($"  Model: {resolved.Model}");
     Console.WriteLine();
 
-    var openAiClient = new OpenAIClient(new System.ClientModel.ApiKeyCredential(aiProvider.ApiKey),
-        new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-    return openAiClient.GetChatClient(model).AsIChatClient();
+    return resolved.Client;
 }
 
 bool ValidatePath(string? path)

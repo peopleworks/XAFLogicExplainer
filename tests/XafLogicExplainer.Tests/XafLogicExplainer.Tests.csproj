@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XafLogicExplainer.Core\XafLogicExplainer.Core.csproj" />
+    <ProjectReference Include="..\..\src\XafLogicExplainer.CopilotSync\XafLogicExplainer.CopilotSync.csproj" />
     <ProjectReference Include="..\..\src\XafLogicExplainer.Mcp\XafLogicExplainer.Mcp.csproj" />
   </ItemGroup>
 
