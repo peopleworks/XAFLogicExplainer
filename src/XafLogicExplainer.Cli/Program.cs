@@ -4,6 +4,7 @@ using System.Text.Json;
 using Spectre.Console;
 using XafLogicExplainer.Cli.Helpers;
 using XafLogicExplainer.Cli.Models;
+using XafLogicExplainer.CopilotSync.Ai;
 using XafLogicExplainer.CopilotSync.Models;
 using XafLogicExplainer.CopilotSync.Services;
 using XafLogicExplainer.Core.Analyzers;
@@ -46,11 +47,33 @@ var allOption = new Option<bool>("--all", "Process all configured projects");
 allOption.AddAlias("-a");
 var enrichOption = new Option<bool>("--enrich", "Enrich controllers with AI-generated business logic summaries");
 
+// Global, because every command that can enrich needs them and none of them owns the choice of
+// model. Declared as options rather than read out of the environment alone so they appear in
+// --help: the reason nobody outside this shop could use --enrich was that nothing said how.
+var apiKeyOption = new Option<string?>("--api-key", "API key for the AI provider (or set OPENAI_API_KEY / ANTHROPIC_API_KEY)");
+var aiBaseUrlOption = new Option<string?>("--ai-base-url", "Any OpenAI-compatible endpoint, including a local one");
+var aiModelOption = new Option<string?>("--ai-model", "Model name, when not the provider's default");
+
 // ============================================================
 // ROOT COMMAND
 // ============================================================
 
 var rootCommand = new RootCommand("XAF Logic Explainer CLI - Extract and sync XAF project documentation");
+
+rootCommand.AddGlobalOption(apiKeyOption);
+rootCommand.AddGlobalOption(aiBaseUrlOption);
+rootCommand.AddGlobalOption(aiModelOption);
+
+// Read once, here, rather than threaded through each handler: SetHandler takes at most eight
+// parameters and extract already spends six, so adding three would have forced four commands onto
+// the InvocationContext pattern to carry a setting none of them decides.
+var aiParse = rootCommand.Parse(args);
+var aiOverrides = new AiClientRequest
+{
+    ApiKey = aiParse.GetValueForOption(apiKeyOption),
+    BaseUrl = aiParse.GetValueForOption(aiBaseUrlOption),
+    Model = aiParse.GetValueForOption(aiModelOption),
+};
 
 // ============================================================
 // COMMAND: config
@@ -380,7 +403,7 @@ extractCommand.SetHandler(async (projectPath, language, force, orm, all, enrich)
 
     if (enrich)
     {
-        await EnrichWithAi(project, config, language!);
+        await EnrichWithAi(project, config, language!, aiOverrides);
     }
 
     // Summary table
@@ -631,7 +654,7 @@ syncCommand.SetHandler(async (context) =>
         {
             enrichHook = async (extractedProject) =>
             {
-                await EnrichWithAi(extractedProject, config, language!);
+                await EnrichWithAi(extractedProject, config, language!, aiOverrides);
             };
         }
         singleResult = await syncService.SyncAsync(singleSyncConfig, BuildExtractionOptions(language, orm), msg =>
@@ -1433,7 +1456,8 @@ agentsCommand.SetHandler(async (context) =>
                 agentsForce,
                 agentsEnrich,
                 agentsOptions,
-                agentsConfig);
+                agentsConfig,
+                aiOverrides);
         }
 
         return;
@@ -1454,7 +1478,8 @@ agentsCommand.SetHandler(async (context) =>
         agentsForce,
         agentsEnrich,
         agentsOptions,
-        agentsConfig);
+        agentsConfig,
+        aiOverrides);
 });
 
 rootCommand.AddCommand(agentsCommand);
@@ -1503,7 +1528,7 @@ explainCommand.SetHandler(async (explainProject, explainLanguage, explainOrm, ex
 
     if (explainEnrich)
     {
-        await EnrichWithAi(explained, explainConfig, explainLang);
+        await EnrichWithAi(explained, explainConfig, explainLang, aiOverrides);
     }
 
     var html = new HtmlExplainerGenerator(ThisAssemblyVersion()).Generate(explained);
@@ -1759,7 +1784,8 @@ static async Task GenerateAgentFiles(
     bool force,
     bool enrich,
     AgentFilesOptions options,
-    CliConfig config)
+    CliConfig config,
+    AiClientRequest aiOverrides)
 {
     if (!Directory.Exists(projectPath))
     {
@@ -1784,7 +1810,7 @@ static async Task GenerateAgentFiles(
 
     if (enrich)
     {
-        await EnrichWithAi(agentProject, config, language);
+        await EnrichWithAi(agentProject, config, language, aiOverrides);
     }
 
     var agentGenerator = new MarkdownDocumentationGenerator(language);
@@ -1967,7 +1993,8 @@ static void DisplayDiffSummary(ProjectDiffReport report)
 // HELPER: AI Business Logic Enrichment
 // ============================================================
 
-static async Task EnrichWithAi(ExtractedProject project, CliConfig config, string language)
+static async Task EnrichWithAi(
+    ExtractedProject project, CliConfig config, string language, AiClientRequest aiOverrides)
 {
     if (project.Controllers.Count == 0)
     {
@@ -1975,40 +2002,36 @@ static async Task EnrichWithAi(ExtractedProject project, CliConfig config, strin
         return;
     }
 
-    var apiUrl = config.ApiUrl;
-    var token = config.Token;
-    var userName = config.UserName ?? "xaf-logic-explainer";
-    var resourceName = config.ResourceName ?? "";
-
-    if (string.IsNullOrEmpty(apiUrl) || string.IsNullOrEmpty(token))
+    // A PeopleWorks Copilot account is now the last of several routes rather than the only one, so
+    // it is offered rather than required: an empty URL or token simply means this route is not
+    // configured, and the resolver moves on to the next.
+    var request = aiOverrides with
     {
-        AnsiConsole.MarkupLine("[yellow]  --enrich requires API credentials. Configure with: xaflogic config[/]");
+        Copilot = new SyncConfiguration
+        {
+            CopilotApiBaseUrl = config.ApiUrl ?? "",
+            CopilotApiToken = config.Token ?? "",
+            UserName = config.UserName ?? "xaf-logic-explainer",
+            ResourceName = config.ResourceName ?? "",
+        },
+    };
+
+    var resolved = await AiClientResolver.ResolveAsync(request);
+
+    if (!resolved.Succeeded)
+    {
+        var problem = resolved.Problem ?? AiClientResolver.NothingConfigured;
+
+        foreach (var line in problem.Split('\n'))
+            AnsiConsole.MarkupLine($"[yellow]  {Markup.Escape(line)}[/]");
+
         return;
     }
 
-    AnsiConsole.MarkupLine("[grey]  Fetching AI provider credentials...[/]");
-    AiProviderInfo? aiProvider = null;
-    using (var apiClient = new CopilotApiClient(apiUrl, token, userName, resourceName))
-    {
-        aiProvider = await apiClient.GetAiProviderAsync();
-    }
+    var chatClient = resolved.Client!;
 
-    if (aiProvider == null || string.IsNullOrEmpty(aiProvider.ApiKey))
-    {
-        AnsiConsole.MarkupLine("[yellow]  Could not retrieve AI provider. Skipping enrichment.[/]");
-        return;
-    }
-
-    var model = aiProvider.Parameters?.GetValueOrDefault("model")?.ToString() ?? "gpt-4o-mini";
-    var baseUrl = aiProvider.AiProviderBaseUrl ?? "https://api.openai.com/v1";
-
-    AnsiConsole.MarkupLine($"[blue]AI:[/] {Markup.Escape(aiProvider.ProviderName ?? "OpenAI")} / {Markup.Escape(model)}");
+    AnsiConsole.MarkupLine($"[blue]AI:[/] {Markup.Escape(resolved.ProviderName)} / {Markup.Escape(resolved.Model)}");
     AnsiConsole.MarkupLine($"[blue]  Enriching {project.Controllers.Count} controllers...[/]");
-
-    var openAiClient = new OpenAIClient(
-        new System.ClientModel.ApiKeyCredential(aiProvider.ApiKey),
-        new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-    var chatClient = openAiClient.GetChatClient(model).AsIChatClient();
 
     var enricher = new BusinessLogicEnricher(chatClient);
     await enricher.EnrichAsync(project, language, msg =>

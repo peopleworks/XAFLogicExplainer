@@ -39,9 +39,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an appearance rule does. Probed at the time: an application went from two declared rules to
   three and the diff reported zero changes.
 
+### Changed
+
+- **Any model will do, and a key is enough** ([#24]). Every AI feature reached PeopleWorks Copilot
+  for its credentials — not for a key the user had configured, but for the *model's* key, fetched
+  from an account. On a public MIT project that meant no outside user could run any of them:
+  `--enrich` refused without an API URL and token and told the reader to configure credentials for
+  a service they had never heard of, and the Description Annotator asked for `COPILOT_API_TOKEN`.
+  There is now one resolver shared by both, taking the first route that is configured: `--api-key`
+  on the command line, then `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the environment, then a
+  PeopleWorks Copilot account — which still works untouched, as one option among several rather
+  than the gate. `--ai-base-url` reaches any OpenAI-compatible endpoint, including a local one, and
+  `--ai-model` names the model. Someone with none of them configured is now told all four.
+  A key is never read from or written to the configuration file: the endpoint and the model name
+  are settings, a key is a secret, and that file lives in a home directory that gets copied around.
+
 ### Internal
 
-- First tests over `ProjectDiffEngine`, which is why the key above survived. 337 tests.
+- First tests over `ProjectDiffEngine`, which is why the key above survived. 345 tests.
+
+[#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
 
 [#21]: https://github.com/peopleworks/XAFLogicExplainer/pull/21
 [@MBrekhof]: https://github.com/MBrekhof
