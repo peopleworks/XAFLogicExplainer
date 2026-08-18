@@ -172,6 +172,32 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
     }
 
     /// <summary>
+    /// Opens an appearance rule's line: what it is called, and what activates it.
+    /// </summary>
+    /// <remarks>
+    /// Both halves are optional in real code, and both were printed as though they were not.
+    /// <para>
+    /// A rule written on a property needs no identifier — the property already says what it governs
+    /// — and the DevExpress non-persistent-objects demo writes <c>[Appearance("", Enabled = false)]</c>
+    /// at class level. The empty name rendered as <c>****</c>.
+    /// </para>
+    /// <para>
+    /// A rule with no criteria is not a rule whose condition went missing: in XAF it is
+    /// <em>always</em> active, which is the stronger of the two claims and the one a reader most
+    /// needs. It rendered as <c>when ``</c> — a condition that looks like it failed to load.
+    /// <see cref="HtmlExplainerGenerator"/> had already settled on the right word.
+    /// </para>
+    /// </remarks>
+    private string OpenAppearance(ExtractedAppearanceRule rule)
+    {
+        var condition = rule.Criteria is { Length: > 0 } criteria ? $"{_l.When} `{criteria}`" : _l.Always;
+
+        // No identifier leaves nothing to put in front of the condition, and an empty bold span is
+        // worse than none: DescribeAppearance names the targets, which is what identifies it.
+        return rule.Id is { Length: > 0 } id ? $"**{id}** — {condition}" : condition;
+    }
+
+    /// <summary>
     /// Says what an appearance rule actually does, and on which screen.
     /// </summary>
     /// <remarks>
@@ -541,7 +567,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 sb.AppendLine();
                 foreach (var rule in entity.AppearanceRules.OrderByDescending(r => r.InheritedFrom is null))
                 {
-                    sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}{Declarer(rule.InheritedFrom)}");
+                    sb.AppendLine($"- {OpenAppearance(rule)}{DescribeAppearance(rule)}{Declarer(rule.InheritedFrom)}");
                 }
                 sb.AppendLine();
             }
@@ -693,7 +719,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             sb.AppendLine($"### {entity.ClassName}");
             foreach (var rule in entity.AppearanceRules.Where(r => r.InheritedFrom is null))
             {
-                sb.AppendLine($"- **{rule.Id}** — {_l.When} `{rule.Criteria}`{DescribeAppearance(rule)}");
+                sb.AppendLine($"- {OpenAppearance(rule)}{DescribeAppearance(rule)}");
             }
             sb.AppendLine();
         }
