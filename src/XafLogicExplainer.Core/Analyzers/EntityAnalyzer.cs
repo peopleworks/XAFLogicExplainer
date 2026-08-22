@@ -86,6 +86,7 @@ public class EntityAnalyzer : IEntityAnalyzer
             ClassName = classDecl.Identifier.Text,
             Namespace = GetNamespace(classDecl),
             FilePath = filePath,
+            Line = SourceLine.Of(classDecl.Identifier),
             BaseType = GetBaseTypeName(classDecl),
             BaseTypes = GetBaseTypeNames(classDecl),
             Description = GetAttributeStringArg(classDecl, "Description"),

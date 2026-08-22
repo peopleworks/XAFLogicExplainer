@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Entities, controllers, actions and methods say where they are declared** ([#23], first step).
+  The extraction knew which *file* a class was in and nothing narrower, so `xaf_entity` and
+  `xaf_controller` handed an agent a name and left it to search the file for it. Each now carries a
+  one-based line, taken from the **identifier token** rather than from the declaration's span — a
+  span begins at the first attribute, and `Customer` sits behind a doc comment and four of them, so
+  the two answers are four lines apart and only one of them is the line anybody means. Actions and
+  methods carry their own file as well as their own line, because a partial controller's members
+  need not be declared in the file the controller is cited at. The MCP tools name the file once and
+  then cite members by line alone; a member in a *different* file is given in full, which is exactly
+  the case where a reader would otherwise open the wrong one. Prerequisite for the walkthrough,
+  where every claim is supposed to carry a `file:line` a reader can check.
+
 ### Fixed
 
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
@@ -70,8 +84,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - First tests over `ProjectDiffEngine`, which is why the key above survived.
 
 - Every sample project's Markdown is now checked, in both languages, for a line that opens raw HTML
-  outside a code fence. 348 tests.
+  outside a code fence.
 
+- Citations are checked by reading the fixture back off disk: the cited line must really contain the
+  declaration, across every sample project. It is the only assertion that catches an off-by-one or a
+  span that starts at an attribute. 355 tests.
+
+[#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
 [#28]: https://github.com/peopleworks/XAFLogicExplainer/issues/28
 [mcpOffice]: https://github.com/MBrekhof/mcpOffice

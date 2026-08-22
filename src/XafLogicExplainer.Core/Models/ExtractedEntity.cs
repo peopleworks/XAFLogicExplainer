@@ -21,6 +21,15 @@ public class ExtractedEntity
     public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
+    /// One-based line the class name sits on, or zero when it is not known.
+    /// </summary>
+    /// <remarks>
+    /// With <see cref="FilePath"/> this is a citation: the place a reader goes to check the claim.
+    /// A partial class is cited at the declaration extraction saw first.
+    /// </remarks>
+    public int Line { get; set; }
+
+    /// <summary>
     /// Name of the project this entity was extracted from (e.g. "Module", "Blazor.Server").
     /// </summary>
     public string? SourceProject { get; set; }
