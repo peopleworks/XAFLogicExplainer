@@ -54,11 +54,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   A key is never read from or written to the configuration file: the endpoint and the model name
   are settings, a key is a secret, and that file lives in a home directory that gets copied around.
 
+- **The Markdown we generate is Markdown** ([#28]). A seed method's source was wrapped in a
+  `<details>` fold. That collapses on GitHub and nowhere else: in a Word or PDF export, in a plain
+  Markdown viewer, and to a model reading the file, the wrapper is literal text and the fold's
+  label — "Source code of PopulateStatuses" — stops being a label and becomes a line of markup. It
+  is now a heading, which survives the trip and takes its place in the document outline. The fold
+  is lost on GitHub; these files are read far more often than they are scrolled. Found by walking
+  the output against the Markdig converter in [mcpOffice], whose documented behaviour for an HTML
+  block is to emit it as plain text — every other construct we write already maps to a real Word
+  equivalent, so this one call site was the whole distance between an extraction and a document
+  somebody can hand over.
+
 ### Internal
 
-- First tests over `ProjectDiffEngine`, which is why the key above survived. 345 tests.
+- First tests over `ProjectDiffEngine`, which is why the key above survived.
+
+- Every sample project's Markdown is now checked, in both languages, for a line that opens raw HTML
+  outside a code fence. 348 tests.
 
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
+[#28]: https://github.com/peopleworks/XAFLogicExplainer/issues/28
+[mcpOffice]: https://github.com/MBrekhof/mcpOffice
 
 [#21]: https://github.com/peopleworks/XAFLogicExplainer/pull/21
 [@MBrekhof]: https://github.com/MBrekhof

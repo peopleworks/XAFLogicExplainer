@@ -840,13 +840,16 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
 
                 if (!string.IsNullOrEmpty(seed.RawSourceCode))
                 {
-                    sb.AppendLine("<details>");
-                    sb.AppendLine($"<summary>{_l.SourceCodeOf} {seed.MethodName}</summary>");
+                    // A heading rather than a <details> fold. The fold only opens in a renderer that
+                    // passes HTML through, and everywhere else -- a Word or PDF export, a plain
+                    // Markdown viewer, a model reading the file -- the wrapper is literal text and the
+                    // label stops being a label. This costs the fold on GitHub, which is the trade:
+                    // these files are read far more often than they are scrolled.
+                    sb.AppendLine($"#### {_l.SourceCodeOf} {seed.MethodName}");
                     sb.AppendLine();
                     sb.AppendLine("```csharp");
                     sb.AppendLine(seed.RawSourceCode);
                     sb.AppendLine("```");
-                    sb.AppendLine("</details>");
                     sb.AppendLine();
                 }
             }
