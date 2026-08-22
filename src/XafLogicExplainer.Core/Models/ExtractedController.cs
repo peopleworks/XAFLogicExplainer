@@ -21,6 +21,16 @@ public class ExtractedController
     public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
+    /// One-based line the controller's class name sits on, or zero when it is not known.
+    /// </summary>
+    /// <remarks>
+    /// A controller assembled from several partial declarations is cited at the one extraction saw
+    /// first — which is why its actions and methods carry their own file and line rather than
+    /// borrowing these.
+    /// </remarks>
+    public int Line { get; set; }
+
+    /// <summary>
     /// Name of the project this controller was extracted from (e.g. "Module", "Blazor.Server").
     /// </summary>
     public string? SourceProject { get; set; }
@@ -139,6 +149,20 @@ public class ExtractedAction
     public string ActionId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Source file path where the action field was declared.
+    /// </summary>
+    /// <remarks>
+    /// Held here rather than read from the controller, because a partial controller's actions can
+    /// be declared in a different file from the one the controller itself is cited at.
+    /// </remarks>
+    public string FilePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// One-based line the action field's name sits on, or zero when it is not known.
+    /// </summary>
+    public int Line { get; set; }
+
+    /// <summary>
     /// Action class/type (SimpleAction, PopupWindowShowAction, and so on).
     /// </summary>
     public string ActionType { get; set; } = string.Empty;
@@ -218,6 +242,20 @@ public class ExtractedMethod
     /// Method name.
     /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Source file path where the method was declared.
+    /// </summary>
+    /// <remarks>
+    /// Held here for the same reason as on an action: the declaration of one partial controller's
+    /// method need not be in the file the controller is cited at.
+    /// </remarks>
+    public string FilePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// One-based line the method's name sits on, or zero when it is not known.
+    /// </summary>
+    public int Line { get; set; }
 
     /// <summary>
     /// Return type name.

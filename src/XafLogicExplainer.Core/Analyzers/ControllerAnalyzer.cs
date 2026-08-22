@@ -135,6 +135,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
             ClassName = first.ClassName,
             Namespace = first.Namespace,
             FilePath = first.FilePath,
+            Line = SourceLine.Of(first.Declaration.Identifier),
             BaseControllerType = parts.Select(part => part.BaseType).FirstOrDefault(name => name.Length > 0) ?? "object",
             // XAF only registers what it can instantiate, so an abstract base class never activates
             // on anything -- it hands its targeting and its actions down to the classes that do.
@@ -147,7 +148,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
             ControllerTargetingReader.Merge(controller.Targeting, ControllerTargetingReader.Read(declaration));
 
-            foreach (var action in ExtractActions(declaration, options))
+            foreach (var action in ExtractActions(declaration, part.FilePath, options))
             {
                 if (!controller.Actions.Exists(existing => existing.ActionId == action.ActionId))
                     controller.Actions.Add(action);
@@ -155,7 +156,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
 
             if (options.IncludeMethodBodies)
             {
-                foreach (var method in ExtractMethods(declaration))
+                foreach (var method in ExtractMethods(declaration, part.FilePath))
                 {
                     if (!controller.Methods.Exists(existing => existing.Name == method.Name))
                         controller.Methods.Add(method);
@@ -198,7 +199,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// <summary>
     /// Extracts action declarations from controller field members and constructor logic.
     /// </summary>
-    private static List<ExtractedAction> ExtractActions(ClassDeclarationSyntax classDecl, ExtractionOptions options)
+    private static List<ExtractedAction> ExtractActions(
+        ClassDeclarationSyntax classDecl, string filePath, ExtractionOptions options)
     {
         var actions = new List<ExtractedAction>();
 
@@ -214,6 +216,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
                 {
                     ActionId = variable.Identifier.Text,
                     ActionType = field.Declaration.Type.ToString(),
+                    FilePath = filePath,
+                    Line = SourceLine.Of(variable.Identifier),
                 };
                 actions.Add(action);
             }
@@ -224,7 +228,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
         foreach (var ctor in constructors)
         {
             if (ctor.Body == null) continue;
-            EnrichActionsFromConstructor(actions, ctor.Body, options);
+            EnrichActionsFromConstructor(actions, ctor.Body, filePath, options);
         }
 
         return actions;
@@ -233,7 +237,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// <summary>
     /// Enriches action metadata by scanning constructor assignments and event wiring.
     /// </summary>
-    private static void EnrichActionsFromConstructor(List<ExtractedAction> actions, BlockSyntax body, ExtractionOptions options)
+    private static void EnrichActionsFromConstructor(
+        List<ExtractedAction> actions, BlockSyntax body, string filePath, ExtractionOptions options)
     {
         var classDecl = body.Ancestors().OfType<ClassDeclarationSyntax>().First();
 
@@ -277,7 +282,14 @@ public class ControllerAnalyzer : IControllerAnalyzer
             var action = actions.FirstOrDefault(a => a.ActionId == fieldName);
             if (action == null)
             {
-                action = new ExtractedAction { ActionType = typeName };
+                // No field declared it, so the constructor is where it exists: cite the `new`
+                // rather than leave the action with no place at all.
+                action = new ExtractedAction
+                {
+                    ActionType = typeName,
+                    FilePath = filePath,
+                    Line = SourceLine.Of(creation.NewKeyword),
+                };
                 actions.Add(action);
             }
 
@@ -400,7 +412,7 @@ public class ControllerAnalyzer : IControllerAnalyzer
     /// <summary>
     /// Extracts controller methods and optional XML summaries.
     /// </summary>
-    private static List<ExtractedMethod> ExtractMethods(ClassDeclarationSyntax classDecl)
+    private static List<ExtractedMethod> ExtractMethods(ClassDeclarationSyntax classDecl, string filePath)
     {
         var methods = new List<ExtractedMethod>();
 
@@ -409,6 +421,8 @@ public class ControllerAnalyzer : IControllerAnalyzer
             var extracted = new ExtractedMethod
             {
                 Name = method.Identifier.Text,
+                FilePath = filePath,
+                Line = SourceLine.Of(method.Identifier),
                 ReturnType = method.ReturnType.ToString(),
                 IsPublic = method.Modifiers.Any(SyntaxKind.PublicKeyword),
                 Parameters = method.ParameterList.Parameters

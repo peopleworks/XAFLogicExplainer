@@ -55,6 +55,9 @@ public sealed class XafDetailTools
         sb.AppendLine();
         sb.AppendLine($"Namespace `{entity.Namespace}`, base class `{entity.BaseType}`.");
 
+        if (At(entity.FilePath, entity.Line) is { Length: > 0 } declaredAt)
+            sb.AppendLine($"Declared at {declaredAt}.");
+
         if (!string.IsNullOrWhiteSpace(entity.Description))
             sb.AppendLine($"\n{entity.Description}");
 
@@ -140,6 +143,9 @@ public sealed class XafDetailTools
         sb.AppendLine($"# {controller.ClassName}");
         sb.AppendLine();
         sb.AppendLine($"Base class `{controller.BaseControllerType}`.");
+
+        if (At(controller.FilePath, controller.Line) is { Length: > 0 } controllerAt)
+            sb.AppendLine($"Declared at {controllerAt}.");
         sb.AppendLine($"Applies to: {controller.TargetObjectType ?? "any object type"}" +
                       $"{(string.IsNullOrWhiteSpace(controller.TargetViewType) ? "" : $", {controller.TargetViewType} only")}.");
 
@@ -180,6 +186,9 @@ public sealed class XafDetailTools
             sb.AppendLine($"## Action `{action.ActionId}`");
             sb.AppendLine();
             sb.AppendLine($"- Type: {action.ActionType}");
+
+            if (Within(controller.FilePath, action.FilePath, action.Line) is { Length: > 0 } actionAt)
+                sb.AppendLine($"- Declared at {actionAt}");
             if (!string.IsNullOrWhiteSpace(action.Caption)) sb.AppendLine($"- Caption: \"{action.Caption}\"");
             if (!string.IsNullOrWhiteSpace(action.Category)) sb.AppendLine($"- Category: {action.Category}");
             if (!string.IsNullOrWhiteSpace(action.ConfirmationMessage)) sb.AppendLine($"- Confirms with: \"{action.ConfirmationMessage}\"");
@@ -214,6 +223,12 @@ public sealed class XafDetailTools
                 sb.AppendLine();
                 sb.AppendLine($"### `{method.ReturnType} {method.Name}({string.Join(", ", method.Parameters)})`");
                 sb.AppendLine();
+
+                if (Within(controller.FilePath, method.FilePath, method.Line) is { Length: > 0 } methodAt)
+                {
+                    sb.AppendLine($"Declared at {methodAt}.");
+                    sb.AppendLine();
+                }
                 sb.AppendLine("```csharp");
                 sb.AppendLine(Cap(method.Body));
                 sb.AppendLine("```");
@@ -866,6 +881,37 @@ public sealed class XafDetailTools
         sb.AppendLine($"If the user expects '{requested}' to exist, it has not been created yet.");
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Where a declaration is, for an agent whose next move is to open the file.
+    /// </summary>
+    /// <remarks>
+    /// The full path rather than one relative to the project: the server runs beside the source it
+    /// read, so an absolute path is directly openable and needs no root to resolve against. Absent
+    /// when there is no line to give, because a citation nobody can follow is worse than none.
+    /// </remarks>
+    private static string At(string filePath, int line) =>
+        string.IsNullOrWhiteSpace(filePath) || line <= 0 ? "" : $"`{filePath}:{line}`";
+
+    /// <summary>
+    /// Where a member is, given that its container has already been cited.
+    /// </summary>
+    /// <remarks>
+    /// A member almost always sits in the file its class was cited at, and repeating a hundred
+    /// characters of path for every action and every helper method spends an agent's context on
+    /// nothing — the same reason <see cref="MaxCodeLength"/> exists. So the shared case says only
+    /// the line. A partial class is the case that is not shared, and there the full path is printed
+    /// precisely because the reader would otherwise open the wrong file.
+    /// </remarks>
+    private static string Within(string containerPath, string filePath, int line)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || line <= 0)
+            return "";
+
+        return filePath.Equals(containerPath, StringComparison.OrdinalIgnoreCase)
+            ? $"line {line}"
+            : $"`{filePath}:{line}`";
     }
 
     /// <summary>Caps a code block, saying so rather than truncating silently.</summary>
