@@ -44,6 +44,10 @@ internal static class SampleProjects
     public static string AuditedXpoPath =>
         Path.Combine(FixturesRoot, "AuditedXpoSolution", "SampleAudited.Module");
 
+    /// <summary>Path to the fixture whose process runs through a virtual method.</summary>
+    public static string WalkthroughPath =>
+        Path.Combine(FixturesRoot, "WalkthroughSolution", "Billing.Module");
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 
@@ -99,6 +103,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyPocoEf = new(() => Extract(PocoEfPath));
     private static readonly Lazy<ExtractedProject> LazyNoOrm = new(() => Extract(NoOrmPath));
 
+    private static readonly Lazy<ExtractedProject> LazyWalkthrough = new(() => Extract(WalkthroughPath));
     private static readonly Lazy<ExtractedProject> LazyDeepXpo = new(() => Extract(DeepXpoPath));
     private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
 
@@ -136,6 +141,16 @@ internal static class SampleProjects
     /// summary of fixed width has to choose between an entity's columns and its base's.
     /// </remarks>
     public static ExtractedProject AuditedXpo => LazyAuditedXpo.Value;
+
+    /// <summary>
+    /// An application whose one process is dispatched through a virtual method.
+    /// </summary>
+    /// <remarks>
+    /// Its proportions are the point. One action, one handler, and a <c>Recalculate</c> that two
+    /// controllers override — so a walk that reports only what it can resolve produces a confident,
+    /// complete-looking account of a process whose entire body it never saw.
+    /// </remarks>
+    public static ExtractedProject Walkthrough => LazyWalkthrough.Value;
 
     /// <summary>
     /// The fourteen-entity demo, with a custom editor in a sibling platform project.
