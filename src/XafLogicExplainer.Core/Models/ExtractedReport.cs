@@ -38,6 +38,13 @@ public class ExtractedReport
     /// </summary>
     public bool? IsInplaceReport { get; set; }
 
+    /// <summary>
+    /// What the report shows, read from its designer code, its <c>.repx</c> or its constructor.
+    /// Null when the report type's declaration was not found under the project — it lives in
+    /// another assembly, or the layout is loaded from somewhere the code does not name.
+    /// </summary>
+    public ReportLayout? Layout { get; set; }
+
     /// <summary>File the registration is in.</summary>
     public string FilePath { get; set; } = string.Empty;
 

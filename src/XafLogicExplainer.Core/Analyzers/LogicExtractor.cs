@@ -184,6 +184,7 @@ public class LogicExtractor : ILogicExtractor
         //    And the reports the module registers, which live in the same method as the updater
         //    and were walked past for fourteen releases.
         project.Reports = _reportAnalyzer.AnalyzeRegistrations(projectPath, options);
+        project.UnregisteredReportLayouts = _reportAnalyzer.UnregisteredLayouts(projectPath, project.Reports);
         project.ReferencesReportsModule = _reportAnalyzer.ReferencesReportsModule(projectPath);
 
         // 5. Build navigation structure from entities

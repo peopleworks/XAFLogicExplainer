@@ -2,7 +2,7 @@
 <XtraReportsLayoutSerializer SerializerVersion="25.2.3.0" Ref="1" ControlType="DevExpress.XtraReports.UI.XtraReport, DevExpress.XtraReports.v25.2" Name="CustomerStatementReport" FilterString="[IsApproved] = True" DataSource="#Ref-0" Version="25.2">
   <Parameters>
     <Item1 Ref="2" Description="Statement period starts" ValueInfo="2026-01-01" Name="PeriodStart" Type="#Ref-3" Visible="false" />
-    <Item2 Ref="4" Description="Region" Name="Region" Type="#Ref-5" Visible="false" />
+    <Item2 Ref="4" Description="Region" Name="Region" Visible="false" />
   </Parameters>
   <CalculatedFields>
     <Item1 Ref="6" Name="InvoiceCount" Expression="Count([Invoices])" FieldType="Int32" />
@@ -40,4 +40,7 @@
   <ComponentStorage>
     <Item1 Ref="0" ObjectType="DevExpress.Persistent.Base.ReportsV2.CollectionDataSource,DevExpress.Persistent.Base.v25.2" Name="collectionDataSource1" ObjectTypeName="Invoicing.Module.BusinessObjects.Customer" />
   </ComponentStorage>
+  <ObjectStorage>
+    <Item1 ObjectType="DevExpress.XtraReports.Serialization.ObjectStorageInfo, DevExpress.XtraReports.v25.2" Ref="3" Content="System.DateTime" Type="System.Type" />
+  </ObjectStorage>
 </XtraReportsLayoutSerializer>

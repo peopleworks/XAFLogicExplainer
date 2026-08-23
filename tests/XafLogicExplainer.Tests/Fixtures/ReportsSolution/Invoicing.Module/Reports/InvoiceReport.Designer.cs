@@ -38,6 +38,7 @@ namespace Invoicing.Module.Reports
             this.collectionDataSource1 = new DevExpress.Persistent.Base.ReportsV2.CollectionDataSource(this.components);
             this.calculatedFieldNet = new DevExpress.XtraReports.UI.CalculatedField();
             this.parameterFrom = new DevExpress.XtraReports.Parameters.Parameter();
+            this.parameterRegion = new DevExpress.XtraReports.Parameters.Parameter();
             ((System.ComponentModel.ISupportInitialize)(this.collectionDataSource1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this)).BeginInit();
             //
@@ -108,6 +109,12 @@ namespace Invoicing.Module.Reports
             this.parameterFrom.Type = typeof(System.DateTime);
             this.parameterFrom.Visible = false;
             //
+            // parameterRegion
+            //
+            this.parameterRegion.Name = "Region";
+            this.parameterRegion.Type = typeof(string);
+            this.parameterRegion.Visible = false;
+            //
             // InvoiceReport
             //
             this.Bands.AddRange(new DevExpress.XtraReports.UI.Band[] {
@@ -122,7 +129,8 @@ namespace Invoicing.Module.Reports
             this.DataSource = this.collectionDataSource1;
             this.FilterString = "[IsApproved] = True And [Date] >= ?From";
             this.Parameters.AddRange(new DevExpress.XtraReports.Parameters.Parameter[] {
-            this.parameterFrom});
+            this.parameterFrom,
+            this.parameterRegion});
             this.Version = "25.2";
             ((System.ComponentModel.ISupportInitialize)(this.collectionDataSource1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
@@ -141,5 +149,6 @@ namespace Invoicing.Module.Reports
         private DevExpress.Persistent.Base.ReportsV2.CollectionDataSource collectionDataSource1;
         private DevExpress.XtraReports.UI.CalculatedField calculatedFieldNet;
         private DevExpress.XtraReports.Parameters.Parameter parameterFrom;
+        private DevExpress.XtraReports.Parameters.Parameter parameterRegion;
     }
 }

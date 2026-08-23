@@ -26,13 +26,15 @@ public class ReportAnalyzer
     private const string RegistrationMethod = "AddPredefinedReport";
 
     /// <summary>
-    /// Every <c>AddPredefinedReport&lt;T&gt;(...)</c> call under the directory, in source order.
+    /// Every <c>AddPredefinedReport&lt;T&gt;(...)</c> call under the directory, in source order,
+    /// each with its layout when the report class is declared under the directory too.
     /// </summary>
     public List<ExtractedReport> AnalyzeRegistrations(string sourceDirectory, ExtractionOptions options)
     {
+        var files = AnalyzableFiles(sourceDirectory).ToList();
         var reports = new List<ExtractedReport>();
 
-        foreach (var file in AnalyzableFiles(sourceDirectory).Where(f => ContainsWord(f, RegistrationMethod)))
+        foreach (var file in files.Where(f => ContainsWord(f, RegistrationMethod)))
         {
             var root = CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot();
 
@@ -43,7 +45,37 @@ public class ReportAnalyzer
             }
         }
 
+        // One read per report type; a type registered twice gets the same layout twice, because
+        // each registration is its own report to a reader.
+        var layouts = new Dictionary<string, ReportLayout?>(StringComparer.Ordinal);
+
+        foreach (var report in reports)
+        {
+            if (!layouts.TryGetValue(report.ReportType, out var layout))
+                layouts[report.ReportType] = layout = ReportLayoutReader.ForReportType(report.ReportType, sourceDirectory, files);
+
+            report.Layout = layout;
+        }
+
         return reports;
+    }
+
+    /// <summary>
+    /// Every <c>.repx</c> under the directory that no registration's report class loads.
+    /// </summary>
+    public List<ReportLayout> UnregisteredLayouts(string sourceDirectory, IEnumerable<ExtractedReport> registered)
+    {
+        var claimed = registered
+            .Select(r => r.Layout?.FilePath)
+            .Where(p => p != null)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return ReportLayoutReader.RepxFiles(sourceDirectory)
+            .Where(f => !claimed.Contains(f))
+            .Select(ReportLayoutReader.FromRepx)
+            .Where(l => l != null)
+            .Select(l => l!)
+            .ToList();
     }
 
     /// <summary>

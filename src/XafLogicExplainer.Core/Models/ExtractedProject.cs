@@ -122,6 +122,17 @@ public class ExtractedProject
     public bool ReferencesReportsModule { get; set; }
 
     /// <summary>
+    /// Layouts found on disk — <c>.repx</c> files — that no registration names.
+    /// </summary>
+    /// <remarks>
+    /// A shop that designs reports outside Visual Studio ends up with layouts no code references:
+    /// imported by hand into the running application, or exported from it. They are still the
+    /// clearest account there is of what those reports show, and skipping them would describe an
+    /// application with fewer reports than its repository holds.
+    /// </remarks>
+    public List<ReportLayout> UnregisteredReportLayouts { get; set; } = [];
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>
