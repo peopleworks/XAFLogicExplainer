@@ -7,6 +7,40 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-08-23
+
+How it works, not only what exists.
+
+Every release until now answered the same shape of question. What entities does this application
+have. What does this controller do. What does that rule forbid. All of it true, all of it
+declarations — and a business process is not a declaration. It is a path across several of them, and
+nothing in the extractor walked a path.
+
+`xaflogic walkthrough --from ApproveOrder` walks it. The scope is **computed**, by a bounded
+breadth-first traversal, and not chosen by a language model — because a model asked what belongs in
+"the approval process" answers authoritatively, in a form nobody can check, and is wrong in the
+places that look exactly like the places it is right. The Mermaid diagram is emitted from that
+traversal arrow for arrow, for the same reason and more sharply: a diagram is believed at a glance,
+so an invented edge in one is worth less than no diagram at all.
+
+The two halves that make it honest are the ones that took the most care. **A call the walk cannot
+follow is printed rather than dropped** — a virtual method is followed to the declaration written
+beside the call and reported with every override that may replace it, and the document says outright
+that the bodies it never entered mean entities missing from the account. And **`--since` reports what
+changed in that one process** against a stored snapshot, which is the question no conversational
+agent can answer, because none of them has a yesterday.
+
+`--narrate` is opt-in and, deliberately, the least load-bearing thing here. The model receives the
+numbered steps and the code behind them; the only prose that reaches a reader is a paragraph it
+managed to key to a step that exists. A document generated with an empty narration is
+byte-for-byte the one generated with none.
+
+Also in this release: every declaration now says where it is, `file:line`, in the extraction and in
+the MCP tools — the foundation the walkthrough needed and worth having on its own, since the tools
+used to hand an agent a name and leave it to search for it. Four appearance-rule defects, two of
+them found by [@MBrekhof]. Any model can now answer, and a key is enough. And the Markdown we
+generate is Markdown.
+
 ### Added
 
 - **Entities, controllers, actions and methods say where they are declared** ([#23], first step).
@@ -842,7 +876,8 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.15.0
 [0.14.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.12.1

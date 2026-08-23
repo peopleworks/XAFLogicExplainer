@@ -338,7 +338,7 @@ project is a no-op. There is an MSBuild `.targets` file if you want it to run on
 
 ## Status
 
-**v0.14.0.** The extraction engine is the mature part: it runs in production against real XAF
+**v0.15.0.** The extraction engine is the mature part: it runs in production against real XAF
 applications. The agent-facing surface is what is landing now, in the open.
 
 | | |
@@ -348,6 +348,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | **Custom property and list editors**, their client assets, and built-in editors reconfigured at run time |
 | ✅ | **Version-gated data migrations** — what happened to databases that were not fresh |
 | ✅ | Incremental change detection, diff reports, multi-project, watch mode |
+| ✅ | **Walkthrough** — one process traced end to end, with a diagram emitted from the trace, the calls it could not follow, and `--since` |
 | ✅ | AI enrichment of controllers and actions (`--enrich`) |
 | ✅ | Blazor in-app help panel |
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
