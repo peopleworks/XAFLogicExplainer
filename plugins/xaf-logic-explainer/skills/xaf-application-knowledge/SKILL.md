@@ -17,7 +17,7 @@ compatibility: >-
   text and never compiles the target project.
 metadata:
   author: PeopleWorks
-  version: "0.14.0"
+  version: "0.15.0"
   repository: https://github.com/peopleworks/XAFLogicExplainer
 ---
 
@@ -56,6 +56,7 @@ One call usually establishes enough to answer, or to know which detail tool to c
 | `xaf_controller` | Asked what a button, command or action actually does — returns the real handler code |
 | `xaf_rules` | Asked what the system requires, forbids or computes |
 | `xaf_model` | Asked how a screen or list is configured |
+| `xaf_walkthrough` | Asked **how** something works, not what exists — traces one process end to end, and names the calls it could not follow |
 | `xaf_refresh` | Only if you believe the cached view is stale; changes are detected automatically |
 
 ## The inventories are complete
