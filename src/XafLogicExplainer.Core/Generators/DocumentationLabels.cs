@@ -147,6 +147,110 @@ public class DocumentationLabels
     public string ModelEditorDescription { get; init; } = "";
     public string FullDocDescription { get; init; } = "";
 
+    // Walkthrough — one business process, traced
+
+    /// <summary>Name of the document: the traced account of one process.</summary>
+    public string Walkthrough { get; init; } = "";
+
+    /// <summary>Said when the seed matched nothing at all.</summary>
+    public string WalkthroughNotFound { get; init; } = "";
+
+    /// <summary>Opens the sentence naming what the walk started from.</summary>
+    public string StartedFrom { get; init; } = "";
+
+    /// <summary>How far it went when it ran out of code before the limit. {0} nodes, {1} depth.</summary>
+    public string ReachedAndFinished { get; init; } = "";
+
+    /// <summary>How far it went when the limit stopped it. {0} nodes, {1} depth.</summary>
+    public string ReachedAndStopped { get; init; } = "";
+
+    /// <summary>
+    /// How far it went when it finished inside the limit but left calls it could not follow.
+    /// {0} nodes, {1} depth.
+    /// </summary>
+    /// <remarks>
+    /// Its own sentence because the plain one would contradict the section below it: a walk that
+    /// stopped at a virtual call did not run out of code, it ran out of code it could decide.
+    /// </remarks>
+    public string ReachedAndBlocked { get; init; } = "";
+
+    /// <summary>Heading over the diagram.</summary>
+    public string Flow { get; init; } = "";
+
+    /// <summary>Heading over the list of everything the walk reached.</summary>
+    /// <remarks>
+    /// Its own section because the steps cite their target, so a node that is only ever the source
+    /// of a step -- a controller, typically -- would otherwise appear in the document with no place
+    /// attached to it at all.
+    /// </remarks>
+    public string WhatTakesPart { get; init; } = "";
+
+    /// <summary>Heading over the ordered account.</summary>
+    public string StepByStep { get; init; } = "";
+
+    /// <summary>Heading over the calls the walk saw and could not follow.</summary>
+    public string CouldNotFollow { get; init; } = "";
+
+    /// <summary>Said when every call resolved, so the absence of a list means something.</summary>
+    public string EverythingResolved { get; init; } = "";
+
+    /// <summary>Joins an unfollowed call to the code that makes it.</summary>
+    public string CalledFrom { get; init; } = "";
+
+    /// <summary>Introduces the declarations an unfollowed call might have reached.</summary>
+    public string CouldBe { get; init; } = "";
+
+    /// <summary>Heading over the bounds, which a document has to state to be read correctly.</summary>
+    public string WhatThisIsNot { get; init; } = "";
+
+    /// <summary>The depth bound, when it stopped the walk. {0} is the depth.</summary>
+    public string BoundHit { get; init; } = "";
+
+    /// <summary>The depth bound, when the walk finished inside it. {0} is the depth.</summary>
+    public string BoundNotHit { get; init; } = "";
+
+    /// <summary>That entity-to-entity relationships are deliberately not walked.</summary>
+    public string BoundNoRelationships { get; init; } = "";
+
+    /// <summary>That a controller reached from its own action does not fan out to its siblings.</summary>
+    public string BoundNoSiblings { get; init; } = "";
+
+    /// <summary>That methods come from controllers, so a service class is not walked into.</summary>
+    public string BoundControllersOnly { get; init; } = "";
+
+    /// <summary>Verb for a controller declaring an action or a method.</summary>
+    public string StepDeclares { get; init; } = "";
+
+    /// <summary>Verb for code invoking a method.</summary>
+    public string StepCalls { get; init; } = "";
+
+    /// <summary>Verb for code naming an entity.</summary>
+    public string StepTouches { get; init; } = "";
+
+    /// <summary>Verb for a controller being activated on an entity.</summary>
+    public string StepTargets { get; init; } = "";
+
+    /// <summary>Verb for an entity carrying a rule.</summary>
+    public string StepGoverns { get; init; } = "";
+
+    /// <summary>What an action is called, with its article where the language needs one.</summary>
+    public string KindAction { get; init; } = "";
+
+    /// <summary>What a method is called.</summary>
+    public string KindMethod { get; init; } = "";
+
+    /// <summary>What a controller is called.</summary>
+    public string KindController { get; init; } = "";
+
+    /// <summary>What an entity is called.</summary>
+    public string KindEntity { get; init; } = "";
+
+    /// <summary>What a validation rule is called.</summary>
+    public string KindValidationRule { get; init; } = "";
+
+    /// <summary>What an appearance rule is called.</summary>
+    public string KindAppearanceRule { get; init; } = "";
+
     /// <summary>
     /// Gets a language-specific label set.
     /// </summary>
@@ -286,6 +390,51 @@ public class DocumentationLabels
         ScreensDescription = "Cada vista de {0} y los controladores que XAF activa en ella",
         ModelEditorDescription = "Personalizaciones del Model Editor de {0}: vistas, columnas, filtros, opciones de UI",
         FullDocDescription = "Documentacion funcional completa del proyecto {0} auto-generada por XAF Logic Explainer",
+
+        Walkthrough = "Recorrido",
+        WalkthroughNotFound = "Nada en esta aplicacion coincide con ese nombre.",
+        StartedFrom = "Parte de",
+        ReachedAndFinished =
+            "Nodos en esta rebanada: {0}. Limite de profundidad: {1}, no alcanzado — el recorrido se "
+            + "quedo antes sin codigo que seguir.",
+        ReachedAndStopped =
+            "Nodos en esta rebanada: {0}. Limite de profundidad: {1}, alcanzado — esto es una vista "
+            + "del proceso, no el proceso completo.",
+        ReachedAndBlocked =
+            "Nodos en esta rebanada: {0}. Limite de profundidad: {1}, no alcanzado — el recorrido se "
+            + "quedo sin llamadas que pudiera resolver, y las que no pudo estan listadas mas abajo.",
+        Flow = "Flujo",
+        WhatTakesPart = "Lo que participa",
+        StepByStep = "Paso a paso",
+        CouldNotFollow = "Lo que este recorrido no pudo seguir",
+        EverythingResolved = "Nada. Cada llamada de esta rebanada resolvio a una sola declaracion.",
+        CalledFrom = "llamada desde",
+        CouldBe = "Podria ser",
+        WhatThisIsNot = "Lo que este recorrido es, y lo que no",
+        BoundHit =
+            "Siguio el proceso hasta una profundidad de {0} y se detuvo ahi, asi que lo que este mas "
+            + "lejos falta por diseno.",
+        BoundNotHit = "Tenia permitida una profundidad de {0} y no la necesito toda.",
+        BoundNoRelationships =
+            "Las relaciones entre entidades no se siguen. Son lo que hace que una rebanada alcance la "
+            + "aplicacion entera; el mapa de entidades responde esa pregunta.",
+        BoundNoSiblings =
+            "Un controlador alcanzado desde una de sus propias acciones aporta lo que esa accion "
+            + "ejecuta, no sus otras acciones.",
+        BoundControllersOnly =
+            "Los metodos se extraen de los controladores, asi que un calculo que vive en una clase de "
+            + "servicio aparece como una llamada que no se pudo seguir, no como un paso.",
+        StepDeclares = "declara",
+        StepCalls = "llama a",
+        StepTouches = "trabaja con",
+        StepTargets = "se activa para",
+        StepGoverns = "lleva la regla",
+        KindAction = "accion",
+        KindMethod = "metodo",
+        KindController = "controlador",
+        KindEntity = "entidad",
+        KindValidationRule = "regla de validacion",
+        KindAppearanceRule = "regla de apariencia",
     };
 
     /// <summary>
@@ -416,5 +565,50 @@ public class DocumentationLabels
         ScreensDescription = "Every view in {0} and the controllers XAF activates on each",
         ModelEditorDescription = "Model Editor customizations of {0}: views, columns, filters, UI options",
         FullDocDescription = "Complete functional documentation of project {0} auto-generated by XAF Logic Explainer",
+
+        Walkthrough = "Walkthrough",
+        WalkthroughNotFound = "Nothing in this application matched that name.",
+        StartedFrom = "Started from",
+        ReachedAndFinished =
+            "Nodes in this slice: {0}. Depth limit: {1}, not reached — the walk ran out of code to "
+            + "follow first.",
+        ReachedAndStopped =
+            "Nodes in this slice: {0}. Depth limit: {1}, reached — this is a view of the process, not "
+            + "the whole of it.",
+        ReachedAndBlocked =
+            "Nodes in this slice: {0}. Depth limit: {1}, not reached — the walk ran out of calls it "
+            + "could resolve, and the ones it could not are listed below.",
+        Flow = "Flow",
+        WhatTakesPart = "What takes part",
+        StepByStep = "Step by step",
+        CouldNotFollow = "What this walk could not follow",
+        EverythingResolved = "Nothing. Every call in this slice resolved to a single declaration.",
+        CalledFrom = "called from",
+        CouldBe = "Could be",
+        WhatThisIsNot = "What this walk is, and is not",
+        BoundHit =
+            "It followed the process to a depth of {0} and stopped there, so anything further out is "
+            + "missing by design.",
+        BoundNotHit = "It was allowed a depth of {0} and did not need all of it.",
+        BoundNoRelationships =
+            "Relationships between entities are not followed. They are what makes a slice reach the "
+            + "whole application; the entity map answers that question instead.",
+        BoundNoSiblings =
+            "A controller reached from one of its own actions contributes what that action runs, not "
+            + "its other actions.",
+        BoundControllersOnly =
+            "Methods are extracted from controllers, so a calculation living in a plain service class "
+            + "appears as a call that could not be followed rather than as a step.",
+        StepDeclares = "declares",
+        StepCalls = "calls",
+        StepTouches = "works with",
+        StepTargets = "is activated for",
+        StepGoverns = "carries the rule",
+        KindAction = "action",
+        KindMethod = "method",
+        KindController = "controller",
+        KindEntity = "entity",
+        KindValidationRule = "validation rule",
+        KindAppearanceRule = "appearance rule",
     };
 }

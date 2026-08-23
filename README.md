@@ -187,6 +187,7 @@ Started from a solution directory it finds the XAF module by itself, so neither 
 | `xaf_editors` | Custom editors, the JavaScript they need, and built-in editors changed at run time |
 | `xaf_migrations` | What ran once against a live database, and the comment explaining why |
 | `xaf_view` | Everything loaded onto one screen — which controllers activate, and why |
+| `xaf_walkthrough` | **How one process works end to end** — what runs, in what order, and what it could not follow |
 | `xaf_refresh` | Re-read the source (changes are detected automatically) |
 
 Ask for something that isn't there and the answer is the useful one:
@@ -282,6 +283,7 @@ licensed software. Everything works without it — it only sharpens the output. 
 | `explain` | **Write a self-contained HTML page explaining the app to a person** |
 | `catalog` | Build the DevExpress ground-truth catalog (`build`, `status`) |
 | `extract` | Read the project, write Markdown + JSON locally |
+| `walkthrough` | **Trace one business process** — what runs, in what order, and what governs it |
 | `diff` | Compare against the previous extraction and report what changed |
 | `status` | Show the change-detection hash and whether a re-extract is needed |
 | `watch` | Re-extract on file change, with debounce |
@@ -328,9 +330,9 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
 | ✅ | **`xaflogic explain`** — one self-contained HTML page, for a person rather than an agent |
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
-| ✅ | **MCP server** — 10 tools, live against your source |
+| ✅ | **MCP server** — 11 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **363 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **373 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

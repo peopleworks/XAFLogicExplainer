@@ -34,7 +34,8 @@ public static class McpServerRunner
             .AddMcpServer()
             .WithStdioServerTransport()
             .WithTools<XafDiscoveryTools>()
-            .WithTools<XafDetailTools>();
+            .WithTools<XafDetailTools>()
+            .WithTools<XafWalkthroughTools>();
 
         await builder.Build().RunAsync(cancellationToken);
     }

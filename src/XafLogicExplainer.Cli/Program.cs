@@ -18,6 +18,7 @@ using XafLogicExplainer.DxCatalog;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using XafLogicExplainer.Core.Models;
+using XafLogicExplainer.Core.Walkthrough;
 
 // ============================================================
 // xaflogic - XAF Logic Explainer CLI
@@ -1396,6 +1397,85 @@ diffCommand.SetHandler(async (projectPath, language, previousFile) =>
 }, projectPathOption, languageOption, previousFileOption);
 
 rootCommand.AddCommand(diffCommand);
+
+// ============================================================
+// COMMAND: walkthrough
+// ============================================================
+
+var walkthroughCommand = new Command(
+    "walkthrough", "Trace one business process: what runs, in what order, and what governs it");
+walkthroughCommand.AddOption(projectPathOption);
+walkthroughCommand.AddOption(languageOption);
+walkthroughCommand.AddOption(ormOption);
+
+var fromOption = new Option<string?>("--from", "Action, controller method, controller or entity to start from")
+{
+    IsRequired = true,
+};
+var depthOption = new Option<int>("--depth", () => 3, "How many hops from the seed to follow");
+var walkthroughOutOption = new Option<string?>("--out", "Write the walkthrough to this file instead of the screen");
+
+walkthroughCommand.AddOption(fromOption);
+walkthroughCommand.AddOption(depthOption);
+walkthroughCommand.AddOption(walkthroughOutOption);
+
+walkthroughCommand.SetHandler((projectPath, language, orm, from, depth, outFile) =>
+{
+    var config = ConfigHelper.Load();
+    projectPath ??= config.ProjectPath;
+    language ??= config.Language ?? "es";
+
+    if (string.IsNullOrEmpty(projectPath) || !Directory.Exists(projectPath))
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] --project is required. Set it with: xaflogic config --project <path>");
+        return;
+    }
+
+    ExtractedProject? walked = null;
+
+    AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Reading the project...", ctx =>
+    {
+        walked = new LogicExtractor().ExtractFromSourceDirectory(
+            projectPath, BuildExtractionOptions(language, orm));
+    });
+
+    var slice = ProcessSlice.From(walked!, from!, depth);
+    var document = new WalkthroughGenerator(language).Generate(walked!, slice);
+
+    // A seed that matched nothing is a failed run, not a document with a sad paragraph in it. The
+    // slice already says what it looked for and what came closest, so print that and stop.
+    if (!slice.Found)
+    {
+        AnsiConsole.MarkupLine($"[yellow]⊘[/] {Markup.Escape(slice.Problem ?? "Nothing matched.")}");
+        return;
+    }
+
+    if (string.IsNullOrEmpty(outFile))
+    {
+        // Straight to stdout rather than through AnsiConsole, which wraps at the terminal width and
+        // would break the Mermaid block across lines. This way `walkthrough ... > process.md` gives
+        // the same file `--out` would.
+        Console.Out.Write(document);
+        return;
+    }
+
+    var directory = Path.GetDirectoryName(Path.GetFullPath(outFile));
+
+    if (!string.IsNullOrEmpty(directory))
+        Directory.CreateDirectory(directory);
+
+    File.WriteAllText(outFile, document);
+
+    AnsiConsole.MarkupLine($"[green]✓[/] {slice.Nodes.Count} nodes, {slice.Edges.Count} steps → {outFile}");
+
+    if (slice.Unresolved.Count > 0)
+    {
+        AnsiConsole.MarkupLine(
+            $"[yellow]![/] {slice.Unresolved.Count} call(s) the walk could not follow — listed in the document.");
+    }
+}, projectPathOption, languageOption, ormOption, fromOption, depthOption, walkthroughOutOption);
+
+rootCommand.AddCommand(walkthroughCommand);
 
 // ============================================================
 // COMMAND: agents
