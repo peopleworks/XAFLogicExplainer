@@ -7,20 +7,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-
-- **A generic base type reaches the reader** (found by [@MBrekhof] while running the Word route in
-  [#36]). `- **Base type:** ViewController<DetailView>` was printed bare, and `<DetailView>` is an
-  *inline* HTML tag to every CommonMark parser: an export drops it and github.com's sanitizer strips
-  it, so the page said the base class was `ViewController`. Not a missing answer — a different one.
-  Backticks at the three sites that print a type name outside code.
-  The guard from [#28] missed it because it scanned only lines that *opened* with `<`, which was the
-  shape of the `<details>` block it was written for. It now matches a tag anywhere on a line, with
-  fenced blocks and inline code spans excluded — the second because it is the remedy, and a guard
-  that rejected its own fix would be no guard at all. 392 tests.
-
-[#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
-
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.
@@ -52,8 +38,19 @@ byte-for-byte the one generated with none.
 Also in this release: every declaration now says where it is, `file:line`, in the extraction and in
 the MCP tools — the foundation the walkthrough needed and worth having on its own, since the tools
 used to hand an agent a name and leave it to search for it. Four appearance-rule defects, two of
-them found by [@MBrekhof]. Any model can now answer, and a key is enough. And the Markdown we
-generate is Markdown.
+them found by [@MBrekhof]. Any model can now answer, and a key is enough.
+
+And the Markdown we generate is Markdown, which took two goes. A seed method's source was wrapped in
+a `<details>` fold that collapses on GitHub and nowhere else ([#28]). Then, running the output
+through a real Word converter, [@MBrekhof] found the second half of the same defect: a generic base
+type was written bare, and `<DetailView>` is an *inline* HTML tag rather than a block, so an export
+drops it and github.com's sanitizer strips it — every controller read as deriving from plain
+`ViewController` ([#36], fixed in [#39]). Type names are written as code now, and the guard was
+widened from lines that *open* with `<` to a tag anywhere on a line. The route from an extraction to
+a Word document is written down in the README, and there is deliberately no exporter here: reading
+an XAF application needs no DevExpress, and that stays true.
+
+392 tests, zero warnings.
 
 ### Added
 
@@ -215,6 +212,8 @@ generate is Markdown.
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
 [#28]: https://github.com/peopleworks/XAFLogicExplainer/issues/28
+[#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
+[#39]: https://github.com/peopleworks/XAFLogicExplainer/pull/39
 [mcpOffice]: https://github.com/MBrekhof/mcpOffice
 
 [#21]: https://github.com/peopleworks/XAFLogicExplainer/pull/21
