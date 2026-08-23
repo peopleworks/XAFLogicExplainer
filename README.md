@@ -297,8 +297,21 @@ Documentation is generated in **English or Spanish** (`--lang en|es`).
 Useful flags: `--orm auto\|xpo\|efcore`, `--lang en\|es`, `--enrich` (AI-generated business-logic
 summaries per controller and action), `--force`, `--all`.
 
-`--enrich` needs a model, and **any of these is enough** — a key on the command line wins, then the
-environment, then a PeopleWorks Copilot account if you happen to have one:
+### Tracing one process
+
+```bash
+xaflogic walkthrough --from ApproveOrder            # to the screen, or > process.md
+xaflogic walkthrough --from ApproveOrder --depth 4 --out docs/approval.md
+```
+
+What runs, in what order, which entities it touches and which rules govern them — every step citing
+`file:line`, with a Mermaid diagram **emitted from the trace itself, never drawn by a model.** Calls
+the trace could not follow are listed rather than skipped, so an empty list means the path really is
+complete. Add `--narrate` for prose over the steps; a paragraph that cannot name a real step is
+dropped before you see it.
+
+`--enrich` and `--narrate` need a model, and **any of these is enough** — a key on the command line
+wins, then the environment, then a PeopleWorks Copilot account if you happen to have one:
 
 ```bash
 xaflogic extract --enrich --api-key sk-...              # or any OpenAI-compatible endpoint:
@@ -308,7 +321,8 @@ export OPENAI_API_KEY=sk-...        # picked up with no configuration at all
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Everything else in this tool runs with no key, no account and no network.
+Everything else in this tool runs with no key, no account and no network — the walkthrough
+included, minus its prose.
 
 Extraction is **incremental** — a SHA-256 over your `.cs` and `.xafml` files means an unchanged
 project is a no-op. There is an MSBuild `.targets` file if you want it to run on build.
@@ -332,7 +346,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 11 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **373 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **382 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

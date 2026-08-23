@@ -1414,12 +1414,14 @@ var fromOption = new Option<string?>("--from", "Action, controller method, contr
 };
 var depthOption = new Option<int>("--depth", () => 3, "How many hops from the seed to follow");
 var walkthroughOutOption = new Option<string?>("--out", "Write the walkthrough to this file instead of the screen");
+var narrateOption = new Option<bool>("--narrate", "Have a model explain each step in business terms");
 
 walkthroughCommand.AddOption(fromOption);
 walkthroughCommand.AddOption(depthOption);
 walkthroughCommand.AddOption(walkthroughOutOption);
+walkthroughCommand.AddOption(narrateOption);
 
-walkthroughCommand.SetHandler((projectPath, language, orm, from, depth, outFile) =>
+walkthroughCommand.SetHandler(async (projectPath, language, orm, from, depth, outFile, narrate) =>
 {
     var config = ConfigHelper.Load();
     projectPath ??= config.ProjectPath;
@@ -1440,7 +1442,6 @@ walkthroughCommand.SetHandler((projectPath, language, orm, from, depth, outFile)
     });
 
     var slice = ProcessSlice.From(walked!, from!, depth);
-    var document = new WalkthroughGenerator(language).Generate(walked!, slice);
 
     // A seed that matched nothing is a failed run, not a document with a sad paragraph in it. The
     // slice already says what it looked for and what came closest, so print that and stop.
@@ -1449,6 +1450,13 @@ walkthroughCommand.SetHandler((projectPath, language, orm, from, depth, outFile)
         AnsiConsole.MarkupLine($"[yellow]⊘[/] {Markup.Escape(slice.Problem ?? "Nothing matched.")}");
         return;
     }
+
+    IReadOnlyDictionary<int, string>? narration = null;
+
+    if (narrate)
+        narration = await NarrateWalkthrough(walked!, slice, config, language, aiOverrides);
+
+    var document = new WalkthroughGenerator(language).Generate(walked!, slice, narration);
 
     if (string.IsNullOrEmpty(outFile))
     {
@@ -1473,7 +1481,7 @@ walkthroughCommand.SetHandler((projectPath, language, orm, from, depth, outFile)
         AnsiConsole.MarkupLine(
             $"[yellow]![/] {slice.Unresolved.Count} call(s) the walk could not follow — listed in the document.");
     }
-}, projectPathOption, languageOption, ormOption, fromOption, depthOption, walkthroughOutOption);
+}, projectPathOption, languageOption, ormOption, fromOption, depthOption, walkthroughOutOption, narrateOption);
 
 rootCommand.AddCommand(walkthroughCommand);
 
@@ -2122,6 +2130,61 @@ static async Task EnrichWithAi(
     var enrichedControllers = project.Controllers.Count(c => c.BusinessLogicSummary != null);
     var enrichedActions = project.Controllers.SelectMany(c => c.Actions).Count(a => a.BusinessLogicSummary != null);
     AnsiConsole.MarkupLine($"[green]  Enriched {enrichedControllers}/{project.Controllers.Count} controllers, {enrichedActions} actions[/]");
+}
+
+// Asks a model to explain a walk that has already been computed.
+//
+// Returns nothing rather than failing the run. The document is worth reading with no narration in
+// it at all -- the diagram, the steps and their citations are the part that was never going to be
+// wrong -- so a missing key, or a provider that did not answer, costs prose and not the walkthrough.
+static async Task<IReadOnlyDictionary<int, string>?> NarrateWalkthrough(
+    ExtractedProject project, ProcessSlice slice, CliConfig config, string language,
+    AiClientRequest aiOverrides)
+{
+    var request = aiOverrides with
+    {
+        Copilot = new SyncConfiguration
+        {
+            CopilotApiBaseUrl = config.ApiUrl ?? "",
+            CopilotApiToken = config.Token ?? "",
+            UserName = config.UserName ?? "xaf-logic-explainer",
+            ResourceName = config.ResourceName ?? "",
+        },
+    };
+
+    var resolved = await AiClientResolver.ResolveAsync(request);
+
+    if (!resolved.Succeeded)
+    {
+        foreach (var line in (resolved.Problem ?? AiClientResolver.NothingConfigured).Split('\n'))
+            AnsiConsole.MarkupLine($"[yellow]  {Markup.Escape(line)}[/]");
+
+        AnsiConsole.MarkupLine("[yellow]  Writing the walkthrough without narration.[/]");
+
+        return null;
+    }
+
+    AnsiConsole.MarkupLine(
+        $"[blue]AI:[/] {Markup.Escape(resolved.ProviderName)} / {Markup.Escape(resolved.Model)}");
+
+    try
+    {
+        var narration = await new WalkthroughNarrator(resolved.Client!)
+            .NarrateAsync(project, slice, language);
+
+        AnsiConsole.MarkupLine(
+            $"[green]  {narration.Count} of {slice.Edges.Count + 1} paragraphs kept[/] "
+            + "[grey](a paragraph that cannot name a real step is dropped)[/]");
+
+        return narration;
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[yellow]  The model did not answer: {Markup.Escape(ex.Message)}[/]");
+        AnsiConsole.MarkupLine("[yellow]  Writing the walkthrough without narration.[/]");
+
+        return null;
+    }
 }
 
 return await rootCommand.InvokeAsync(args);

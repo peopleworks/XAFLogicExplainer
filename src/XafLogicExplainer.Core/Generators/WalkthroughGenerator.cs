@@ -26,7 +26,18 @@ public sealed class WalkthroughGenerator
     public WalkthroughGenerator(string language = "es") => _l = DocumentationLabels.ForLanguage(language);
 
     /// <summary>Renders the walkthrough, or the reason there is none.</summary>
-    public string Generate(ExtractedProject project, ProcessSlice slice)
+    /// <param name="project">The application the slice came from.</param>
+    /// <param name="slice">The computed walk.</param>
+    /// <param name="narration">
+    /// Optional prose keyed by step number, with <c>0</c> being the opening paragraph.
+    /// </param>
+    /// <remarks>
+    /// Narration arrives as plain text keyed to steps that already exist, which is what keeps this
+    /// assembly free of any AI dependency — and, more to the point, keeps the model unable to add a
+    /// step. Whoever produced the prose had to key it to the structure; it could not bring its own.
+    /// </remarks>
+    public string Generate(
+        ExtractedProject project, ProcessSlice slice, IReadOnlyDictionary<int, string>? narration = null)
     {
         var sb = new StringBuilder();
 
@@ -40,17 +51,19 @@ public sealed class WalkthroughGenerator
             return sb.ToString();
         }
 
-        AppendOpening(sb, project, slice);
+        AppendOpening(sb, project, slice, narration);
         AppendFlow(sb, slice);
         AppendCast(sb, project, slice);
-        AppendSteps(sb, project, slice);
+        AppendSteps(sb, project, slice, narration);
         AppendUnresolved(sb, slice);
         AppendBounds(sb, slice);
 
         return sb.ToString();
     }
 
-    private void AppendOpening(StringBuilder sb, ExtractedProject project, ProcessSlice slice)
+    private void AppendOpening(
+        StringBuilder sb, ExtractedProject project, ProcessSlice slice,
+        IReadOnlyDictionary<int, string>? narration)
     {
         var root = slice.Root!;
 
@@ -69,6 +82,14 @@ public sealed class WalkthroughGenerator
             : string.Format(_l.ReachedAndFinished, slice.Nodes.Count, slice.Depth));
 
         sb.AppendLine();
+
+        // Step zero: what the whole process is for. It is the one paragraph that answers a question
+        // the structure cannot, which is why it is the only prose allowed to stand on its own.
+        if (narration?.GetValueOrDefault(0) is { Length: > 0 } opening)
+        {
+            sb.AppendLine(opening);
+            sb.AppendLine();
+        }
     }
 
     private void AppendFlow(StringBuilder sb, ProcessSlice slice)
@@ -103,7 +124,9 @@ public sealed class WalkthroughGenerator
         sb.AppendLine();
     }
 
-    private void AppendSteps(StringBuilder sb, ExtractedProject project, ProcessSlice slice)
+    private void AppendSteps(
+        StringBuilder sb, ExtractedProject project, ProcessSlice slice,
+        IReadOnlyDictionary<int, string>? narration)
     {
         if (slice.Edges.Count == 0)
             return;
@@ -122,6 +145,15 @@ public sealed class WalkthroughGenerator
 
             // The citation is the target's, because the target is what the step introduces.
             sb.AppendLine($"{++step}. **{from.Name}** {Verb(edge.Kind)} **{to.Name}** — {At(project, to)}");
+
+            // Directly beneath the step it explains, and indented under its number. A sentence about
+            // a process is worth what its citation is worth, and here they cannot come apart.
+            if (narration?.GetValueOrDefault(step) is { Length: > 0 } prose)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"   {prose}");
+                sb.AppendLine();
+            }
         }
 
         sb.AppendLine();
