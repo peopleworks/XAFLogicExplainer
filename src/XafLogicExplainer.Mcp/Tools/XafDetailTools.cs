@@ -702,6 +702,13 @@ public sealed class XafDetailTools
         sb.AppendLine();
         sb.AppendLine("## What this cannot tell you");
         sb.AppendLine();
+
+        if (XafLogicExplainer.Core.Catalog.CatalogTrust.Caveat(app) is { } caveat)
+        {
+            sb.AppendLine(caveat);
+            sb.AppendLine();
+        }
+
         sb.AppendLine("A controller that passes all four targeting conditions can still switch itself " +
                       "off at run time through `Active[\"reason\"] = …`, which depends on data and on " +
                       "the user. This is what XAF **loads** onto the view, not what will necessarily " +

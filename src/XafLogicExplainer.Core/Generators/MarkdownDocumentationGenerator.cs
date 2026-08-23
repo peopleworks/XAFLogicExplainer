@@ -390,6 +390,12 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 "`xaflogic catalog build` on a machine with a DevExpress licence."));
         }
 
+        if (Catalog.CatalogTrust.Caveat(project, _spanish) is { } caveat)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"> {caveat}");
+        }
+
         sb.AppendLine();
         sb.AppendLine(L(
             "> Un controlador listado aqui todavia puede apagarse solo en tiempo de ejecucion con " +

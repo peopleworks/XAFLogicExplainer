@@ -560,6 +560,9 @@ public sealed class HtmlExplainerGenerator
                           "with a DevExpress licence and this section will say which.</p>");
         }
 
+        if (Catalog.CatalogTrust.Caveat(project) is { } caveat)
+            sb.AppendLine($"  <p class=\"note\">{E(caveat)}</p>");
+
         sb.AppendLine("  <p class=\"note\">A controller listed here can still switch itself off at run time " +
                       "through <code>Active[\"reason\"]</code>, which depends on the data and the user. " +
                       "This is what XAF loads onto a screen, not what will necessarily do something.</p>");
@@ -956,7 +959,12 @@ public sealed class HtmlExplainerGenerator
         sb.Append($"  <p>Generated from source by <a href=\"https://github.com/peopleworks/XAFLogicExplainer\">XAF Logic Explainer</a> {E(_toolVersion)}");
         sb.Append($" on {E(project.ExtractedAt)}");
         if (!string.IsNullOrWhiteSpace(project.CatalogVersion))
-            sb.Append($", checked against the DevExpress {E(project.CatalogVersion)} framework catalog");
+        {
+            sb.Append(Catalog.CatalogTrust.Of(project) == Catalog.CatalogTrustLevel.Mismatched
+                ? $", checked against the DevExpress {E(project.CatalogVersion)} framework catalog "
+                  + $"while this application declares {E(Catalog.DeclaredDevExpressVersion.Of(project))}"
+                : $", checked against the DevExpress {E(project.CatalogVersion)} framework catalog");
+        }
         sb.AppendLine(".</p>");
         sb.AppendLine("  <p>Nothing here was written by hand, and nothing was inferred by a language model: every statement is read from the code. Regenerate with <code>xaflogic explain</code>.</p>");
         sb.AppendLine("</div></footer>");

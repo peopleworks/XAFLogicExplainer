@@ -115,7 +115,16 @@ public sealed class AgentContextGenerator
         sb.AppendLine($"  Source fingerprint: {Short(project.SourceHash)}");
 
         if (!string.IsNullOrWhiteSpace(project.CatalogVersion))
-            sb.AppendLine($"  Checked against the DevExpress {project.CatalogVersion} framework catalog");
+        {
+            // An agent reads this file and acts on it, so a catalog from the wrong release has to
+            // be declared at the top rather than only beside the section it affects.
+            sb.AppendLine(
+                Catalog.CatalogTrust.Of(project) == Catalog.CatalogTrustLevel.Mismatched
+                    ? $"  Checked against the DevExpress {project.CatalogVersion} framework catalog, "
+                      + $"but this application declares {Catalog.DeclaredDevExpressVersion.Of(project)} "
+                      + "— treat framework claims below as the closest available, not as certain"
+                    : $"  Checked against the DevExpress {project.CatalogVersion} framework catalog");
+        }
         sb.AppendLine();
         sb.AppendLine("  This file is generated from source. Edits are overwritten.");
         sb.AppendLine("  Refresh it with:  xaflogic agents --project <module path>");

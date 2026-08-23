@@ -82,7 +82,13 @@ public class LogicExtractor : ILogicExtractor
         // analyzers through the options they already carry. Controller extraction needs it to
         // recognise a class that extends a DevExpress controller, which is not something it can
         // work out on its own.
-        var catalog = options.Catalog ?? (options.UseCatalog ? Catalog.XafCatalogStore.LoadLatest() : null);
+        //
+        // Asked for by the release this application says it targets, rather than by whatever was
+        // generated most recently on this machine. When that release has no catalog here the store
+        // still falls back to the newest, and the difference is reported instead of hidden.
+        var catalog = options.Catalog ?? (options.UseCatalog
+            ? Catalog.XafCatalogStore.LoadFor(project.DeclaredDevExpressVersion)
+            : null);
         options.Catalog = catalog;
 
         // 1. Extract entities (business objects) from Module
@@ -334,6 +340,13 @@ public class LogicExtractor : ILogicExtractor
         {
             project.PackageReferences.Add($"{match.Groups[1].Value} {match.Groups[2].Value}");
         }
+
+        // Read from the raw project file rather than from PackageReferences above, because a
+        // pre-NuGet XAF project has none: it names DevExpress through assembly references such as
+        // `DevExpress.ExpressApp.Xpo.v17.1`, which the loop above cannot see. Those are exactly the
+        // applications where a catalog mismatch is widest.
+        project.DeclaredDevExpressVersion =
+            Catalog.DeclaredDevExpressVersion.FromProjectFile(csprojContent);
     }
 
     /// <summary>
