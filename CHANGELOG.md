@@ -9,6 +9,31 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The reports are written down, and the list says what it is** ([#37], the rendering half). They
+  now appear in the Markdown pages, in `AGENTS.md`, and through a new `xaf_reports` MCP tool — each
+  with what it is over, the filter inside its layout, its calculated fields and bound expressions,
+  and the parameters dialog it opens with, including the `GetCriteria()` that turns the answers into
+  a filter.
+
+  **The sentence under the heading carries more than the list.** With `ReportsModuleV2` registered,
+  users design reports at run time and those are stored as database rows, so an application with
+  forty of them and none in its repository is the ordinary case: checked against a production
+  application that registers the module, sets `ReportStoreMode.XML`, and contains no report in
+  source at all. Printing "no reports" there is not an incomplete answer but a wrong one, and the
+  more use an application makes of reports the wronger it gets. Three states are told apart — the
+  module absent and the list complete, the module present and the list a **lower bound**, and the
+  module present with nothing in source, where the number is reported as *unknown rather than zero*.
+  An application that registers nothing and ships no layout gets no section, because there "no
+  reports" is the default rather than a finding.
+
+  Two things the generated document showed that reading the code would not have. A layout kept
+  beside the module rather than inside it was cited by its **absolute path** — the drive of whichever
+  machine ran the extraction, in a file meant to be committed; citations now fall back to the
+  solution root and then to the file name, never to a path that is wrong everywhere but here. And
+  two registrations sharing one `.repx` printed the filter, the bindings and the whole of
+  `GetCriteria()` twice, burying the only thing that differs between them; the second now points at
+  the first.
+
 - **The reports an application declares are read** ([#37], phases 1–3 — the extraction; the
   Markdown and MCP rendering follow separately). Reports V2 leaves four kinds of trace in a
   repository, all syntax, and none of them was read: the registration

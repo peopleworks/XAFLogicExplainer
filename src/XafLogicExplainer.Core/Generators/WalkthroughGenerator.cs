@@ -280,26 +280,9 @@ public sealed class WalkthroughGenerator
     /// read on another machine and pasted into an issue, and an absolute path is noise in all three.
     /// The tools serve an agent standing in the source tree, which is a different reader.
     /// </remarks>
-    private static string At(ExtractedProject project, SliceNode node)
-    {
-        if (node.FilePath.Length == 0)
-            return "";
-
-        var path = node.FilePath;
-
-        if (project.ProjectPath.Length > 0
-            && path.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase))
-        {
-            path = path[project.ProjectPath.Length..].TrimStart('/', '\\');
-        }
-
-        // Forward slashes whatever the machine wrote them with. This document gets committed and
-        // read elsewhere, and a separator that changes with the extractor's operating system would
-        // put a diff in every citation the day someone else regenerates it.
-        path = path.Replace('\\', '/');
-
-        return node.Line > 0 ? $"`{path}:{node.Line}`" : $"`{path}`";
-    }
+    /// <summary>Where a node was declared, cited the way every generator cites source.</summary>
+    private static string At(ExtractedProject project, SliceNode node) =>
+        SourceCitation.Of(project, node.FilePath, node.Line);
 
     private string Verb(SliceEdgeKind kind) => kind switch
     {

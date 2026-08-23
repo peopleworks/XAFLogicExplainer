@@ -37,6 +37,7 @@ Started from a solution directory it finds the XAF module by itself. To be expli
 | `xaf_model` | Model Editor customizations, which exist in no C# file |
 | `xaf_editors` | Custom property editors, which live in the platform project beside the module |
 | `xaf_migrations` | Version-guarded upgrade code that ran once and cannot be re-read from today's source |
+| `xaf_reports` | What each report shows, and whether the list is all of them or a lower bound |
 | `xaf_view` | Everything loaded onto one screen — most views exist in no file, and neither does this answer |
 | `xaf_walkthrough` | **How one process works end to end** — what runs, in what order, and what it could not follow |
 | `xaf_refresh` | Re-read the source (changes are detected automatically) |

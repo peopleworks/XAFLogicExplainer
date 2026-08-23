@@ -933,6 +933,120 @@ public sealed class XafDetailTools
             : $"`{filePath}:{line}`";
     }
 
+    /// <summary>
+    /// Returns the reports declared in source, and says what source cannot see.
+    /// </summary>
+    /// <remarks>
+    /// The bound matters more here than in any other tool. An agent that asks what reports an
+    /// application has and is told "none" will design as though none exist — and with
+    /// <c>ReportsModuleV2</c> registered, "none in source" is the normal state of an application
+    /// whose users build their reports at run time, where they are stored as database rows.
+    /// </remarks>
+    [McpServerTool(Name = "xaf_reports")]
+    [Description(
+        "Reports the application registers in source: what each is over, the filter and expressions " +
+        "in its layout, and the parameters dialog it opens with. Use when asked what a report shows, " +
+        "why its numbers differ from a screen's, or before writing a new one. Says explicitly when " +
+        "the list is a lower bound because users can also design reports at run time.")]
+    public async Task<string> ReportsAsync(
+        [Description("Project name, when several are configured.")] string? project = null,
+        CancellationToken cancellationToken = default)
+    {
+        var app = await _context.GetAsync(project, cancellationToken);
+
+        if (app.Reports.Count == 0 && app.UnregisteredReportLayouts.Count == 0)
+        {
+            return app.ReferencesReportsModule
+                ? $"{app.ProjectName} registers `ReportsModuleV2` and declares no report in source. "
+                  + "That is not the same as having none: with that module in, users design reports "
+                  + "at run time through the End-User Designer and they are stored as rows in the "
+                  + "database, which reading source cannot reach. The true number is unknown rather "
+                  + "than zero — do not tell the user this application has no reports."
+                : $"{app.ProjectName} does not register `ReportsModuleV2` and declares no report. "
+                  + "Reports are not part of this application.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Reports — {app.ProjectName}");
+        sb.AppendLine();
+
+        sb.AppendLine(app.ReferencesReportsModule
+            ? $"{app.Reports.Count} registered in source. `ReportsModuleV2` is registered too, so "
+              + "users can design their own at run time; those live in the database and are not "
+              + "visible here. **Treat this list as a lower bound.**"
+            : $"{app.Reports.Count} registered in source. `ReportsModuleV2` is not registered, so "
+              + "this is all of them.");
+
+        foreach (var report in app.Reports)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {report.DisplayName}");
+            sb.AppendLine();
+            sb.AppendLine($"Over `{report.DataType}`, rendered by `{report.ReportType}`, registered at "
+                          + $"`{report.FilePath}:{report.Line}`.");
+
+            if (report.IsInplaceReport is { } inplace)
+                sb.AppendLine($"Offered in place on the list view: {(inplace ? "yes" : "no")}.");
+
+            if (report.Layout is { } layout)
+            {
+                sb.AppendLine();
+
+                if (layout.FilterString is { Length: > 0 } filter)
+                    sb.AppendLine($"- Filters on `{filter}`");
+
+                if (layout.GroupFields.Count > 0)
+                    sb.AppendLine($"- Grouped by {string.Join(", ", layout.GroupFields.Select(f => $"`{f}`"))}");
+
+                foreach (var field in layout.CalculatedFields)
+                    sb.AppendLine($"- Calculates `{field.Name}` as `{field.Expression}`");
+
+                foreach (var binding in layout.Bindings)
+                    sb.AppendLine($"- `{binding.Control}.{binding.Property}` = `{binding.Expression}`");
+            }
+
+            if (report.ParametersObject is { } parameters)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"Opens with `{parameters.ClassName}` — "
+                              + $"`{parameters.FilePath}:{parameters.Line}`:");
+                sb.AppendLine();
+
+                foreach (var field in parameters.Fields)
+                {
+                    var fallback = field.Default is { Length: > 0 } value ? $", default `{value}`" : "";
+                    sb.AppendLine($"- `{field.Name}` ({field.Type}){fallback}");
+                }
+
+                if (parameters.CriteriaSource is { Length: > 0 } criteria)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("```csharp");
+                    sb.AppendLine(Cap(criteria.Trim()));
+                    sb.AppendLine("```");
+                }
+            }
+        }
+
+        if (app.UnregisteredReportLayouts.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Layouts nothing registers");
+            sb.AppendLine();
+            sb.AppendLine("In the repository, named by no registration call — usually exported from the "
+                          + "running application and imported into the database by hand.");
+            sb.AppendLine();
+
+            foreach (var layout in app.UnregisteredReportLayouts)
+            {
+                var filter = layout.FilterString is { Length: > 0 } criteria ? $" — filters on `{criteria}`" : "";
+                sb.AppendLine($"- `{layout.FilePath}`{filter}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Caps a code block, saying so rather than truncating silently.</summary>
     private static string Cap(string code) =>
         code.Length <= MaxCodeLength
