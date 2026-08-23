@@ -110,8 +110,314 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         if (project.Views.Count > 0)
             sections.Add(GenerateScreensSection(project));
 
+        // Only when the application has something to say about reports. One that never registered
+        // ReportsModuleV2 and ships no layouts gets no section rather than an empty one — "no
+        // reports" is worth printing when it is a finding, not when it is the default.
+        if (project.ReferencesReportsModule
+            || project.Reports.Count > 0
+            || project.UnregisteredReportLayouts.Count > 0)
+        {
+            sections.Add(GenerateReportsSection(project));
+        }
+
         return sections;
     }
+
+    /// <summary>
+    /// The reports an application declares, and what the repository cannot show.
+    /// </summary>
+    /// <remarks>
+    /// The sentence under the heading does more work than the list. Reports V2 lets users build
+    /// reports at run time in the End-User Designer, and those are stored as rows rather than
+    /// files, so an extraction that reads source can never see them. An application with forty
+    /// user-designed reports and none in its repository is the ordinary case rather than an exotic
+    /// one — checked against a production application where <c>ReportsModuleV2</c> is registered,
+    /// the store mode is the database, and the source contains no report at all.
+    /// <para>
+    /// Printing "no reports" there would not be an incomplete answer but a wrong one, and the more
+    /// use an application makes of reports the wronger it would get.
+    /// </para>
+    /// </remarks>
+    private DocumentSection GenerateReportsSection(ExtractedProject project)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine($"## {L("Reportes", "Reports")}");
+        sb.AppendLine();
+        sb.AppendLine(ReportsPreamble(project));
+        sb.AppendLine();
+
+        // One layout can carry several registrations — the same `.repx` offered both from the
+        // navigation and in place on a list view is an ordinary pair. Rendering the filter, the
+        // bindings and the whole of `GetCriteria()` again under the second one buries the
+        // difference between them, which is the only thing a reader opened it for.
+        var alreadyShown = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var report in project.Reports)
+            AppendReport(sb, project, report, alreadyShown);
+
+        AppendUnregisteredReports(sb, project);
+
+        return new DocumentSection
+        {
+            Title = L("Reportes", "Reports"),
+            Content = sb.ToString().TrimEnd(),
+        };
+    }
+
+    /// <summary>
+    /// What the list of reports is: all of them, a lower bound, or an absence worth explaining.
+    /// </summary>
+    private string ReportsPreamble(ExtractedProject project)
+    {
+        if (!project.ReferencesReportsModule)
+        {
+            return L(
+                $"Se leyeron {project.Reports.Count} reportes del codigo. Esta aplicacion no registra "
+                + "`ReportsModuleV2`, asi que estos son todos los que hay.",
+                $"{project.Reports.Count} reports read from source. This application does not register "
+                + "`ReportsModuleV2`, so these are all of them.");
+        }
+
+        if (project.Reports.Count == 0)
+        {
+            return L(
+                "Esta aplicacion registra `ReportsModuleV2` y **no declara ningun reporte en el "
+                + "codigo**. Eso casi nunca significa que no tenga reportes: con ese modulo, los "
+                + "usuarios los disenan en tiempo de ejecucion y quedan guardados como filas en la "
+                + "base de datos. Leer el repositorio no puede mostrarlos, y el numero real no es "
+                + "cero sino desconocido.",
+                "This application registers `ReportsModuleV2` and **declares no reports in source**. "
+                + "That rarely means it has none: with that module in, users design reports at run "
+                + "time and they are stored as rows in the database. Reading the repository cannot "
+                + "show them, and the true number is not zero but unknown.");
+        }
+
+        return L(
+            $"Se leyeron {project.Reports.Count} reportes del codigo. Esta aplicacion tambien registra "
+            + "`ReportsModuleV2`, con lo que los usuarios pueden crear los suyos en tiempo de "
+            + "ejecucion; esos viven en la base de datos, asi que **esta lista es una cota inferior**.",
+            $"{project.Reports.Count} reports read from source. This application also registers "
+            + "`ReportsModuleV2`, so users can build their own at run time; those live in the "
+            + "database, which makes **this list a lower bound**.");
+    }
+
+    private void AppendReport(
+        StringBuilder sb, ExtractedProject project, ExtractedReport report,
+        Dictionary<string, string> alreadyShown)
+    {
+        sb.AppendLine($"### {report.DisplayName}");
+        sb.AppendLine();
+        sb.AppendLine($"- **{L("Sobre", "Over")}:** `{report.DataType}`");
+        sb.AppendLine($"- **{L("Clase del reporte", "Report class")}:** `{report.ReportType}`");
+
+        if (report.ParametersType is { Length: > 0 } parameters)
+            sb.AppendLine($"- **{L("Dialogo previo", "Opens with")}:** `{parameters}`");
+
+        // Null is not false. The registration overload that says nothing about in-place reporting
+        // leaves XAF's own default in charge, and reporting "no" there would be an invention.
+        if (report.IsInplaceReport is { } inplace)
+        {
+            sb.AppendLine($"- **{L("En la lista del objeto", "Offered in place")}:** "
+                + (inplace ? L("si", "yes") : L("no", "no")));
+        }
+
+        var registeredAt = SourceCitation.Of(project, report.FilePath, report.Line);
+
+        if (registeredAt.Length > 0)
+            sb.AppendLine($"- **{L("Registrado en", "Registered at")}:** {registeredAt}");
+
+        sb.AppendLine();
+
+        // Keyed by what is actually shared. Two registrations of one `.repx` differ in their
+        // options, which are printed above, and in nothing below.
+        var key = $"{report.Layout?.FilePath}|{report.Layout?.Line}|{report.ParametersObject?.ClassName}";
+
+        if (report.Layout is not null || report.ParametersObject is not null)
+        {
+            if (alreadyShown.TryGetValue(key, out var shownUnder))
+            {
+                sb.AppendLine(L(
+                    $"Mismo diseno y dialogo que **{shownUnder}**, arriba.",
+                    $"Same layout and dialog as **{shownUnder}**, above."));
+                sb.AppendLine();
+
+                return;
+            }
+
+            alreadyShown[key] = report.DisplayName;
+        }
+
+        AppendLayout(sb, project, report.Layout);
+        AppendParametersObject(sb, project, report.ParametersObject);
+    }
+
+    /// <summary>
+    /// What a report shows: the decisions in its layout, not its appearance.
+    /// </summary>
+    private void AppendLayout(StringBuilder sb, ExtractedProject project, ReportLayout? layout)
+    {
+        if (layout is null)
+            return;
+
+        var at = SourceCitation.Of(project, layout.FilePath, layout.Line);
+
+        sb.AppendLine($"{L("Diseno leido de", "Layout read from")} {LayoutSource(layout.Source)}"
+            + (at.Length > 0 ? $", {at}" : "") + ".");
+        sb.AppendLine();
+
+        if (layout.DataSource is { Length: > 0 } source)
+        {
+            var member = layout.DataMember is { Length: > 0 } dataMember ? $" / `{dataMember}`" : "";
+            sb.AppendLine($"- **{L("Origen de datos", "Data source")}:** `{source}`{member}");
+        }
+
+        // The filter is the most consequential line in a report and the one nothing else in the
+        // repository mentions: "approved only", "this fiscal year", "excluding cancelled".
+        if (layout.FilterString is { Length: > 0 } filter)
+            sb.AppendLine($"- **{L("Filtra por", "Filters on")}:** `{filter}`");
+
+        if (layout.GroupFields.Count > 0)
+        {
+            sb.AppendLine($"- **{L("Agrupa por", "Grouped by")}:** "
+                + string.Join(", ", layout.GroupFields.Select(field => $"`{field}`")));
+        }
+
+        if (layout.CalculatedFields.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"**{L("Campos calculados", "Calculated fields")}**");
+            sb.AppendLine();
+            sb.AppendLine($"| {L("Nombre", "Name")} | {L("Expresion", "Expression")} |");
+            sb.AppendLine("| --- | --- |");
+
+            foreach (var field in layout.CalculatedFields)
+                sb.AppendLine($"| `{field.Name}` | `{field.Expression}` |");
+        }
+
+        if (layout.Bindings.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"**{L("Expresiones en el diseno", "Expressions in the layout")}**");
+            sb.AppendLine();
+            sb.AppendLine($"| {L("Control", "Control")} | {L("Propiedad", "Property")} | "
+                + $"{L("Expresion", "Expression")} |");
+            sb.AppendLine("| --- | --- | --- |");
+
+            foreach (var binding in layout.Bindings)
+                sb.AppendLine($"| `{binding.Control}` | `{binding.Property}` | `{binding.Expression}` |");
+        }
+
+        sb.AppendLine();
+    }
+
+    private void AppendParametersObject(
+        StringBuilder sb, ExtractedProject project, ReportParametersObject? parameters)
+    {
+        if (parameters is null)
+            return;
+
+        var at = SourceCitation.Of(project, parameters.FilePath, parameters.Line);
+
+        sb.AppendLine($"**{L("El dialogo pide", "The dialog asks for")}** — `{parameters.ClassName}`"
+            + (at.Length > 0 ? $", {at}" : "") + ".");
+        sb.AppendLine();
+
+        if (parameters.Fields.Count > 0)
+        {
+            sb.AppendLine($"| {L("Campo", "Field")} | {L("Tipo", "Type")} | "
+                + $"{L("Por defecto", "Default")} |");
+            sb.AppendLine("| --- | --- | --- |");
+
+            foreach (var field in parameters.Fields)
+            {
+                var fallback = field.Default is { Length: > 0 } value ? $"`{value}`" : "";
+                sb.AppendLine($"| `{field.Name}` | `{field.Type}` | {fallback} |");
+            }
+
+            sb.AppendLine();
+        }
+
+        // What the answers are turned into. This is the business logic of the dialog, and the
+        // reason the parameters object is worth reading rather than merely naming.
+        if (parameters.CriteriaSource is { Length: > 0 } criteria)
+        {
+            sb.AppendLine(L("Con esas respuestas filtra", "Those answers become the filter") + ":");
+            sb.AppendLine();
+            sb.AppendLine("```csharp");
+            sb.AppendLine(criteria.Trim());
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
+        if (parameters.SortingSource is { Length: > 0 } sorting)
+        {
+            sb.AppendLine(L("Y el orden", "And the sort order") + ":");
+            sb.AppendLine();
+            sb.AppendLine("```csharp");
+            sb.AppendLine(sorting.Trim());
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+    }
+
+    /// <summary>
+    /// Layouts and dialogs that exist in the repository and that nothing registers.
+    /// </summary>
+    /// <remarks>
+    /// A shop that designs reports outside Visual Studio keeps the exports beside the module and
+    /// imports them into the database by hand, so these files are real work that no registration
+    /// claims. Listing them as unregistered is the difference between "this exists and nothing in
+    /// the code points at it" and silence.
+    /// </remarks>
+    private void AppendUnregisteredReports(StringBuilder sb, ExtractedProject project)
+    {
+        if (project.UnregisteredReportLayouts.Count == 0
+            && project.UnregisteredReportParameters.Count == 0)
+        {
+            return;
+        }
+
+        sb.AppendLine($"### {L("Disenos que nadie registra", "Layouts nothing registers")}");
+        sb.AppendLine();
+        sb.AppendLine(L(
+            "Estos archivos estan en el repositorio y ninguna llamada de registro los nombra. "
+            + "Normalmente son disenos exportados de la aplicacion e importados a mano a la base "
+            + "de datos, asi que son trabajo real que el codigo no menciona.",
+            "These files are in the repository and no registration call names them. Usually they "
+            + "are layouts exported from the running application and imported into the database by "
+            + "hand — real work that the code never mentions."));
+        sb.AppendLine();
+
+        foreach (var layout in project.UnregisteredReportLayouts)
+        {
+            var at = SourceCitation.Of(project, layout.FilePath, layout.Line);
+            var filter = layout.FilterString is { Length: > 0 } criteria
+                ? $" — {L("filtra por", "filters on")} `{criteria}`"
+                : "";
+
+            sb.AppendLine($"- {at}{filter}");
+        }
+
+        foreach (var parameters in project.UnregisteredReportParameters)
+        {
+            var at = SourceCitation.Of(project, parameters.FilePath, parameters.Line);
+
+            sb.AppendLine($"- `{parameters.ClassName}` — "
+                + L("dialogo de parametros que ningun reporte nombra",
+                    "a parameters dialog no report names")
+                + (at.Length > 0 ? $", {at}" : ""));
+        }
+
+        sb.AppendLine();
+    }
+
+    private string LayoutSource(ReportLayoutSource source) => source switch
+    {
+        ReportLayoutSource.DesignerCode => L("el codigo del disenador", "designer code"),
+        ReportLayoutSource.Repx => L("un archivo `.repx`", "a `.repx` file"),
+        _ => L("el codigo del reporte", "the report's own code"),
+    };
 
     /// <summary>Says which class a folded declaration came from, for a line that has room.</summary>
     private string Declarer(string? inheritedFrom)

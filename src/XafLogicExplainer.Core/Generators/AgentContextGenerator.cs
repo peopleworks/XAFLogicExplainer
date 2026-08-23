@@ -74,6 +74,7 @@ public sealed class AgentContextGenerator
         WriteCriteriaExamples(sb, conventions);
         WriteEditors(sb, project);
         WriteMigrations(sb, project);
+        WriteReports(sb, project);
         WriteConventions(sb, project, conventions);
         WriteRecipes(sb, project, conventions);
         WriteDetailPointers(sb, detailFiles);
@@ -547,6 +548,67 @@ public sealed class AgentContextGenerator
     /// column holds what it holds, an agent will reason from code that runs today and invent a
     /// cause. The real one ran once, years ago, and only the updater remembers it.
     /// </remarks>
+    /// <summary>
+    /// The reports, and the reason their number may be larger than it looks.
+    /// </summary>
+    /// <remarks>
+    /// The bound is the point of this block, not the list. An agent that reads "no reports" builds
+    /// as though none exist, and with <c>ReportsModuleV2</c> registered that is the normal state of
+    /// an application whose users design their reports at run time — stored as database rows, which
+    /// nothing reading source can reach. The list is worth having; the sentence is worth more.
+    /// </remarks>
+    private static void WriteReports(StringBuilder sb, ExtractedProject project)
+    {
+        if (!project.ReferencesReportsModule && project.Reports.Count == 0)
+            return;
+
+        sb.AppendLine("## Reports");
+        sb.AppendLine();
+
+        if (project.Reports.Count == 0)
+        {
+            sb.AppendLine("This application registers `ReportsModuleV2` and declares **no report in source**.");
+            sb.AppendLine("That is not the same as having none: users design reports at run time and they are");
+            sb.AppendLine("stored in the database, out of reach of anything reading this repository. The number");
+            sb.AppendLine("is unknown, not zero — do not tell anyone this application has no reports.");
+            sb.AppendLine();
+
+            return;
+        }
+
+        foreach (var report in project.Reports)
+        {
+            var opens = report.ParametersType is { Length: > 0 } parameters
+                ? $", after a `{parameters}` dialog"
+                : "";
+
+            sb.AppendLine($"- **{report.DisplayName}** — over `{report.DataType}`{opens}"
+                + FilterClause(report));
+        }
+
+        sb.AppendLine();
+
+        if (project.ReferencesReportsModule)
+        {
+            sb.AppendLine("`ReportsModuleV2` is registered, so users can also design reports at run time.");
+            sb.AppendLine("Those live in the database and are not listed here: **this is a lower bound**.");
+            sb.AppendLine();
+        }
+
+        if (project.UnregisteredReportLayouts.Count > 0)
+        {
+            sb.AppendLine($"{project.UnregisteredReportLayouts.Count} more layout"
+                + (project.UnregisteredReportLayouts.Count == 1 ? " is" : "s are")
+                + " in the repository that no registration names — usually exported from the running");
+            sb.AppendLine("application and imported by hand. Ask `xaf_reports` for them.");
+            sb.AppendLine();
+        }
+    }
+
+    /// <summary>The filter a report carries, which is the business decision inside it.</summary>
+    private static string FilterClause(ExtractedReport report) =>
+        report.Layout?.FilterString is { Length: > 0 } filter ? $", filtered to `{filter}`" : "";
+
     private static void WriteMigrations(StringBuilder sb, ExtractedProject project)
     {
         if (project.Migrations.Count == 0)
