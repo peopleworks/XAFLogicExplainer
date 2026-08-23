@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A generic base type reaches the reader** (found by [@MBrekhof] while running the Word route in
+  [#36]). `- **Base type:** ViewController<DetailView>` was printed bare, and `<DetailView>` is an
+  *inline* HTML tag to every CommonMark parser: an export drops it and github.com's sanitizer strips
+  it, so the page said the base class was `ViewController`. Not a missing answer — a different one.
+  Backticks at the three sites that print a type name outside code.
+  The guard from [#28] missed it because it scanned only lines that *opened* with `<`, which was the
+  shape of the `<details>` block it was written for. It now matches a tag anywhere on a line, with
+  fenced blocks and inline code spans excluded — the second because it is the remedy, and a guard
+  that rejected its own fix would be no guard at all. 392 tests.
+
+[#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
+
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.
