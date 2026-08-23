@@ -31,13 +31,17 @@ public sealed class WalkthroughGenerator
     /// <param name="narration">
     /// Optional prose keyed by step number, with <c>0</c> being the opening paragraph.
     /// </param>
+    /// <param name="since">
+    /// Optional comparison against a stored snapshot, rendered as its own section.
+    /// </param>
     /// <remarks>
     /// Narration arrives as plain text keyed to steps that already exist, which is what keeps this
     /// assembly free of any AI dependency — and, more to the point, keeps the model unable to add a
     /// step. Whoever produced the prose had to key it to the structure; it could not bring its own.
     /// </remarks>
     public string Generate(
-        ExtractedProject project, ProcessSlice slice, IReadOnlyDictionary<int, string>? narration = null)
+        ExtractedProject project, ProcessSlice slice, IReadOnlyDictionary<int, string>? narration = null,
+        WalkthroughDiff? since = null)
     {
         var sb = new StringBuilder();
 
@@ -56,6 +60,7 @@ public sealed class WalkthroughGenerator
         AppendCast(sb, project, slice);
         AppendSteps(sb, project, slice, narration);
         AppendUnresolved(sb, slice);
+        AppendSince(sb, project, since);
         AppendBounds(sb, slice);
 
         return sb.ToString();
@@ -184,6 +189,74 @@ public sealed class WalkthroughGenerator
 
         sb.AppendLine();
     }
+
+    /// <summary>
+    /// What is different about this process since a stored snapshot.
+    /// </summary>
+    /// <remarks>
+    /// Present only when a snapshot was given, because an absent section reads as "not asked" and an
+    /// empty one has to read as "asked, and nothing". Those are different answers and a document
+    /// that cannot tell them apart is worse than one that never offered.
+    /// </remarks>
+    private void AppendSince(StringBuilder sb, ExtractedProject project, WalkthroughDiff? since)
+    {
+        if (since is null)
+            return;
+
+        sb.AppendLine($"## {_l.WhatChanged}");
+        sb.AppendLine();
+
+        if (!since.ExistedBefore)
+        {
+            sb.AppendLine(_l.DidNotExistBefore);
+            sb.AppendLine();
+
+            return;
+        }
+
+        if (!since.AnyChange)
+        {
+            sb.AppendLine(_l.NothingChanged);
+            sb.AppendLine();
+
+            return;
+        }
+
+        foreach (var change in since.Changes)
+        {
+            sb.AppendLine(
+                $"- **{change.Node.Name}** — {ChangeName(change.Kind)} ({KindName(change.Node.Kind)}), "
+                + $"{At(project, change.Node)}");
+        }
+
+        AppendList(sb, _l.StepsAdded, since.StepsAdded);
+        AppendList(sb, _l.StepsRemoved, since.StepsRemoved);
+        AppendList(sb, _l.BlindSpotsGained, since.BlindSpotsGained);
+        AppendList(sb, _l.BlindSpotsLost, since.BlindSpotsLost);
+
+        sb.AppendLine();
+    }
+
+    private static void AppendList(StringBuilder sb, string heading, IReadOnlyList<string> items)
+    {
+        if (items.Count == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"**{heading}**");
+        sb.AppendLine();
+
+        foreach (var item in items)
+            sb.AppendLine($"- {item}");
+    }
+
+    private string ChangeName(ProcessChangeKind kind) => kind switch
+    {
+        ProcessChangeKind.Added => _l.ChangeAdded,
+        ProcessChangeKind.Removed => _l.ChangeRemoved,
+        ProcessChangeKind.Changed => _l.ChangeEdited,
+        _ => "",
+    };
 
     private void AppendBounds(StringBuilder sb, ProcessSlice slice)
     {

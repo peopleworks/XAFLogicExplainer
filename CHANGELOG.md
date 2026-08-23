@@ -73,6 +73,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `XafLogicExplainer.Core` still references nothing but Roslyn: narration arrives at the generator
   as plain text keyed to steps that already exist.
 
+- **`xaflogic walkthrough --since`** ([#23], phase 4 — the last one). Re-walks the same process over
+  a stored snapshot and reports what is different about **this** process: a step added, a rule now
+  governing it, a branch gone, a body rewritten, and a call the trace can no longer follow. Reads
+  the same `_Previous.json` that `xaflogic diff` does, or any snapshot given by path.
+  This is the part no conversational agent can imitate, because none of them has a yesterday. Asked
+  what changed in the commission calculation since the last release, a model can only re-read
+  today's code and describe it fluently.
+  Comparing two walks by their node sets alone would have missed the most ordinary change there is —
+  somebody edits a method body and leaves every call in it alone — so each node now carries a
+  fingerprint of its own substance: a method's body, a rule's condition and effect, an action's
+  caption and criteria. Whitespace is collapsed first, so reformatting is not reported as a change
+  of behaviour. A controller and an entity have no fingerprint; what matters about them is elsewhere
+  in the slice, and giving them one would report the same edit twice.
+  Three states that had to stay distinct: the process is unchanged, the process did not exist at the
+  snapshot, and no snapshot could be read — the last one stops the run rather than writing a
+  document with the section missing, because an absent section reads exactly like "nothing changed".
+
 ### Fixed
 
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
@@ -145,7 +162,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - New fixture, `WalkthroughSolution`, whose proportions are its point: one action, one handler, and a
   `Recalculate` that two controllers override — so a walk reporting only what it can resolve
   produces a confident, complete-looking account of a process whose body it never saw. No existing
-  fixture could reach that case. 382 tests.
+  fixture could reach that case. 391 tests.
 
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24

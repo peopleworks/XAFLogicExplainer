@@ -188,6 +188,36 @@ public class DocumentationLabels
     /// <summary>Heading over the ordered account.</summary>
     public string StepByStep { get; init; } = "";
 
+    /// <summary>Heading over what is different since a stored snapshot.</summary>
+    public string WhatChanged { get; init; } = "";
+
+    /// <summary>Said when the process is the same as it was.</summary>
+    public string NothingChanged { get; init; } = "";
+
+    /// <summary>Said when the seed matched nothing in the snapshot: the process is new.</summary>
+    public string DidNotExistBefore { get; init; } = "";
+
+    /// <summary>Marks a node that takes part now and did not before.</summary>
+    public string ChangeAdded { get; init; } = "";
+
+    /// <summary>Marks a node that took part before and does not now.</summary>
+    public string ChangeRemoved { get; init; } = "";
+
+    /// <summary>Marks a node whose own substance is not what it was.</summary>
+    public string ChangeEdited { get; init; } = "";
+
+    /// <summary>Introduces steps that exist now and did not.</summary>
+    public string StepsAdded { get; init; } = "";
+
+    /// <summary>Introduces steps that existed and no longer do.</summary>
+    public string StepsRemoved { get; init; } = "";
+
+    /// <summary>Introduces calls the walk can no longer follow.</summary>
+    public string BlindSpotsGained { get; init; } = "";
+
+    /// <summary>Introduces calls the walk can now follow and could not.</summary>
+    public string BlindSpotsLost { get; init; } = "";
+
     /// <summary>Heading over the calls the walk saw and could not follow.</summary>
     public string CouldNotFollow { get; init; } = "";
 
@@ -406,6 +436,16 @@ public class DocumentationLabels
         Flow = "Flujo",
         WhatTakesPart = "Lo que participa",
         StepByStep = "Paso a paso",
+        WhatChanged = "Lo que cambio en este proceso",
+        NothingChanged = "Nada. Este proceso es el mismo que era.",
+        DidNotExistBefore = "Este proceso no existia en la extraccion anterior. Es nuevo por completo.",
+        ChangeAdded = "nuevo",
+        ChangeRemoved = "ya no participa",
+        ChangeEdited = "cambio lo que hace",
+        StepsAdded = "Pasos nuevos",
+        StepsRemoved = "Pasos que ya no ocurren",
+        BlindSpotsGained = "Llamadas que el recorrido ya no puede seguir",
+        BlindSpotsLost = "Llamadas que el recorrido ahora si puede seguir",
         CouldNotFollow = "Lo que este recorrido no pudo seguir",
         EverythingResolved = "Nada. Cada llamada de esta rebanada resolvio a una sola declaracion.",
         CalledFrom = "llamada desde",
@@ -581,6 +621,16 @@ public class DocumentationLabels
         Flow = "Flow",
         WhatTakesPart = "What takes part",
         StepByStep = "Step by step",
+        WhatChanged = "What changed in this process",
+        NothingChanged = "Nothing. This process is what it was.",
+        DidNotExistBefore = "This process did not exist at the previous extraction. All of it is new.",
+        ChangeAdded = "new",
+        ChangeRemoved = "no longer takes part",
+        ChangeEdited = "does something different",
+        StepsAdded = "Steps that are new",
+        StepsRemoved = "Steps that no longer happen",
+        BlindSpotsGained = "Calls the walk can no longer follow",
+        BlindSpotsLost = "Calls the walk can now follow and could not",
         CouldNotFollow = "What this walk could not follow",
         EverythingResolved = "Nothing. Every call in this slice resolved to a single declaration.",
         CalledFrom = "called from",

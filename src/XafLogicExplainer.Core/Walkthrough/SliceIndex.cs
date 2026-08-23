@@ -135,6 +135,9 @@ internal sealed class SliceIndex
                 Kind = SliceNodeKind.Action,
                 Name = action.ActionId,
                 Owner = controller.ClassName,
+                Fingerprint = string.Join("|",
+                    action.Caption, action.ConfirmationMessage, action.EnabledCriteria,
+                    action.TargetObjectsCriteria, action.ExecuteMethodName),
                 // An action declared only in a constructor still has a place; one extracted before
                 // locations existed has none, and falls back to its controller's file.
                 FilePath = action.FilePath.Length > 0 ? action.FilePath : controller.FilePath,
@@ -150,6 +153,8 @@ internal sealed class SliceIndex
                 Kind = SliceNodeKind.Method,
                 Name = $"{controller.ClassName}.{method.Name}",
                 Owner = controller.ClassName,
+                // Whitespace collapsed, so a reformat is not reported as a change of behaviour.
+                Fingerprint = Squeeze(method.Body),
                 FilePath = method.FilePath.Length > 0 ? method.FilePath : controller.FilePath,
                 Line = method.Line,
             },
@@ -242,6 +247,9 @@ internal sealed class SliceIndex
                     Owner = declarer.ClassName,
                     FilePath = declarer.FilePath,
                     Line = declarer.Line,
+                    Fingerprint = string.Join("|",
+                        rule.RuleType, rule.TargetProperty, rule.TargetCriteria,
+                        rule.Expression, rule.Contexts),
                 },
                 null));
         }
@@ -264,10 +272,17 @@ internal sealed class SliceIndex
                     Owner = declarer.ClassName,
                     FilePath = declarer.FilePath,
                     Line = declarer.Line,
+                    Fingerprint = string.Join("|",
+                        rule.TargetItems, rule.Criteria, rule.Context,
+                        rule.Visibility, rule.Enabled, rule.BackColor, rule.FontColor),
                 },
                 null));
         }
     }
+
+    /// <summary>Collapses runs of whitespace, so reformatting is not mistaken for an edit.</summary>
+    private static string Squeeze(string text) =>
+        string.Join(" ", text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     private ExtractedEntity Declarer(string? inheritedFrom, ExtractedEntity carrier) =>
         inheritedFrom is { Length: > 0 } from && _entities.TryGetValue(from, out var declared)
