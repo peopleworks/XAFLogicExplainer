@@ -7,34 +7,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-
-- **An appearance rule keeps its condition however the attribute was written** ([#22], reported by
-  [@MBrekhof]). `AppearanceAttribute` has three constructors and two pass the criteria by position —
-  `(id, criteria)` and `(id, appearanceItemType, criteria)`. Only the named form was read, so a rule
-  written either of the other two ways was extracted with no condition and then documented as
-  applying **always**, which is the strongest claim a rule can make, printed about rules whose whole
-  purpose is a condition. The criteria is the last positional argument in both overloads that carry
-  one, so both are read without knowing which constructor was called; a named argument still wins.
-  The expression index — the page that introduces itself as every distinct expression in the
-  application — heals on its own, because it already gathered appearance criteria and there were
-  none to gather.
-
-- **A rule over an Action is no longer called a field** ([#22]). `AppearanceItemType` was never read,
-  so a rule disabling the `Delete` action was documented as governing a column called Delete — a
-  confident sentence about something that does not exist. It is written two ways in real code:
-  positionally as the enum, and by name as a string, which is the form the DevExpress examples use;
-  both are read and normalised to one value. Absent means the XAF default, `ViewItem`, and is
-  recorded as absent so a rule that said nothing can be told from one that said `ViewItem`. The
-  Markdown now says *actions* or *layout items* where it applies, the MCP tool says
-  `Delete (actions)`, and both diffs treat the item type as part of a rule's identity — a rule
-  repointed from a column to an action of the same name changes nothing else.
-
-- New fixture, `AppearanceSolution`, whose rules are written every way the attribute allows. Every
-  existing fixture wrote `Criteria =` named, which is the whole reason the suite agreed. 402 tests.
-
-[#22]: https://github.com/peopleworks/XAFLogicExplainer/issues/22
-
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.
@@ -78,7 +50,7 @@ widened from lines that *open* with `<` to a tag anywhere on a line. The route f
 a Word document is written down in the README, and there is deliberately no exporter here: reading
 an XAF application needs no DevExpress, and that stays true.
 
-392 tests, zero warnings.
+402 tests, zero warnings.
 
 ### Added
 
@@ -165,6 +137,30 @@ an XAF application needs no DevExpress, and that stays true.
 
 ### Fixed
 
+- **An appearance rule keeps its condition however the attribute was written** ([#22], reported by
+  [@MBrekhof]). `AppearanceAttribute` has three constructors and two pass the criteria by position —
+  `(id, criteria)` and `(id, appearanceItemType, criteria)`. Only the named form was read, so a rule
+  written either of the other two ways was extracted with no condition and then documented as
+  applying **always**, which is the strongest claim a rule can make, printed about rules whose whole
+  purpose is a condition. The criteria is the last positional argument in both overloads that carry
+  one, so both are read without knowing which constructor was called; a named argument still wins.
+  The expression index — the page that introduces itself as every distinct expression in the
+  application — heals on its own, because it already gathered appearance criteria and there were
+  none to gather.
+
+- **A rule over an Action is no longer called a field** ([#22]). `AppearanceItemType` was never read,
+  so a rule disabling the `Delete` action was documented as governing a column called Delete — a
+  confident sentence about something that does not exist. It is written two ways in real code:
+  positionally as the enum, and by name as a string, which is the form the DevExpress examples use;
+  both are read and normalised to one value. Absent means the XAF default, `ViewItem`, and is
+  recorded as absent so a rule that said nothing can be told from one that said `ViewItem`. The
+  Markdown now says *actions* or *layout items* where it applies, the MCP tool says
+  `Delete (actions)`, and both diffs treat the item type as part of a rule's identity — a rule
+  repointed from a column to an action of the same name changes nothing else.
+
+- New fixture, `AppearanceSolution`, whose rules are written every way the attribute allows. Every
+  existing fixture wrote `Criteria =` named, which is the whole reason the suite agreed. 402 tests.
+
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
   `AppearanceAttribute` is usable on a class or on a property, and the documentation teaches the
   property form first: a rule on `UnitPrice` and a rule on the class naming
@@ -239,6 +235,7 @@ an XAF application needs no DevExpress, and that stays true.
 
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
+[#22]: https://github.com/peopleworks/XAFLogicExplainer/issues/22
 [#28]: https://github.com/peopleworks/XAFLogicExplainer/issues/28
 [#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
 [#39]: https://github.com/peopleworks/XAFLogicExplainer/pull/39
