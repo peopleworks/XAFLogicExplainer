@@ -48,8 +48,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Both project-file spellings are read. A pre-NuGet XAF project has no `PackageReference` at all and
   names its version only inside the assembly reference (`DevExpress.ExpressApp.Xpo.v17.1`) — which is
   exactly the case where the mismatch is widest, so reading only the modern spelling would have
-  missed the applications that need this most. Verified against three real applications declaring
-  17.1, 23.2 and 25.1.
+  missed the applications that need this most.
+
+  Two further spellings were found by running this against seven real applications rather than
+  against fixtures, and both returned "declares nothing" until they were handled. A version written
+  as an MSBuild property — `<DevExpressVersion>25.2.7</DevExpressVersion>` with
+  `Version="$(DevExpressVersion)"` — is what DevExpress's current template generates, so it is not
+  an exotic case to tolerate but what a project created today looks like; properties a project file
+  sets are now resolved before anything reads a version, which also stops `$(DevExpressVersion)`
+  reaching the rendered package list. A floating `25.2.*-*` already worked and is now pinned.
+
+- **The project file a module folder is named for is the one that is read.** With several
+  `.csproj` side by side — a `.Net10.csproj` from a framework migration, a hand-made
+  `" - Backup.Module.csproj"` — extraction took whichever the file system returned first, so the
+  target framework, the package list and the DevExpress version could come from a backup, and two
+  machines could describe one repository differently with nothing in the output to say why. Three
+  of the seven applications checked have more than one.
+
+  Verified end to end against applications declaring 17.1, 23.2, 25.1, 25.2 and 26.1 — including
+  every case above, and one whose version matches the installed catalog, where the new sentence
+  correctly says nothing at all.
 
 ## [0.15.0] — 2026-08-23
 
