@@ -30,6 +30,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   catalog: a syntactic reader correctly sees zero registrations there, the module referenced, and
   the fourteen layouts and two parameters objects it would otherwise have hidden.
 
+### Fixed
+
+- **The framework catalog is chosen by the version the application declares, not by file date.**
+  `LoadLatest()` took the newest catalog on the machine whatever the application targeted, and the
+  output then reported which framework controllers load onto a screen in the same confident sentence
+  either way. On a machine holding a single 26.1 catalog, that sentence was produced for a 23.2
+  application and for a 17.1 one — three releases and nine years out — with nothing to tell the
+  reader. Reported by the external review at 0.12.0 and live until now.
+
+  Extraction now reads the DevExpress `major.minor` from the project file and asks for that
+  release's catalog. When it is not on the machine the newest is still used — most of the framework
+  is stable across releases, and withholding it would trade real information for a small error — but
+  the difference is now stated wherever a framework fact is reported: the Markdown and HTML pages,
+  the `AGENTS.md` header, and the MCP view detail.
+
+  Both project-file spellings are read. A pre-NuGet XAF project has no `PackageReference` at all and
+  names its version only inside the assembly reference (`DevExpress.ExpressApp.Xpo.v17.1`) — which is
+  exactly the case where the mismatch is widest, so reading only the modern spelling would have
+  missed the applications that need this most. Verified against three real applications declaring
+  17.1, 23.2 and 25.1.
+
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.

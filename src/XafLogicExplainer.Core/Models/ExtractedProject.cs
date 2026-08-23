@@ -150,6 +150,18 @@ public class ExtractedProject
     public string? CatalogVersion { get; set; }
 
     /// <summary>
+    /// The DevExpress <c>major.minor</c> this application declares in its project file, or null
+    /// when it declares none.
+    /// </summary>
+    /// <remarks>
+    /// Kept beside <see cref="CatalogVersion"/> so the two can be compared. A catalog describes one
+    /// release of the framework; an application written against a different one may load different
+    /// controllers on a screen, so the pair is what makes any framework claim checkable rather than
+    /// merely confident. Whether they agree is not stored — it is derived, so it cannot go stale.
+    /// </remarks>
+    public string? DeclaredDevExpressVersion { get; set; }
+
+    /// <summary>
     /// Attributes used in this application that XAF does not define, and that are not part of
     /// .NET either — so they are the team's own. Populated only when a catalog is present.
     /// </summary>
