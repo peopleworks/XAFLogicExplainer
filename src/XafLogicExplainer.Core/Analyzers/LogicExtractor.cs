@@ -185,6 +185,7 @@ public class LogicExtractor : ILogicExtractor
         //    and were walked past for fourteen releases.
         project.Reports = _reportAnalyzer.AnalyzeRegistrations(projectPath, options);
         project.UnregisteredReportLayouts = _reportAnalyzer.UnregisteredLayouts(projectPath, project.Reports);
+        project.UnregisteredReportParameters = _reportAnalyzer.AttachParametersObjects(projectPath, project.Reports, options);
         project.ReferencesReportsModule = _reportAnalyzer.ReferencesReportsModule(projectPath);
 
         // 5. Build navigation structure from entities

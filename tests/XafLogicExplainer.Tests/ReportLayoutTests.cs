@@ -131,4 +131,18 @@ public class ReportLayoutTests
         Assert.Equal("Warehouse", orphan.DataSource);
         Assert.Equal("Summary", orphan.DataMember);
     }
+
+    [Fact]
+    public void TheSearchClimbsToTheSolutionOnlyFromAProject()
+    {
+        // Pointed at a folder that is not a project, the search stays in it. Found by pointing the
+        // analyzer at a solution root whose parent held every other repository on the machine:
+        // seventeen layouts, none of them this application's.
+        var reportingFolder = Path.Combine(Path.GetDirectoryName(SampleProjects.ReportsPath)!, "Reporting");
+
+        var extracted = new Core.Analyzers.LogicExtractor()
+            .ExtractFromSourceDirectory(reportingFolder, new ExtractionOptions { DiscoverPlatformModels = false });
+
+        Assert.Single(extracted.UnregisteredReportLayouts);
+    }
 }

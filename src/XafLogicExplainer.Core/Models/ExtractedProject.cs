@@ -133,6 +133,17 @@ public class ExtractedProject
     public List<ReportLayout> UnregisteredReportLayouts { get; set; } = [];
 
     /// <summary>
+    /// <c>ReportParametersObjectBase</c> descendants that no registration this extraction could
+    /// read names.
+    /// </summary>
+    /// <remarks>
+    /// Either the registration is one the syntactic reader cannot follow — a shop registering
+    /// through reflection over a catalog, which exists — or the class was written and never
+    /// wired. Both are worth a reader's attention, and neither is a reason to drop the criteria.
+    /// </remarks>
+    public List<ReportParametersObject> UnregisteredReportParameters { get; set; } = [];
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>

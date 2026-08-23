@@ -45,6 +45,12 @@ public class ExtractedReport
     /// </summary>
     public ReportLayout? Layout { get; set; }
 
+    /// <summary>
+    /// The parameters dialog, when the registration names one and its class is declared under
+    /// the project.
+    /// </summary>
+    public ReportParametersObject? ParametersObject { get; set; }
+
     /// <summary>File the registration is in.</summary>
     public string FilePath { get; set; } = string.Empty;
 

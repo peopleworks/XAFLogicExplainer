@@ -24,6 +24,7 @@ namespace XafLogicExplainer.Core.Analyzers;
 public class ReportAnalyzer
 {
     private const string RegistrationMethod = "AddPredefinedReport";
+    private const string ParametersBase = "ReportParametersObjectBase";
 
     /// <summary>
     /// Every <c>AddPredefinedReport&lt;T&gt;(...)</c> call under the directory, in source order,
@@ -59,6 +60,76 @@ public class ReportAnalyzer
 
         return reports;
     }
+
+    /// <summary>
+    /// Every <c>ReportParametersObjectBase</c> descendant under the directory, attached to the
+    /// registrations that name it; the rest are returned.
+    /// </summary>
+    public List<ReportParametersObject> AttachParametersObjects(string sourceDirectory, List<ExtractedReport> reports, ExtractionOptions options)
+    {
+        var declared = new List<ReportParametersObject>();
+
+        foreach (var file in AnalyzableFiles(sourceDirectory).Where(f => ContainsWord(f, ParametersBase)))
+        {
+            var root = CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot();
+
+            declared.AddRange(root.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .Where(c => c.BaseList?.Types.Any(t => ShortName(t.Type) == ParametersBase) == true)
+                .Select(c => ReadParametersObject(c, file, options)));
+        }
+
+        var byName = declared.ToDictionary(p => p.ClassName, StringComparer.Ordinal);
+        var claimed = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var report in reports)
+        {
+            if (report.ParametersType != null && byName.TryGetValue(report.ParametersType, out var parameters))
+            {
+                report.ParametersObject = parameters;
+                claimed.Add(parameters.ClassName);
+            }
+        }
+
+        return declared.Where(p => !claimed.Contains(p.ClassName)).ToList();
+    }
+
+    private static ReportParametersObject ReadParametersObject(ClassDeclarationSyntax cls, string file, ExtractionOptions options)
+    {
+        var parameters = new ReportParametersObject
+        {
+            ClassName = cls.Identifier.Text,
+            FilePath = file,
+            Line = SourceLine.Of(cls.Identifier),
+        };
+
+        foreach (var property in cls.Members.OfType<PropertyDeclarationSyntax>())
+        {
+            if (!property.Modifiers.Any(SyntaxKind.PublicKeyword) || property.Modifiers.Any(SyntaxKind.StaticKeyword))
+                continue;
+
+            parameters.Fields.Add(new ReportParameterField
+            {
+                Name = property.Identifier.Text,
+                Type = property.Type.ToString(),
+                Default = property.Initializer?.Value.ToString(),
+            });
+        }
+
+        if (options.IncludeSourceCode)
+        {
+            parameters.CriteriaSource = MethodSource(cls, "GetCriteria");
+            parameters.SortingSource = MethodSource(cls, "GetSorting");
+        }
+
+        return parameters;
+    }
+
+    /// <summary>The whole declaration, signature included, the way a reader would quote it.</summary>
+    private static string? MethodSource(ClassDeclarationSyntax cls, string name) =>
+        cls.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Identifier.Text == name)?
+            .ToString();
 
     /// <summary>
     /// Every <c>.repx</c> under the directory that no registration's report class loads.
