@@ -278,6 +278,20 @@ public class ExtractedMethod
     public bool IsPublic { get; set; }
 
     /// <summary>
+    /// Whether a derived class is allowed to replace this method — <c>virtual</c> or <c>abstract</c>.
+    /// </summary>
+    /// <remarks>
+    /// What separates a call that syntax can follow from one it only appears to. An unqualified call
+    /// to a sealed method reaches the declaration written beside it; the same call to a virtual one
+    /// reaches whichever override the run-time type carries, and there is no way to tell from source
+    /// which that is.
+    /// </remarks>
+    public bool IsOverridable { get; set; }
+
+    /// <summary>Whether this method replaces one inherited from a base class.</summary>
+    public bool IsOverride { get; set; }
+
+    /// <summary>
     /// XML summary text from leading documentation trivia when present.
     /// </summary>
     public string? Summary { get; set; }

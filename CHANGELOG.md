@@ -21,6 +21,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the case where a reader would otherwise open the wrong one. Prerequisite for the walkthrough,
   where every claim is supposed to carry a `file:line` a reader can check.
 
+- **The walk that decides what belongs to one process** ([#23], phase 1). `ProcessSlice.From` takes
+  an action, a controller method, a controller or an entity by name and walks outward from it —
+  breadth-first, bounded by depth, syntax-only like everything else here. It follows an action to
+  the handler it runs, a method to the methods it calls and the entities it names, a controller to
+  the entities it is activated for, and an entity to the rules that govern it. Every node carries
+  the file and line a reader can open.
+  The scope is computed rather than asked for, and that is the governing decision: a model asked
+  what belongs in "the approval process" answers authoritatively, in a form nobody can check, and is
+  wrong in the places that look exactly like the places it is right.
+  **A call it cannot follow is printed, not dropped.** A virtual declaration is followed to what is
+  written beside the call, and reported with every override that may replace it — which is honest
+  about the consequence, because the bodies that were not entered mean entities missing from the
+  slice. So is the depth bound: a walk that ran out of things to reach is a whole process, and a
+  walk that stopped at its limit is a view of one, and rendering them identically is how a document
+  claims completeness it does not have.
+  Methods now record `virtual`/`abstract` and `override`, which is what makes that distinction
+  possible at all. Nothing consumes the slice yet — the Mermaid diagram, the document, the CLI
+  command and the MCP tool are phase 2.
+
 ### Fixed
 
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
@@ -88,7 +107,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Citations are checked by reading the fixture back off disk: the cited line must really contain the
   declaration, across every sample project. It is the only assertion that catches an off-by-one or a
-  span that starts at an attribute. 355 tests.
+  span that starts at an attribute.
+
+- New fixture, `WalkthroughSolution`, whose proportions are its point: one action, one handler, and a
+  `Recalculate` that two controllers override — so a walk reporting only what it can resolve
+  produces a confident, complete-looking account of a process whose body it never saw. No existing
+  fixture could reach that case. 363 tests.
 
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24

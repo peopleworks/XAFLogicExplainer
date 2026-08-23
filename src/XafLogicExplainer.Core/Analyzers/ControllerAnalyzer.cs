@@ -425,6 +425,9 @@ public class ControllerAnalyzer : IControllerAnalyzer
                 Line = SourceLine.Of(method.Identifier),
                 ReturnType = method.ReturnType.ToString(),
                 IsPublic = method.Modifiers.Any(SyntaxKind.PublicKeyword),
+                IsOverridable = method.Modifiers.Any(SyntaxKind.VirtualKeyword)
+                                || method.Modifiers.Any(SyntaxKind.AbstractKeyword),
+                IsOverride = method.Modifiers.Any(SyntaxKind.OverrideKeyword),
                 Parameters = method.ParameterList.Parameters
                     .Select(p => $"{p.Type} {p.Identifier.Text}")
                     .ToList(),
