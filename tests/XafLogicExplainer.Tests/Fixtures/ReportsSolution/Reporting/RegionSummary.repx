@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XtraReportsLayoutSerializer SerializerVersion="25.2.3.0" Ref="1" ControlType="DevExpress.XtraReports.UI.XtraReport, DevExpress.XtraReports.v25.2" Name="RegionSummary" DataMember="Summary" DataSource="#Ref-0" Version="25.2">
+  <Bands>
+    <Item1 Ref="2" ControlType="DetailBand" Name="Detail" HeightF="25">
+      <Controls>
+        <Item1 Ref="3" ControlType="XRLabel" Name="xrLabelRegion" SizeF="200,23" LocationFloat="0,0">
+          <ExpressionBindings>
+            <Item1 Ref="4" EventName="BeforePrint" PropertyName="Text" Expression="[Region]" />
+          </ExpressionBindings>
+        </Item1>
+      </Controls>
+    </Item1>
+  </Bands>
+  <ObjectStorage>
+    <Item1 Ref="0" Name="Warehouse" ObjectType="DevExpress.DataAccess.Sql.SqlDataSource,DevExpress.DataAccess.v25.2" Base64="PFNxbERhdGFTb3VyY2UgTmFtZT0iV2FyZWhvdXNlIj48L1NxbERhdGFTb3VyY2U+" />
+  </ObjectStorage>
+</XtraReportsLayoutSerializer>

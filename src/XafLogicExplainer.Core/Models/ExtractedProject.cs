@@ -106,6 +106,44 @@ public class ExtractedProject
     public List<ExtractedMigration> Migrations { get; set; } = [];
 
     /// <summary>
+    /// Predefined reports, as their registrations declare them.
+    /// </summary>
+    public List<ExtractedReport> Reports { get; set; } = [];
+
+    /// <summary>
+    /// Whether the application references <c>ReportsModuleV2</c> at all.
+    /// </summary>
+    /// <remarks>
+    /// The difference between "this application has no reports" and "this application's reports
+    /// are not in any file": with the module referenced, users can create reports at run time,
+    /// stored only in the database, and <see cref="Reports"/> is then a lower bound rather than
+    /// the list.
+    /// </remarks>
+    public bool ReferencesReportsModule { get; set; }
+
+    /// <summary>
+    /// Layouts found on disk — <c>.repx</c> files — that no registration names.
+    /// </summary>
+    /// <remarks>
+    /// A shop that designs reports outside Visual Studio ends up with layouts no code references:
+    /// imported by hand into the running application, or exported from it. They are still the
+    /// clearest account there is of what those reports show, and skipping them would describe an
+    /// application with fewer reports than its repository holds.
+    /// </remarks>
+    public List<ReportLayout> UnregisteredReportLayouts { get; set; } = [];
+
+    /// <summary>
+    /// <c>ReportParametersObjectBase</c> descendants that no registration this extraction could
+    /// read names.
+    /// </summary>
+    /// <remarks>
+    /// Either the registration is one the syntactic reader cannot follow — a shop registering
+    /// through reflection over a catalog, which exists — or the class was written and never
+    /// wired. Both are worth a reader's attention, and neither is a reason to drop the criteria.
+    /// </remarks>
+    public List<ReportParametersObject> UnregisteredReportParameters { get; set; } = [];
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>

@@ -52,6 +52,9 @@ internal static class SampleProjects
     public static string WalkthroughPath =>
         Path.Combine(FixturesRoot, "WalkthroughSolution", "Billing.Module");
 
+    /// <summary>Path to the fixture whose module registers predefined reports.</summary>
+    public static string ReportsPath => Path.Combine(FixturesRoot, "ReportsSolution", "Invoicing.Module");
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 
@@ -111,6 +114,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyWalkthrough = new(() => Extract(WalkthroughPath));
     private static readonly Lazy<ExtractedProject> LazyDeepXpo = new(() => Extract(DeepXpoPath));
     private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
+    private static readonly Lazy<ExtractedProject> LazyReports = new(() => Extract(ReportsPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -136,6 +140,13 @@ internal static class SampleProjects
 
     /// <summary>An XPO application whose entities reach BaseObject through a shared base.</summary>
     public static ExtractedProject DeepXpo => LazyDeepXpo.Value;
+
+    /// <summary>
+    /// An XPO application with Reports V2: three predefined reports registered through all four
+    /// <c>AddPredefinedReport</c> overloads, one laid out in designer code, one shipped as a
+    /// <c>.repx</c>, one built in its constructor, and a parameters object.
+    /// </summary>
+    public static ExtractedProject Reports => LazyReports.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.
