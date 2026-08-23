@@ -44,6 +44,10 @@ internal static class SampleProjects
     public static string AuditedXpoPath =>
         Path.Combine(FixturesRoot, "AuditedXpoSolution", "SampleAudited.Module");
 
+    /// <summary>Path to the fixture whose appearance rules use every constructor form.</summary>
+    public static string AppearancePath =>
+        Path.Combine(FixturesRoot, "AppearanceSolution", "Helpdesk.Module");
+
     /// <summary>Path to the fixture whose process runs through a virtual method.</summary>
     public static string WalkthroughPath =>
         Path.Combine(FixturesRoot, "WalkthroughSolution", "Billing.Module");
@@ -103,6 +107,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyPocoEf = new(() => Extract(PocoEfPath));
     private static readonly Lazy<ExtractedProject> LazyNoOrm = new(() => Extract(NoOrmPath));
 
+    private static readonly Lazy<ExtractedProject> LazyAppearance = new(() => Extract(AppearancePath));
     private static readonly Lazy<ExtractedProject> LazyWalkthrough = new(() => Extract(WalkthroughPath));
     private static readonly Lazy<ExtractedProject> LazyDeepXpo = new(() => Extract(DeepXpoPath));
     private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
@@ -141,6 +146,16 @@ internal static class SampleProjects
     /// summary of fixed width has to choose between an entity's columns and its base's.
     /// </remarks>
     public static ExtractedProject AuditedXpo => LazyAuditedXpo.Value;
+
+    /// <summary>
+    /// An application whose appearance rules are written every way the attribute allows.
+    /// </summary>
+    /// <remarks>
+    /// Every rule passes its criteria by position, and one governs an Action rather than a property.
+    /// Both are forms no other fixture uses, which is precisely why the suite agreed that both were
+    /// being extracted correctly.
+    /// </remarks>
+    public static ExtractedProject Appearance => LazyAppearance.Value;
 
     /// <summary>
     /// An application whose one process is dispatched through a virtual method.

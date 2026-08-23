@@ -99,6 +99,18 @@ public class ExtractedAppearanceRule
     public string? TargetItems { get; set; }
 
     /// <summary>
+    /// Which kind of UI element <see cref="TargetItems"/> names: <c>ViewItem</c>, <c>Action</c> or
+    /// <c>LayoutItem</c>. Absent means the XAF default, which is <c>ViewItem</c>.
+    /// </summary>
+    /// <remarks>
+    /// Without it every target reads as a field, so a rule disabling the <c>Delete</c> action was
+    /// documented as governing a column called Delete — a confident sentence about a thing that does
+    /// not exist. It is written two ways in real code: positionally as the enum, and by name as a
+    /// string, which is the form the DevExpress examples use.
+    /// </remarks>
+    public string? AppearanceItemType { get; set; }
+
+    /// <summary>
     /// Criteria expression controlling when the rule is active.
     /// </summary>
     public string? Criteria { get; set; }

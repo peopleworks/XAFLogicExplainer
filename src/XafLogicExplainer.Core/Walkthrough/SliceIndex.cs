@@ -273,7 +273,7 @@ internal sealed class SliceIndex
                     FilePath = declarer.FilePath,
                     Line = declarer.Line,
                     Fingerprint = string.Join("|",
-                        rule.TargetItems, rule.Criteria, rule.Context,
+                        rule.TargetItems, rule.AppearanceItemType, rule.Criteria, rule.Context,
                         rule.Visibility, rule.Enabled, rule.BackColor, rule.FontColor),
                 },
                 null));

@@ -218,12 +218,28 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         var where = new List<string>();
 
         if (rule.Context is { Length: > 0 }) where.Add($"{L("en", "in")} {rule.Context}");
-        if (rule.TargetItems is { Length: > 0 }) where.Add($"{_l.Fields}: {rule.TargetItems}");
+        if (rule.TargetItems is { Length: > 0 }) where.Add($"{TargetKind(rule)}: {rule.TargetItems}");
 
         var text = effects.Count > 0 ? $": {string.Join(", ", effects)}" : $": {L("sin efecto declarado", "no declared effect")}";
 
         return where.Count > 0 ? $"{text} ({string.Join(", ", where)})" : text;
     }
+
+    /// <summary>
+    /// What kind of thing the rule's targets are.
+    /// </summary>
+    /// <remarks>
+    /// Every target used to be called a field, so a rule disabling the <c>Delete</c> action read as
+    /// governing a column called Delete — a column no reader would find, described confidently. XAF
+    /// defaults the type to <c>ViewItem</c>, so an absent one is a field and the common case is
+    /// unchanged.
+    /// </remarks>
+    private string TargetKind(ExtractedAppearanceRule rule) => rule.AppearanceItemType switch
+    {
+        "Action" => L("acciones", "actions"),
+        "LayoutItem" => L("elementos de layout", "layout items"),
+        _ => _l.Fields,
+    };
 
     /// <summary>Joins controller names for a one-line mention.</summary>
     private static string Names(IEnumerable<ViewActivation> activations) =>
