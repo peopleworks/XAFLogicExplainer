@@ -238,6 +238,40 @@ Try it on the sample without touching your own code:
 xaflogic explain --project tests/XafLogicExplainer.Tests/Fixtures/DemoSolution/PharmacyDemo.Module --open
 ```
 
+## The same knowledge, as a document
+
+You arrive at an XAF project you have never seen and, half a day later, hand someone a document
+about it. The last step is not this tool's. `xaflogic extract` writes Markdown, and
+[mcpOffice](https://github.com/MBrekhof/mcpOffice) — an MCP server built on the DevExpress Office
+File API — turns Markdown into `.docx` and `.docx` into PDF. With both servers connected, the agent
+hands one to the other. There is no Word exporter here and there will not be one
+([#28](https://github.com/peopleworks/XAFLogicExplainer/issues/28)): reading an XAF application
+needs no DevExpress, and that stays true.
+
+```bash
+xaflogic extract --project "C:\MySolution\MyApp.Module"
+# writes .xaflogic-output/MyApp_Full.md, and one file per section beside it
+```
+
+Then, to the agent:
+
+> Turn `.xaflogic-output/MyApp_Entities.md` into a Word document with `word_create_from_markdown`,
+> then `word_convert` it to PDF.
+
+Hand over a section file rather than `_Full.md` when the reader is one audience: `_Entities.md` is
+the data dictionary, `_BusinessRules.md` the rules, `_Controllers.md` what the buttons do.
+`word_create_from_markdown` takes a `templatePath`, so headings, tables, header and footer can come
+from your own `.dotx`.
+
+Verified on the sample application in this repository: every heading becomes a Word heading and
+appears in the document outline, the property tables become real tables, fenced C# becomes shaded
+monospace, and lists, bold and inline code survive. Nothing in the generated Markdown is HTML, and
+[a test](tests/XafLogicExplainer.Tests/PortableMarkdownTests.cs) keeps it that way.
+
+mcpOffice needs a DevExpress licence, because it writes Office files with DevExpress's API. If you
+run an XAF application, you have one. Setup is in
+[its usage guide](https://github.com/MBrekhof/mcpOffice/blob/main/docs/usage.md).
+
 ## Optional: tell your code apart from DevExpress's
 
 Extraction reads your source without knowing anything about the framework it is written against,
