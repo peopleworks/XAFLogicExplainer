@@ -84,6 +84,57 @@ public class CatalogVersionMatchTests
             """));
     }
 
+    /// <summary>The spelling DevExpress's own current template writes.</summary>
+    private const string PropertyProject = """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <TargetFramework>net10.0</TargetFramework>
+            <DevExpressVersion>25.2.7</DevExpressVersion>
+          </PropertyGroup>
+          <ItemGroup>
+            <PackageReference Include="DevExpress.ExpressApp" Version="$(DevExpressVersion)" />
+            <PackageReference Include="DevExpress.Charts.Core" Version="$(DevExpressVersion)" />
+          </ItemGroup>
+        </Project>
+        """;
+
+    [Fact]
+    public void ReadsAVersionWrittenAsAnMsBuildProperty()
+    {
+        // Not an exotic spelling to be tolerant of: a project generated today looks like this, and
+        // read literally it declares a version of "$(DevExpressVersion)" -- no digits, so a reader
+        // matching on digits reports an application that names no framework at all.
+        Assert.Equal("25.2", DeclaredDevExpressVersion.FromProjectFile(PropertyProject));
+    }
+
+    [Fact]
+    public void APropertyDefinedSomewhereElseStaysUnresolved()
+    {
+        // Held in a Directory.Build.props beside the project, which is not read here. Returning
+        // null says "cannot tell", which is true; inventing a number would not be.
+        Assert.Null(DeclaredDevExpressVersion.FromProjectFile("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="DevExpress.ExpressApp" Version="$(DevExpressVersion)" />
+              </ItemGroup>
+            </Project>
+            """));
+    }
+
+    [Fact]
+    public void AFloatingVersionIsStillAVersion()
+    {
+        // `25.2.*-*` asks NuGet for the newest 25.2 including prereleases. The major.minor is the
+        // grain a catalog is generated at, so the wildcard costs nothing here.
+        Assert.Equal("25.2", DeclaredDevExpressVersion.FromProjectFile("""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <PackageReference Include="DevExpress.ExpressApp" Version="25.2.*-*" />
+              </ItemGroup>
+            </Project>
+            """));
+    }
+
     [Fact]
     public void DeclaringNothingIsNotTheSameAsDeclaringZero()
     {
