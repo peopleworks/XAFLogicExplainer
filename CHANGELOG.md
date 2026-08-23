@@ -7,6 +7,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **The reports an application declares are read** ([#37], phases 1–3 — the extraction; the
+  Markdown and MCP rendering follow separately). Reports V2 leaves four kinds of trace in a
+  repository, all syntax, and none of them was read: the registration
+  (`PredefinedReportsUpdater.AddPredefinedReport<T>`, in the same `GetModuleUpdaters` the updater
+  already lives in), the layout (designer code, a `.repx`, or a constructor), and the parameters
+  dialog (`ReportParametersObjectBase`, whose `GetCriteria()` is business logic in the plainest
+  sense). `ExtractedProject.Reports` now carries each registration with what the call says and
+  nothing it does not — `IsInplaceReport` is null when the overload is silent — plus the layout's
+  filter, bound expressions, grouping, calculated fields and parameters, and the dialog's fields
+  and criteria source. `ReferencesReportsModule` is the flag the rendering needs for the sentence
+  that makes the list safe to believe: with `ReportsModuleV2` in, users build reports at run time
+  that live only in the database, and the list is a lower bound.
+  Three things the real files taught, each pinned by the new `ReportsSolution` fixture: a `.repx`
+  parameter's type resolves through `<ObjectStorage>`; a layout exported from the running
+  application keeps its data source there too; and a shop that designs reports outside Visual
+  Studio keeps the exports beside the module, registered by nothing — so every `.repx` in the
+  solution is read, and the unclaimed ones are listed as unregistered rather than skipped.
+  Checked against three licensed applications, one of which registers through reflection over a
+  catalog: a syntactic reader correctly sees zero registrations there, the module referenced, and
+  the fourteen layouts and two parameters objects it would otherwise have hidden.
+
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.
@@ -238,6 +261,7 @@ an XAF application needs no DevExpress, and that stays true.
 [#22]: https://github.com/peopleworks/XAFLogicExplainer/issues/22
 [#28]: https://github.com/peopleworks/XAFLogicExplainer/issues/28
 [#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
+[#37]: https://github.com/peopleworks/XAFLogicExplainer/issues/37
 [#39]: https://github.com/peopleworks/XAFLogicExplainer/pull/39
 [mcpOffice]: https://github.com/MBrekhof/mcpOffice
 
