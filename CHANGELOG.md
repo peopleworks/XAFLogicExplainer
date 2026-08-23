@@ -55,6 +55,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   guess whether it has them all — and the guess that stops one atom early produces a confident
   answer with a step missing from it.
 
+- **`xaflogic walkthrough --narrate`** ([#23], phase 3). Opt-in prose over a walk that has already
+  been computed: one paragraph on what the process is for, and a sentence or two under each step,
+  each sitting directly beneath the citation it belongs to.
+  **The model narrates; it does not discover.** It receives the numbered steps and the code behind
+  them, and the only thing that reaches a reader is a paragraph it managed to key to a step that
+  exists — a paragraph keyed to step 99 of a nine-step process is dropped before rendering, and so
+  is fluent prose attached to no step at all. The point is not that such a sentence would probably
+  be wrong; it is that nobody could check it, and an ordinary reader cannot tell a fluent sentence
+  about real code from a fluent sentence about code that is not there.
+  The model is also told what the walk could not follow, so it does not narrate its way over the one
+  gap the analysis already knows about.
+  Failure costs prose and not the document: no key, or a provider that does not answer, prints why
+  and writes the walkthrough anyway. Phases 1 and 2 stand entirely on their own, which is what makes
+  the model optional rather than load-bearing — and a test pins that a document generated with an
+  empty narration is byte-for-byte the one generated with none.
+  `XafLogicExplainer.Core` still references nothing but Roslyn: narration arrives at the generator
+  as plain text keyed to steps that already exist.
+
 ### Fixed
 
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
@@ -127,7 +145,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - New fixture, `WalkthroughSolution`, whose proportions are its point: one action, one handler, and a
   `Recalculate` that two controllers override — so a walk reporting only what it can resolve
   produces a confident, complete-looking account of a process whose body it never saw. No existing
-  fixture could reach that case. 373 tests.
+  fixture could reach that case. 382 tests.
 
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
