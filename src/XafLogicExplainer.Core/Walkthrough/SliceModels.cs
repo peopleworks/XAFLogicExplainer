@@ -68,6 +68,22 @@ public sealed record SliceNode
 
     /// <summary>Hops from the seed. The seed itself is zero.</summary>
     public int Distance { get; init; }
+
+    /// <summary>
+    /// What has to change for this to be a different thing than it was.
+    /// </summary>
+    /// <remarks>
+    /// Comparing two walks by their node sets alone reports a step added and a step removed, and
+    /// says nothing at all about the most ordinary change there is: somebody edited the body of the
+    /// method and left every call in it alone. Answering "nothing changed" to that would be the
+    /// easiest lie this feature could tell.
+    /// <para>
+    /// A method's is its body, a rule's is its condition and its effect, an action's is what it
+    /// says and when it is available. A controller and an entity have none — what matters about
+    /// them is elsewhere in the slice, and giving them one would report the same edit twice.
+    /// </para>
+    /// </remarks>
+    public string Fingerprint { get; init; } = "";
 }
 
 /// <summary>One resolved step between two nodes.</summary>

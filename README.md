@@ -310,6 +310,15 @@ the trace could not follow are listed rather than skipped, so an empty list mean
 complete. Add `--narrate` for prose over the steps; a paragraph that cannot name a real step is
 dropped before you see it.
 
+```bash
+xaflogic walkthrough --from ApproveOrder --since        # against the last extraction
+```
+
+`--since` re-walks the same process over a stored snapshot and reports what is different about
+**this** process: a step added, a rule now governing it, a body rewritten, a branch gone, a call the
+trace can no longer follow. No conversational agent can answer that, because none of them has a
+yesterday.
+
 `--enrich` and `--narrate` need a model, and **any of these is enough** — a key on the command line
 wins, then the environment, then a PeopleWorks Copilot account if you happen to have one:
 
@@ -346,7 +355,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 11 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **382 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **391 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

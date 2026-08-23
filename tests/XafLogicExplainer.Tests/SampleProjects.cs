@@ -178,7 +178,15 @@ internal static class SampleProjects
             $"'{entity.ClassName}' has no property '{name}'. Extracted: " +
             string.Join(", ", entity.Properties.Select(p => p.Name)));
 
-    private static ExtractedProject Extract(string path)
+    /// <summary>
+    /// Extracts a fixture afresh.
+    /// </summary>
+    /// <remarks>
+    /// Public because the cached properties above hand out one shared instance, and a test that
+    /// compares two extractions has to be able to edit one of them without the edit reaching every
+    /// other test in the run.
+    /// </remarks>
+    public static ExtractedProject Extract(string path)
     {
         if (!Directory.Exists(path))
         {

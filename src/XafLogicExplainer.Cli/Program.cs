@@ -1415,14 +1415,31 @@ var fromOption = new Option<string?>("--from", "Action, controller method, contr
 var depthOption = new Option<int>("--depth", () => 3, "How many hops from the seed to follow");
 var walkthroughOutOption = new Option<string?>("--out", "Write the walkthrough to this file instead of the screen");
 var narrateOption = new Option<bool>("--narrate", "Have a model explain each step in business terms");
+var sinceOption = new Option<string?>(
+    "--since",
+    "Report what changed in this process against a snapshot (a path, or omit the value for the last one)")
+{
+    Arity = ArgumentArity.ZeroOrOne,
+};
 
 walkthroughCommand.AddOption(fromOption);
 walkthroughCommand.AddOption(depthOption);
 walkthroughCommand.AddOption(walkthroughOutOption);
 walkthroughCommand.AddOption(narrateOption);
+walkthroughCommand.AddOption(sinceOption);
 
-walkthroughCommand.SetHandler(async (projectPath, language, orm, from, depth, outFile, narrate) =>
+walkthroughCommand.SetHandler(async (context) =>
 {
+    var projectPath = context.ParseResult.GetValueForOption(projectPathOption);
+    var language = context.ParseResult.GetValueForOption(languageOption);
+    var orm = context.ParseResult.GetValueForOption(ormOption);
+    var from = context.ParseResult.GetValueForOption(fromOption);
+    var depth = context.ParseResult.GetValueForOption(depthOption);
+    var outFile = context.ParseResult.GetValueForOption(walkthroughOutOption);
+    var narrate = context.ParseResult.GetValueForOption(narrateOption);
+    var since = context.ParseResult.GetValueForOption(sinceOption);
+    var sinceAsked = context.ParseResult.FindResultFor(sinceOption) is not null;
+
     var config = ConfigHelper.Load();
     projectPath ??= config.ProjectPath;
     language ??= config.Language ?? "es";
@@ -1456,7 +1473,19 @@ walkthroughCommand.SetHandler(async (projectPath, language, orm, from, depth, ou
     if (narrate)
         narration = await NarrateWalkthrough(walked!, slice, config, language, aiOverrides);
 
-    var document = new WalkthroughGenerator(language).Generate(walked!, slice, narration);
+    WalkthroughDiff? changed = null;
+
+    if (sinceAsked)
+    {
+        changed = CompareWalkthrough(walked!, projectPath, from!, depth, since);
+
+        // Asked and unanswerable is not the same as not asked, and it must not quietly become a
+        // document that reads as though this process had never changed.
+        if (changed is null)
+            return;
+    }
+
+    var document = new WalkthroughGenerator(language).Generate(walked!, slice, narration, changed);
 
     if (string.IsNullOrEmpty(outFile))
     {
@@ -1481,7 +1510,7 @@ walkthroughCommand.SetHandler(async (projectPath, language, orm, from, depth, ou
         AnsiConsole.MarkupLine(
             $"[yellow]![/] {slice.Unresolved.Count} call(s) the walk could not follow — listed in the document.");
     }
-}, projectPathOption, languageOption, ormOption, fromOption, depthOption, walkthroughOutOption, narrateOption);
+});
 
 rootCommand.AddCommand(walkthroughCommand);
 
@@ -2185,6 +2214,56 @@ static async Task<IReadOnlyDictionary<int, string>?> NarrateWalkthrough(
 
         return null;
     }
+}
+
+// Compares this process against a stored snapshot, or explains why it cannot.
+//
+// Returns null when there is nothing to compare against, and the caller stops rather than writing a
+// document with the section missing: a walkthrough that silently omits "what changed" reads exactly
+// like one where nothing changed, and those are opposite answers.
+static WalkthroughDiff? CompareWalkthrough(
+    ExtractedProject current, string projectPath, string from, int depth, string? snapshot)
+{
+    var outputDir = Path.Combine(projectPath, ".xaflogic-output");
+
+    if (string.IsNullOrWhiteSpace(snapshot))
+    {
+        // The same file `xaflogic diff` reads, so the two commands agree on what "previous" means.
+        var previous = Directory.Exists(outputDir)
+            ? Directory.GetFiles(outputDir, "*_Previous.json").FirstOrDefault()
+            : null;
+
+        if (previous is null)
+        {
+            AnsiConsole.MarkupLine(
+                "[yellow]⊘[/] No previous snapshot to compare against. Run [cyan]xaflogic extract --force[/] "
+                + "twice, or pass [cyan]--since <file>[/].");
+
+            return null;
+        }
+
+        snapshot = previous;
+    }
+
+    if (!File.Exists(snapshot))
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] No such snapshot: {Markup.Escape(snapshot)}");
+
+        return null;
+    }
+
+    var stored = MarkdownDocumentationGenerator.DeserializeProject(File.ReadAllText(snapshot));
+
+    if (stored is null)
+    {
+        AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(snapshot)} is not an extraction snapshot.");
+
+        return null;
+    }
+
+    AnsiConsole.MarkupLine($"[blue]Since:[/] {Path.GetFileName(snapshot)}");
+
+    return WalkthroughDiff.Between(stored, current, from, depth);
 }
 
 return await rootCommand.InvokeAsync(args);
