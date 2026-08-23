@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Models;
 
@@ -19,6 +20,11 @@ namespace XafLogicExplainer.Tests;
 /// pipe tables, fenced code, lists, bold, inline code — maps to a real Word equivalent, so this one
 /// call site was the whole difference between an extraction and a document someone can hand over.
 /// </para>
+/// <para>
+/// The second offender was found the same way, by him, one release later: a generic base type was
+/// printed bare, and <c>&lt;DetailView&gt;</c> is an <em>inline</em> tag rather than a block. The
+/// guard below missed it because it was written to the shape of the first one.
+/// </para>
 /// </remarks>
 public class PortableMarkdownTests
 {
@@ -32,6 +38,7 @@ public class PortableMarkdownTests
         ("DeepXpo", SampleProjects.DeepXpo),
         ("AuditedXpo", SampleProjects.AuditedXpo),
         ("Demo", SampleProjects.Demo),
+        ("Walkthrough", SampleProjects.Walkthrough),
     ];
 
     private static string Markdown(ExtractedProject project, string language) =>
@@ -41,10 +48,20 @@ public class PortableMarkdownTests
             .Replace("\r", "");
 
     /// <summary>
-    /// Lines that begin a CommonMark HTML block: outside a fence, a line whose first character is
-    /// <c>&lt;</c>. Inside a fence the same line is source code and is left alone, which is why this
-    /// tracks the fence rather than matching the whole document at once.
+    /// Every tag CommonMark would treat as HTML, wherever on the line it sits.
     /// </summary>
+    /// <remarks>
+    /// The first version checked only whether a line <em>opened</em> with <c>&lt;</c>, which was the
+    /// shape of the <c>&lt;details&gt;</c> block it was written for. A generic type in the middle of
+    /// a sentence walked straight past it: <c>ViewController&lt;DetailView&gt;</c> is an inline HTML
+    /// tag to every CommonMark parser, so the reader was shown <c>ViewController</c> and nothing
+    /// else — on github.com, where the sanitizer strips the unknown tag, as much as in an export.
+    /// <para>
+    /// Two things are excluded rather than matched. A fenced block is source code, where
+    /// <c>CreateObject&lt;Customer&gt;()</c> is exactly right. An inline code span is the remedy
+    /// itself, so it has to be allowed or the guard would reject its own fix.
+    /// </para>
+    /// </remarks>
     private static List<string> RawHtmlLines(string markdown)
     {
         var offenders = new List<string>();
@@ -58,7 +75,12 @@ public class PortableMarkdownTests
                 continue;
             }
 
-            if (!insideFence && line.TrimStart().StartsWith('<'))
+            if (insideFence)
+                continue;
+
+            var bare = Regex.Replace(line, "`[^`]*`", "");
+
+            if (Regex.IsMatch(bare, "</?[A-Za-z][A-Za-z0-9-]*[^<>]*/?>"))
                 offenders.Add(line.Trim());
         }
 
@@ -75,9 +97,23 @@ public class PortableMarkdownTests
             var offenders = RawHtmlLines(Markdown(project, language));
 
             Assert.True(offenders.Count == 0,
-                $"{name} ({language}) emits raw HTML outside a code fence, which renders as literal "
-                + $"text everywhere but a browser: {string.Join(" | ", offenders)}");
+                $"{name} ({language}) emits a tag CommonMark reads as HTML. A block renders as "
+                + "literal text everywhere but a browser; an inline tag is dropped and takes the "
+                + $"type name with it: {string.Join(" | ", offenders)}");
         }
+    }
+
+    [Fact]
+    public void AGenericTypeSurvivesBecauseItIsWrittenAsCode()
+    {
+        // Found by @MBrekhof pointing a real Word converter at the output. `ViewController<DetailView>`
+        // was printed bare, and `<DetailView>` is an inline HTML tag to every CommonMark parser: an
+        // export drops it and github.com's sanitizer strips it, so the reader is told the base class
+        // is `ViewController`. That is a different answer rather than a missing one.
+        var english = Markdown(SampleProjects.Xpo, "en");
+
+        Assert.Contains("`ViewController<DetailView>`", english, StringComparison.Ordinal);
+        Assert.DoesNotContain("** ViewController<DetailView>", english, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -496,7 +496,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                 sb.AppendLine($"*{entity.Description}*");
 
             sb.AppendLine();
-            sb.AppendLine($"- **{_l.BaseType}:** {entity.BaseType}");
+            sb.AppendLine($"- **{_l.BaseType}:** `{entity.BaseType}`");
             if (!string.IsNullOrEmpty(entity.ModelCaption))
                 sb.AppendLine($"- **{_l.CaptionModelEditor}:** {entity.ModelCaption}");
             if (!string.IsNullOrEmpty(entity.NavigationGroup))
@@ -599,7 +599,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         {
             sb.AppendLine($"## {controller.ClassName}");
             sb.AppendLine();
-            sb.AppendLine($"- **{_l.BaseType}:** {controller.BaseControllerType}");
+            sb.AppendLine($"- **{_l.BaseType}:** `{controller.BaseControllerType}`");
             if (!string.IsNullOrEmpty(controller.TargetObjectType))
                 sb.AppendLine($"- **{_l.TargetEntity}:** {controller.TargetObjectType}");
             if (!string.IsNullOrEmpty(controller.TargetViewType))
@@ -912,7 +912,7 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
             sb.AppendLine();
             foreach (var entity in orphans)
             {
-                sb.AppendLine($"- **{entity.ClassName}** ({entity.BaseType})");
+                sb.AppendLine($"- **{entity.ClassName}** (`{entity.BaseType}`)");
             }
         }
 
