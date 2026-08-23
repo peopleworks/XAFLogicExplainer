@@ -7,6 +7,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A generic base type is written in backticks** ([#36], thanks [@MBrekhof]). `ViewController<DetailView>`
+  in running text is an inline HTML tag to CommonMark, so `<DetailView>` vanished from the Word
+  export and from GitHub's own rendering alike — every controller looked derived from plain
+  `ViewController`. Three lines in the Markdown generator wrote a type name bare where every other
+  one was already quoted; they now match. The portability test only checked lines that *open* with
+  `<`; it now also checks for a tag left in prose once code spans are removed.
+
 ## [0.15.0] — 2026-08-23
 
 How it works, not only what exists.
@@ -204,6 +213,7 @@ generate is Markdown.
 [mcpOffice]: https://github.com/MBrekhof/mcpOffice
 
 [#21]: https://github.com/peopleworks/XAFLogicExplainer/pull/21
+[#36]: https://github.com/peopleworks/XAFLogicExplainer/pull/36
 [@MBrekhof]: https://github.com/MBrekhof
 
 ## [0.14.0] — 2026-08-16

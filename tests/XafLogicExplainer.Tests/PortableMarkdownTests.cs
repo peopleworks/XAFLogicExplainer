@@ -94,4 +94,54 @@ public class PortableMarkdownTests
         // brackets where a title belonged.
         Assert.DoesNotContain("<summary>", english, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// A generic type argument in running text — <c>ViewController&lt;DetailView&gt;</c> — is an
+    /// inline HTML tag to CommonMark, and <c>&lt;DetailView&gt;</c> is dropped by Word and by GitHub
+    /// alike. The line-opening check above never sees it, because the line opens with a bullet.
+    /// Inside backticks it is text again, which is how every other type name here is written.
+    /// </summary>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("es")]
+    public void NoGeneratedPageCarriesAnUnquotedAngleBracketTag(string language)
+    {
+        foreach (var (name, project) in Samples)
+        {
+            var offenders = InlineTagLines(Markdown(project, language));
+
+            Assert.True(offenders.Count == 0,
+                $"{name} ({language}) writes a type argument that renders as an HTML tag: "
+                + string.Join(" | ", offenders));
+        }
+    }
+
+    /// <summary>
+    /// Lines, outside a fence, that still contain <c>&lt;Word&gt;</c> once inline code spans are
+    /// removed.
+    /// </summary>
+    private static List<string> InlineTagLines(string markdown)
+    {
+        var offenders = new List<string>();
+        var insideFence = false;
+
+        foreach (var line in markdown.Split('\n'))
+        {
+            if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+            {
+                insideFence = !insideFence;
+                continue;
+            }
+
+            if (insideFence)
+                continue;
+
+            var prose = System.Text.RegularExpressions.Regex.Replace(line, "`[^`]*`", "");
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(prose, "<[A-Za-z][A-Za-z0-9]*>"))
+                offenders.Add(line.Trim());
+        }
+
+        return offenders;
+    }
 }
