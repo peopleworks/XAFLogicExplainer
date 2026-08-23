@@ -89,7 +89,11 @@ internal static class ReportLayoutReader
         if (!Directory.Exists(sourceDirectory))
             return [];
 
-        var root = Directory.GetParent(sourceDirectory)?.FullName ?? sourceDirectory;
+        // The parent is the solution only when this directory is a project. Pointed at a
+        // solution folder — or at a working copy sitting in a folder of unrelated repositories —
+        // climbing would read every other application's reports as this one's.
+        var isProject = Directory.EnumerateFiles(sourceDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Any();
+        var root = isProject ? Directory.GetParent(sourceDirectory)?.FullName ?? sourceDirectory : sourceDirectory;
 
         return Directory.GetFiles(root, "*.repx", SearchOption.AllDirectories)
             .Where(f => BuildOutputFilter.IsAnalyzable(f, root))
