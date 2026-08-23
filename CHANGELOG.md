@@ -7,6 +7,43 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-08-23
+
+What we cannot see, said out loud.
+
+Every release so far made the same kind of promise: here is something in your application you could
+not see from the code. This one keeps that promise — reports are read now, the largest gap left in
+the extraction — and then does the opposite thing, which turns out to matter more.
+
+An XAF application's reports are frequently **not in its repository at all**. With `ReportsModuleV2`
+registered, users design reports at run time and they are stored as rows in a database, out of reach
+of anything that reads source. An application with forty reports and none in its code is not an edge
+case; it is what a reporting setup looks like once people use it. So the answer had to stop being a
+list and start being three different sentences: the list is all of them, the list is a **lower
+bound**, or the number is **unknown rather than zero** — and that last one is the common case, the
+one where a tool that answers confidently does real damage. An agent told an application has no
+reports designs as though none can exist.
+
+The same correction landed on the framework catalog, where it had been wrong for three releases.
+The newest catalog on the machine was used for every application whatever version it targeted, and
+the result said "these controllers load onto this screen" in one confident sentence either way. On a
+machine holding a single 26.1 catalog that sentence was produced for a 23.2 application and for a
+17.1 one, unqualified. It now asks for the release the application declares, still falls back when
+that catalog is absent, and **says which** wherever a framework fact is reported.
+
+Both halves of the reports work are a collaboration: [@MBrekhof] extracted them, this side rendered
+them and wrote the bound. Two things only the generated document could show were caught that way —
+a citation printing an absolute path from the machine that ran the extraction, and one layout's
+filter and `GetCriteria()` printed twice when two registrations shared it.
+
+Five spellings of a DevExpress version are read now, because seven real applications were checked
+instead of fixtures: `PackageReference`, a floating `25.2.*-*`, an MSBuild property (what
+DevExpress's current template generates), and a pre-NuGet assembly reference from 17.1. Three of
+those seven module folders hold more than one `.csproj`, which had been resolved by whatever order
+the file system returned.
+
+457 tests, zero warnings.
+
 ### Added
 
 - **The reports are written down, and the list says what it is** ([#37], the rendering half). They
@@ -1002,7 +1039,8 @@ applications; this is the point where it becomes a community project.
 - `XafLogicExplainer.Core` references no DevExpress assemblies and needs no DevExpress license.
   Only the Blazor widget does.
 
-[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.16.0
 [0.15.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.15.0
 [0.14.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.13.0
