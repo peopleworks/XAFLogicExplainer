@@ -39,6 +39,7 @@ public class PortableMarkdownTests
         ("AuditedXpo", SampleProjects.AuditedXpo),
         ("Demo", SampleProjects.Demo),
         ("Walkthrough", SampleProjects.Walkthrough),
+        ("Appearance", SampleProjects.Appearance),
     ];
 
     private static string Markdown(ExtractedProject project, string language) =>

@@ -378,7 +378,11 @@ public class ProjectDiffEngine
         var when = rule.Criteria is { Length: > 0 } criteria ? $"when {criteria}" : "always";
         var effect = effects.Count > 0 ? string.Join(", ", effects) : "no declared effect";
 
-        return $"{name} on {rule.TargetItems ?? "*"} {when}: {effect}";
+        // The item type is part of the key: a rule repointed from a column to an action of the same
+        // name governs something else entirely, and nothing else in this string would move.
+        var kind = rule.AppearanceItemType is { Length: > 0 } itemType ? $" [{itemType}]" : "";
+
+        return $"{name} on {rule.TargetItems ?? "*"}{kind} {when}: {effect}";
     }
 
     private static void CompareField(List<FieldChange> changes, string fieldName, string? oldVal, string? newVal)

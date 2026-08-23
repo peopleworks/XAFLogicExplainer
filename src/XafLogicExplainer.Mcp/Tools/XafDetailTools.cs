@@ -817,7 +817,19 @@ public sealed class XafDetailTools
                 // An unnamed rule is ordinary rather than an omission -- a rule written on a property
                 // already says what it governs -- and it printed as an empty bold span, `****`.
                 var name = rule.Id is { Length: > 0 } id ? $"**{id}**" : "unnamed rule";
-                sb.AppendLine($"- {name} on {rule.TargetItems ?? "the whole object"}{declarer}");
+                // Naming the kind, because "on Delete" reads as a column and the rule may well be
+                // governing the Delete *action*. XAF defaults the type to ViewItem, so silence here
+                // means a field and the common case says nothing extra.
+                var target = rule.TargetItems is { Length: > 0 } items
+                    ? rule.AppearanceItemType switch
+                    {
+                        "Action" => $"{items} (actions)",
+                        "LayoutItem" => $"{items} (layout items)",
+                        _ => items,
+                    }
+                    : "the whole object";
+
+                sb.AppendLine($"- {name} on {target}{declarer}");
                 // Said outright rather than by omission: a rule that declares no criteria is always
                 // active, and a reader met only by a missing line cannot tell that from a criteria
                 // that failed to extract.

@@ -525,19 +525,19 @@ public class EntityAnalyzer : IEntityAnalyzer
         if (attr.ArgumentList == null) return null;
 
         var rule = new ExtractedAppearanceRule();
-        var args = attr.ArgumentList.Arguments.ToList();
-
-        // First positional argument is typically the ID
-        if (args.Count > 0)
-            rule.Id = SyntaxLiteral.ValueOf(args[0].Expression);
+        var args = attr.ArgumentList.Arguments;
 
         foreach (var arg in args)
         {
             var name = arg.NameEquals?.Name.ToString();
+
+            if (name is null) continue;
+
             var value = SyntaxLiteral.ValueOf(arg.Expression);
 
             switch (name)
             {
+                case "Id": rule.Id = value; break;
                 case "TargetItems": rule.TargetItems = value; break;
                 case "Criteria": rule.Criteria = value; break;
                 case "Context": rule.Context = value; break;
@@ -545,13 +545,66 @@ public class EntityAnalyzer : IEntityAnalyzer
                 case "Enabled": rule.Enabled = value; break;
                 case "BackColor": rule.BackColor = value; break;
                 case "FontColor": rule.FontColor = value; break;
+                case "AppearanceItemType": rule.AppearanceItemType = ItemType(value); break;
             }
         }
+
+        // After the named ones, which win: everything below is a fallback.
+        ApplyPositionalAppearanceArguments(rule, args);
 
         if (targetProperty is { Length: > 0 } && string.IsNullOrEmpty(rule.TargetItems))
             rule.TargetItems = targetProperty;
 
         return rule;
+    }
+
+    /// <summary>
+    /// Reads the arguments an <c>[Appearance]</c> was given by position.
+    /// </summary>
+    /// <remarks>
+    /// Two of the three constructors pass the criteria positionally —
+    /// <c>(id, criteria)</c> and <c>(id, appearanceItemType, criteria)</c> — and only the named form
+    /// was read, so a rule written either of the other two ways was extracted with no condition at
+    /// all and documented as applying unconditionally. Every fixture wrote <c>Criteria =</c> named,
+    /// which is why the whole suite agreed.
+    /// <para>
+    /// The criteria is the <em>last</em> positional argument in both overloads that carry one, and
+    /// the item type only exists in the three-argument form, so both can be read without knowing
+    /// which constructor was called.
+    /// </para>
+    /// </remarks>
+    private static void ApplyPositionalAppearanceArguments(
+        ExtractedAppearanceRule rule, SeparatedSyntaxList<AttributeArgumentSyntax> args)
+    {
+        var positional = args.Where(arg => arg.NameEquals is null).ToList();
+
+        if (positional.Count == 0) return;
+
+        if (rule.Id.Length == 0)
+            rule.Id = SyntaxLiteral.ValueOf(positional[0].Expression);
+
+        if (positional.Count >= 2)
+            rule.Criteria ??= SyntaxLiteral.ValueOf(positional[^1].Expression);
+
+        if (positional.Count >= 3)
+            rule.AppearanceItemType ??= ItemType(SyntaxLiteral.ValueOf(positional[1].Expression));
+    }
+
+    /// <summary>
+    /// The item type as XAF names it, however the source spelled it.
+    /// </summary>
+    /// <remarks>
+    /// Positionally it is the enum member, so the source text reads
+    /// <c>AppearanceItemType.Action</c>; by name the DevExpress examples write the plain string
+    /// <c>"Action"</c>. Both mean the same rule and must not produce two different values.
+    /// </remarks>
+    private static string? ItemType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var dot = value.LastIndexOf('.');
+
+        return dot >= 0 && dot < value.Length - 1 ? value[(dot + 1)..] : value;
     }
 
     #region Helper Methods
