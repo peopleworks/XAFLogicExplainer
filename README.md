@@ -75,6 +75,10 @@ tool never links against DevExpress assemblies:
 - **Version-gated migrations** — the `CurrentDBVersion < new Version(…)` blocks in your updater.
   Each runs at most once for any database, and is the only explanation for data the current code
   cannot account for.
+- **Reports** — what each one is over, the filter inside its layout, its calculated fields and bound
+  expressions, and the parameters dialog it opens with, down to the `GetCriteria()` that turns the
+  answers into a filter. Read from designer code, from a `.repx`, or from the report's own
+  constructor.
 - **Every screen, and what loads onto it** — see below.
 
 These are the reason an agent that has read every business class can still be confidently wrong
@@ -110,6 +114,36 @@ What it will not claim: a controller listed here can still switch itself off thr
 `Active["reason"]`, which depends on the data and the user. This is what XAF **loads** onto a
 screen, not what will necessarily do something — and anything it could not read from the source is
 listed apart, with the reason, instead of being quietly treated as "runs everywhere".
+
+## The reports are the test of whether you can trust any of this
+
+Every other section here is a claim that we found something you could not see. This one is the
+opposite, and it is the more useful half.
+
+Reports V2 lets your users design reports at run time. Those are stored as **rows in your database**,
+not as files — so no tool that reads a repository can see them, this one included. An application
+with forty reports and none in its source is not unusual; it is what a successful reporting setup
+looks like.
+
+So the answer changes shape depending on what is knowable:
+
+| Your application | What you are told |
+| --- | --- |
+| No `ReportsModuleV2` | *"these are all of them"* — nothing can appear at run time |
+| Module registered, reports in source | *"this list is a **lower bound**"* |
+| Module registered, none in source | *"the true number is **not zero but unknown**"* |
+
+That last row is the common case, and it is where a confident tool does real damage. An agent told
+"this application has no reports" will design as though none can exist — for an application whose
+users built forty. `AGENTS.md` says it outright:
+
+> The number is unknown, not zero — do not tell anyone this application has no reports.
+
+The same rule governs the framework catalog. If the catalog on your machine describes DevExpress
+26.1 and your application declares 23.2, every framework answer says so, with both numbers, rather
+than being presented as certain.
+
+**A tool that never says "I cannot see that" is not more capable. It is less checkable.**
 
 ## Quick start
 

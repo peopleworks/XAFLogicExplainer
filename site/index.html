@@ -596,6 +596,7 @@ footer p { max-width: 44rem; }
   <a href="#gap" class="nav__hideable">The gap</a>
   <a href="#hidden" class="nav__hideable">Hidden behaviour</a>
   <a href="#screens" class="nav__hideable">Screens</a>
+  <a href="#reports" class="nav__hideable">Reports</a>
   <a href="#output" class="nav__hideable">Output</a>
   <a href="#mcp" class="nav__hideable">MCP</a>
   <a href="#explainer" class="nav__hideable">Explainer</a>
@@ -960,6 +961,71 @@ footer p { max-width: 44rem; }
     </div>
   </section>
 
+  <!-- --------------------------------------------------------- reports -->
+  <section id="reports" class="reveal">
+    <p class="eyebrow">The limit</p>
+    <h2>Your reports are not in your repository.<br>Saying so is the feature.</h2>
+    <p>
+      Every other section on this page claims we found something you could not see. This one is the
+      opposite, and it is the half that decides whether the rest is worth trusting.
+    </p>
+    <p>
+      Reports V2 lets your users design reports at run time. Those are stored as <strong>rows in
+      your database</strong>, not as files — so no tool that reads a repository can see them, this
+      one included. An application with forty reports and none in its source is not unusual. It is
+      what a reporting setup looks like when people actually use it.
+    </p>
+
+    <div class="grid grid--pairs">
+      <div class="card card--lit">
+        <h3>What is in the source</h3>
+        <p>Each registered report: what it is over, the filter inside its layout, its calculated
+           fields, the expressions behind its labels, and the parameters dialog it opens with — down
+           to the <code>GetCriteria()</code> that turns the answers into a filter. From designer
+           code, from a <code>.repx</code>, or from the report's own constructor.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>What the list <em>is</em></h3>
+        <p>Three different sentences, not one. No <code>ReportsModuleV2</code> and the list is all
+           of them. Module registered and it is a <strong>lower bound</strong>. Module registered
+           with nothing in source and the true number is <strong>unknown, not zero</strong> — which
+           is the most common case of the three.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>Layouts nothing registers</h3>
+        <p>A shop that designs reports outside Visual Studio keeps the <code>.repx</code> exports in
+           a folder beside the module and imports them by hand. Real work that no line of code
+           mentions — listed as unregistered rather than skipped.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>The same rule, elsewhere</h3>
+        <p>If the DevExpress catalog on your machine describes 26.1 and your application declares
+           23.2, every framework answer says so, with both numbers. A controller can be introduced
+           or retargeted between releases: close enough is not the same as certain.</p>
+      </div>
+    </div>
+
+    <p>
+      That third sentence is where a confident tool does real damage. An agent told <em>“this
+      application has no reports”</em> will design as though none can exist — for an application
+      whose users built forty. So <code>AGENTS.md</code> says it outright:
+    </p>
+
+    <blockquote class="quote">
+      This application registers <strong>ReportsModuleV2</strong> and declares <strong>no report in
+      source</strong>.<br>
+      That is not the same as having none: users design reports at run time and they are stored in
+      the database, out of reach of anything reading this repository.<br>
+      <strong>The number is unknown, not zero — do not tell anyone this application has no
+      reports.</strong>
+    </blockquote>
+
+    <p>
+      <strong>A tool that never says “I cannot see that” is not more capable. It is less
+      checkable.</strong>
+    </p>
+  </section>
+
   <!-- ---------------------------------------------------------- output -->
   <section id="output" class="reveal">
     <p class="eyebrow">The output</p>
@@ -1052,7 +1118,7 @@ footer p { max-width: 44rem; }
     <p class="eyebrow">Live, not a snapshot</p>
     <h2>Or let the agent<br>ask questions directly.</h2>
     <p>
-      A generated file is a snapshot. The MCP server is a connection: seven tools your agent calls
+      A generated file is a snapshot. The MCP server is a connection: twelve tools your agent calls
       against the source while you are still changing it, so it cannot go stale.
     </p>
 
@@ -1070,8 +1136,19 @@ footer p { max-width: 44rem; }
         <p>What an action does — including the C# that runs when it fires.</p>
       </div>
       <div class="card">
-        <div class="card__tag">xaf_search · xaf_rules · xaf_model · xaf_refresh</div>
-        <p>Find a business term, list what the app enforces, read the Model Editor, re-read the source.</p>
+        <div class="card__tag">xaf_walkthrough</div>
+        <p>How one business process works end to end: what runs, in what order, and what the walk
+           could not follow.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">xaf_reports</div>
+        <p>What a report shows and the filter inside it — and whether the list is all of them or a
+           lower bound.</p>
+      </div>
+      <div class="card">
+        <div class="card__tag">xaf_view · xaf_editors · xaf_migrations · xaf_search · xaf_rules · xaf_model · xaf_refresh</div>
+        <p>What loads onto one screen, the custom editors, what ran once against a live database,
+           a business term, what the app enforces, the Model Editor, and a re-read of the source.</p>
       </div>
     </div>
 
