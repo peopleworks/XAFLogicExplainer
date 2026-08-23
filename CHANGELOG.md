@@ -40,6 +40,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   possible at all. Nothing consumes the slice yet — the Mermaid diagram, the document, the CLI
   command and the MCP tool are phase 2.
 
+- **`xaflogic walkthrough` and `xaf_walkthrough`** ([#23], phase 2). The slice becomes a document,
+  and the feature is now usable: a Mermaid diagram, everything that takes part with the place it is
+  declared, the ordered steps each citing a `file:line`, the calls the walk could not follow, and
+  what the walk deliberately is not. In both languages, offline, with no API key and no network.
+  **The diagram is emitted from the walk's own edge set — node for node, arrow for arrow.** Nothing
+  decides what to draw. Ask a model for a Mermaid diagram of a process and it will produce one,
+  including edges that do not exist, drawn with a confidence indistinguishable from the true ones,
+  in a format whose whole value is that a reader believes it at a glance. A test counts the arrows
+  against the edges, because an invented one is exactly what a spot check of a diagram that looks
+  right would miss.
+  `xaf_walkthrough` is the first MCP tool that answers a question about a *process*. The other ten
+  return atoms, so an agent asked how something works has to guess which atoms to fetch and then
+  guess whether it has them all — and the guess that stops one atom early produces a confident
+  answer with a step missing from it.
+
 ### Fixed
 
 - **An appearance rule written on a property is read** ([#21], thanks [@MBrekhof]).
@@ -112,7 +127,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - New fixture, `WalkthroughSolution`, whose proportions are its point: one action, one handler, and a
   `Recalculate` that two controllers override — so a walk reporting only what it can resolve
   produces a confident, complete-looking account of a process whose body it never saw. No existing
-  fixture could reach that case. 363 tests.
+  fixture could reach that case. 373 tests.
 
 [#23]: https://github.com/peopleworks/XAFLogicExplainer/issues/23
 [#24]: https://github.com/peopleworks/XAFLogicExplainer/issues/24
