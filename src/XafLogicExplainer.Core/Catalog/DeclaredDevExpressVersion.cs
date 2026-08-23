@@ -65,12 +65,16 @@ public static class DeclaredDevExpressVersion
         if (string.IsNullOrWhiteSpace(projectFileContent))
             return null;
 
+        // `Version="$(DevExpressVersion)"` is what DevExpress's current template writes, so the
+        // properties the file sets have to be resolved before anything looks for digits.
+        var text = Analyzers.ProjectFileProperties.Expand(projectFileContent);
+
         (int Major, int Minor)? highest = null;
 
-        foreach (Match match in PackageForm.Matches(projectFileContent))
+        foreach (Match match in PackageForm.Matches(text))
             highest = Higher(highest, match);
 
-        foreach (Match match in AssemblyForm.Matches(projectFileContent))
+        foreach (Match match in AssemblyForm.Matches(text))
             highest = Higher(highest, match);
 
         return Format(highest);
