@@ -106,6 +106,22 @@ public class ExtractedProject
     public List<ExtractedMigration> Migrations { get; set; } = [];
 
     /// <summary>
+    /// Predefined reports, as their registrations declare them.
+    /// </summary>
+    public List<ExtractedReport> Reports { get; set; } = [];
+
+    /// <summary>
+    /// Whether the application references <c>ReportsModuleV2</c> at all.
+    /// </summary>
+    /// <remarks>
+    /// The difference between "this application has no reports" and "this application's reports
+    /// are not in any file": with the module referenced, users can create reports at run time,
+    /// stored only in the database, and <see cref="Reports"/> is then a lower bound rather than
+    /// the list.
+    /// </remarks>
+    public bool ReferencesReportsModule { get; set; }
+
+    /// <summary>
     /// DevExpress version of the ground-truth catalog that informed this extraction, or null when
     /// none was available.
     /// </summary>

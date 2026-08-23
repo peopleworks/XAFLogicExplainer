@@ -14,6 +14,7 @@ public class LogicExtractor : ILogicExtractor
     private readonly UpdaterAnalyzer _updaterAnalyzer;
     private readonly ModuleAnalyzer _moduleAnalyzer;
     private readonly ModelAnalyzer _modelAnalyzer;
+    private readonly ReportAnalyzer _reportAnalyzer = new();
     private readonly ProjectHashCalculator _hashCalculator;
 
     /// <summary>
@@ -179,6 +180,11 @@ public class LogicExtractor : ILogicExtractor
 
         // 4. Extract module info
         project.ModuleInfo = _moduleAnalyzer.AnalyzeModule(projectPath, options);
+
+        //    And the reports the module registers, which live in the same method as the updater
+        //    and were walked past for fourteen releases.
+        project.Reports = _reportAnalyzer.AnalyzeRegistrations(projectPath, options);
+        project.ReferencesReportsModule = _reportAnalyzer.ReferencesReportsModule(projectPath);
 
         // 5. Build navigation structure from entities
         project.Navigation = BuildNavigationStructure(project.Entities);

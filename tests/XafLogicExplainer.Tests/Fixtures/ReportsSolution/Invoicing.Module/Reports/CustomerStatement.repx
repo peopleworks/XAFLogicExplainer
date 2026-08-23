@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XtraReportsLayoutSerializer SerializerVersion="25.2.3.0" Ref="1" ControlType="DevExpress.XtraReports.UI.XtraReport, DevExpress.XtraReports.v25.2" Name="CustomerStatementReport" FilterString="[IsApproved] = True" DataSource="#Ref-0" Version="25.2">
+  <Parameters>
+    <Item1 Ref="2" Description="Statement period starts" ValueInfo="2026-01-01" Name="PeriodStart" Type="#Ref-3" Visible="false" />
+    <Item2 Ref="4" Description="Region" Name="Region" Type="#Ref-5" Visible="false" />
+  </Parameters>
+  <CalculatedFields>
+    <Item1 Ref="6" Name="InvoiceCount" Expression="Count([Invoices])" FieldType="Int32" />
+  </CalculatedFields>
+  <Bands>
+    <Item1 Ref="7" ControlType="TopMarginBand" Name="TopMargin" />
+    <Item2 Ref="8" ControlType="DetailBand" Name="Detail" HeightF="40">
+      <Controls>
+        <Item1 Ref="9" ControlType="XRLabel" Name="xrLabelName" SizeF="300,23" LocationFloat="0,0">
+          <ExpressionBindings>
+            <Item1 Ref="10" EventName="BeforePrint" PropertyName="Text" Expression="[Name]" />
+          </ExpressionBindings>
+        </Item1>
+        <Item2 Ref="11" ControlType="XRLabel" Name="xrLabelCount" SizeF="100,23" LocationFloat="300,0">
+          <ExpressionBindings>
+            <Item1 Ref="12" EventName="BeforePrint" PropertyName="Text" Expression="[InvoiceCount]" />
+          </ExpressionBindings>
+        </Item2>
+      </Controls>
+    </Item2>
+    <Item3 Ref="13" ControlType="GroupHeaderBand" Name="GroupHeader1" HeightF="30">
+      <GroupFields>
+        <Item1 Ref="14" FieldName="Region" />
+      </GroupFields>
+      <Controls>
+        <Item1 Ref="15" ControlType="XRLabel" Name="xrLabelRegion" SizeF="300,23" LocationFloat="0,0">
+          <ExpressionBindings>
+            <Item1 Ref="16" EventName="BeforePrint" PropertyName="Text" Expression="[Region]" />
+          </ExpressionBindings>
+        </Item1>
+      </Controls>
+    </Item3>
+    <Item4 Ref="17" ControlType="BottomMarginBand" Name="BottomMargin" />
+  </Bands>
+  <ComponentStorage>
+    <Item1 Ref="0" ObjectType="DevExpress.Persistent.Base.ReportsV2.CollectionDataSource,DevExpress.Persistent.Base.v25.2" Name="collectionDataSource1" ObjectTypeName="Invoicing.Module.BusinessObjects.Customer" />
+  </ComponentStorage>
+</XtraReportsLayoutSerializer>
