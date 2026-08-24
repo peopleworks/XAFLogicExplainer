@@ -600,6 +600,7 @@ footer p { max-width: 44rem; }
   <a href="#output" class="nav__hideable">Output</a>
   <a href="#mcp" class="nav__hideable">MCP</a>
   <a href="#explainer" class="nav__hideable">Explainer</a>
+  <a href="#wiki" class="nav__hideable">Wiki</a>
   <a href="#install" class="is-cta">Install</a>
 </nav>
 
@@ -1222,6 +1223,52 @@ footer p { max-width: 44rem; }
         the source — the working examples an agent needs to write a criteria string that parses.
       </figcaption>
     </figure>
+  </section>
+
+  <!-- --------------------------------------------------------- wiki -->
+  <section id="wiki" class="reveal">
+    <p class="eyebrow">And for the person who has built forty of them</p>
+    <h2>You already solved this.<br>In a project you cannot remember.</h2>
+    <p>
+      Ten years of XAF work for different clients, and somewhere in there is the class you are about
+      to model again. Not a similar one — the same one, thought through properly, with the two
+      properties you are going to forget this time.
+    </p>
+    <p>
+      <code>xaflogic wiki</code> reads <em>every</em> project you have configured into one page and
+      computes what they have in common. There is nowhere in that page to type a sentence about the
+      collection, which is the point: a hand-written summary of nine applications is wrong the day
+      the tenth arrives, and nobody notices.
+    </p>
+
+    <div class="grid grid--2">
+      <div class="card card--lit">
+        <h3>Classes you modelled more than once</h3>
+        <p>Property by property, side by side, so you can see which application models
+           <code>Cliente</code> in the most detail before writing it a fourth time.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>The layer you wrote yourself</h3>
+        <p>Base classes carried from one application into another: your own framework, the one that
+           was never written down.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>The same name, two shapes</h3>
+        <p><code>Total</code> is a <code>decimal</code> in one application and a <code>double</code>
+           in another. Nothing is broken. It is how a total ends up two cents out.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>Names you keep</h3>
+        <p>The vocabulary of your applications, which nobody wrote down and everybody who joins has
+           to learn by reading code.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:2.2rem">
+      Two classes are matched <strong>by name</strong>. So the wiki tells you they share a name — the
+      comparison beside it is what tells you whether they share an idea. It says which of those two
+      things it knows, on the page, next to the finding.
+    </p>
   </section>
 
   <!-- --------------------------------------------------------- catalog -->

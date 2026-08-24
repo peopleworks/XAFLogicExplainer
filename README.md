@@ -273,6 +273,38 @@ Try it on the sample without touching your own code:
 xaflogic explain --project tests/XafLogicExplainer.Tests/Fixtures/DemoSolution/PharmacyDemo.Module --open
 ```
 
+## The question one application cannot answer
+
+You have delivered XAF applications to clients for ten years. Somewhere in there you already
+modelled the class you are about to write again, and you cannot remember which project it was in.
+
+```bash
+xaflogic projects add --name pwLegalOffice --project "C:\Clients\Legal\pwLegalOffice.Module"
+xaflogic projects add --name Presupuesto   --project "C:\Clients\Budget\PWPresupuesto.Module"
+xaflogic wiki --open
+```
+
+One HTML file over **all of them**, and a section that exists in no single-project tool:
+
+- **Classes you modelled more than once** — with a property-by-property comparison, so you can see
+  which application models `Cliente` in the most detail before writing it a fourth time.
+- **The layer you wrote yourself** — base classes carried from one application into another. Your
+  own framework, the one that was never written down. A base class is listed only when its own
+  source was read in one of the projects, so nothing is matched against a list of DevExpress type
+  names that would rot at the next release.
+- **The same name, two shapes** — where `Total` is a `decimal` in one application and a `double`
+  in another. Nothing is broken; each one compiles. It is how a total ends up two cents out.
+- **Names you keep** — the vocabulary of your applications, which nobody wrote down and everybody
+  who joins has to learn by reading code.
+
+Everything in it is computed from what was read. There is no place in the page to put a sentence
+somebody typed about the corpus, because a hand-written summary of nine applications is wrong the
+day the tenth is added and nobody notices.
+
+Filter by any project to see only what it has in common with the rest. And the honest part is on
+the page too: two classes are matched **by name**, so the wiki tells you they share a name — the
+comparison is what tells you whether they share an idea.
+
 ## The same knowledge, as a document
 
 You arrive at an XAF project you have never seen and, half a day later, hand someone a document
@@ -350,6 +382,7 @@ licensed software. Everything works without it — it only sharpens the output. 
 | `agents` | **Write `AGENTS.md` / `CLAUDE.md` / Copilot instructions for your agent** |
 | `mcp` | **Run as an MCP server so agents can query the app live** |
 | `explain` | **Write a self-contained HTML page explaining the app to a person** |
+| `wiki` | **Read every project together and say what they have in common** |
 | `catalog` | Build the DevExpress ground-truth catalog (`build`, `status`) |
 | `extract` | Read the project, write Markdown + JSON locally |
 | `walkthrough` | **Trace one business process** — what runs, in what order, and what governs it |
@@ -422,10 +455,11 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Blazor in-app help panel |
 | ✅ | **`AGENTS.md` / `CLAUDE.md` / Copilot instructions** — zero infrastructure, works for everyone |
 | ✅ | **`xaflogic explain`** — one self-contained HTML page, for a person rather than an agent |
+| ✅ | **`xaflogic wiki`** — every project in one page, and what they have in common |
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 12 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **457 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **498 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

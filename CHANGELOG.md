@@ -7,6 +7,33 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`xaflogic wiki`** — reads every configured project into one self-contained HTML page and computes
+  what they have in common. A single-application explainer answers "how does this work"; this answers
+  a question that cannot be asked of one application at a time: *have I built this before?*
+  - **Classes modelled more than once**, with a property-by-property comparison and a column per
+    application, so the richest version of `Cliente` is the one you open before writing it again.
+  - **The layer you wrote yourself** — base classes carried between applications. A base type is
+    listed only when its own source was read in one of the projects, so no list of DevExpress type
+    names is involved and nothing here goes stale when DevExpress renames something.
+  - **The same name, two shapes** — where a name means one scalar type in one application and
+    another elsewhere. `Double` and `double` are one type and are never reported as a disagreement;
+    neither is a nullable annotation on a reference type. A name holding a different collection per
+    entity is vocabulary rather than a conflict, and is listed as such.
+  - **Names you keep**, **modules more than one application requires**, per-application detail, and
+    a filter that shows only what touches one project.
+  - Search across every application, one file, no network requests.
+- Source citations on every entity and controller in a wiki, so an entry can always tell you which
+  file to open.
+
+### Changed
+
+- `xaflogic projects add` no longer requires `--resource-name`. It names a resource in PeopleWorks
+  Copilot, which is one publishing target among several and irrelevant to `wiki`, `explain`, `agents`
+  and `mcp` — all of which read the configured project list and write locally. Requiring it made the
+  multi-project list unreachable without an account somewhere. It now defaults to the profile name.
+
 ## [0.16.0] — 2026-08-23
 
 What we cannot see, said out loud.
