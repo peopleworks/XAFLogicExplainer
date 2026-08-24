@@ -19,6 +19,7 @@ using Microsoft.Extensions.AI;
 using OpenAI;
 using XafLogicExplainer.Core.Models;
 using XafLogicExplainer.Core.Walkthrough;
+using XafLogicExplainer.Core.Wiki;
 
 // ============================================================
 // xaflogic - XAF Logic Explainer CLI
@@ -211,7 +212,12 @@ var addProjectCommand = new Command("add", "Add a project to the configuration")
 var addNameOption = new Option<string>("--name", "Project friendly name") { IsRequired = true };
 var addProjectPathOption = new Option<string>("--project", "XAF module directory path") { IsRequired = true };
 addProjectPathOption.AddAlias("-p");
-var addResourceOption = new Option<string>("--resource-name", "Copilot resource name") { IsRequired = true };
+// Not required. It names a resource in PeopleWorks Copilot, which is one publishing target among
+// several and irrelevant to anyone using `wiki`, `explain`, `agents` or `mcp` — every one of which
+// reads the configured projects and writes locally. Demanding it made the multi-project list
+// unreachable unless you had an account somewhere. Defaults to the profile name so `sync` still
+// has something to publish to.
+var addResourceOption = new Option<string?>("--resource-name", "Copilot resource name (defaults to the profile name)");
 var addLangOption = new Option<string?>("--lang", "Language override (es/en)");
 var addOrmOption = new Option<string?>("--orm", "ORM override (auto/xpo/efcore)");
 
@@ -241,7 +247,7 @@ addProjectCommand.SetHandler((name, path, resource, lang, orm) =>
     {
         Name = name,
         ProjectPath = fullPath,
-        ResourceName = resource,
+        ResourceName = string.IsNullOrWhiteSpace(resource) ? name : resource,
         Language = lang,
         Orm = orm
     });
@@ -1690,6 +1696,166 @@ explainCommand.SetHandler(async (explainProject, explainLanguage, explainOrm, ex
 rootCommand.AddCommand(explainCommand);
 
 // ============================================================
+// COMMAND: wiki
+// ============================================================
+var wikiCommand = new Command(
+    "wiki",
+    "Read every configured XAF application into one page, and say what they have in common");
+
+var wikiProjectsOption = new Option<string[]>(
+    "--project",
+    "An XAF project to include. Repeat for several. Defaults to every configured project.")
+{
+    AllowMultipleArgumentsPerToken = true,
+};
+wikiProjectsOption.AddAlias("-p");
+
+var wikiOutputOption = new Option<string?>(
+    "--output",
+    "File to write (default: xaf-wiki.html in the current directory)");
+var wikiTitleOption = new Option<string?>(
+    "--title",
+    "A name for the collection (default: \"Your XAF applications\")");
+var wikiOpenOption = new Option<bool>(
+    "--open",
+    "Open the page in the default browser when it is written");
+
+wikiCommand.AddOption(wikiProjectsOption);
+wikiCommand.AddOption(languageOption);
+wikiCommand.AddOption(ormOption);
+wikiCommand.AddOption(wikiOutputOption);
+wikiCommand.AddOption(wikiTitleOption);
+wikiCommand.AddOption(wikiOpenOption);
+
+wikiCommand.SetHandler((wikiPaths, wikiLanguage, wikiOrm, wikiOutput, wikiTitle, wikiOpen) =>
+{
+    var wikiConfig = ConfigHelper.Load();
+
+    // Named profiles first: a wiki is the multi-project command, so the configured list is what it
+    // is for. Explicit --project wins, and a single default project still produces a page — one
+    // that says outright that a corpus of one has nothing to compare itself against.
+    var wikiSources = new List<(string Name, string Path, string? Language, string? Orm)>();
+
+    if (wikiPaths.Length > 0)
+    {
+        // The folder is called MyApp.Module; the application is called MyApp. Repeating ".Module"
+        // beside every heading, chip and nav entry costs width and says nothing, since every
+        // project in a wiki is a module.
+        wikiSources.AddRange(wikiPaths.Select(p =>
+            (Name: WikiApplicationName(p),
+             Path: p,
+             Language: wikiLanguage,
+             Orm: wikiOrm)));
+    }
+    else if (wikiConfig.Projects.Count > 0)
+    {
+        wikiSources.AddRange(wikiConfig.Projects.Select(p =>
+            (p.Name, Path: p.ProjectPath, Language: p.Language ?? wikiLanguage, Orm: p.Orm ?? wikiOrm)));
+    }
+    else if (!string.IsNullOrEmpty(wikiConfig.ProjectPath))
+    {
+        wikiSources.Add((new DirectoryInfo(wikiConfig.ProjectPath).Name, wikiConfig.ProjectPath, wikiLanguage, wikiOrm));
+    }
+
+    if (wikiSources.Count == 0)
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] Nothing to read. Add projects with [cyan]xaflogic projects add[/], "
+                             + "or pass [cyan]--project <path>[/] once per application.");
+        return;
+    }
+
+    var wikiApplications = new List<WikiApplication>();
+    var wikiTaken = new HashSet<string>(StringComparer.Ordinal);
+    var wikiSkipped = new List<(string Name, string Why)>();
+
+    AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Reading the applications...", ctx =>
+    {
+        foreach (var source in wikiSources)
+        {
+            ctx.Status($"Reading {Markup.Escape(source.Name)}...");
+
+            if (string.IsNullOrWhiteSpace(source.Path) || !Directory.Exists(source.Path))
+            {
+                wikiSkipped.Add((source.Name, "path not found"));
+                continue;
+            }
+
+            try
+            {
+                // One project that moved, or that no longer parses, must not cost the other eleven.
+                var extracted = new LogicExtractor().ExtractFromSourceDirectory(
+                    source.Path,
+                    BuildExtractionOptions(source.Language ?? wikiConfig.Language ?? "en", source.Orm ?? wikiConfig.Orm));
+
+                wikiApplications.Add(new WikiApplication
+                {
+                    Name = source.Name,
+                    Slug = CorpusAnalyzer.Slug(source.Name, wikiTaken),
+                    Project = extracted,
+                });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                wikiSkipped.Add((source.Name, ex.Message));
+            }
+        }
+    });
+
+    if (wikiApplications.Count == 0)
+    {
+        AnsiConsole.MarkupLine("[red]✗[/] None of the projects could be read.");
+        foreach (var (name, why) in wikiSkipped)
+            AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(name)}: {Markup.Escape(why)}[/]");
+        return;
+    }
+
+    var wikiCorpus = CorpusAnalyzer.Analyze(wikiApplications);
+    var wikiHtml = new WikiGenerator(ThisAssemblyVersion()).Generate(wikiCorpus, wikiTitle);
+    var wikiFile = wikiOutput ?? Path.Combine(Directory.GetCurrentDirectory(), "xaf-wiki.html");
+
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(wikiFile))!);
+    File.WriteAllText(wikiFile, wikiHtml);
+
+    var wikiTable = new Table().Border(TableBorder.Rounded).AddColumn("In common").AddColumn("");
+    wikiTable.AddRow("Applications read", wikiApplications.Count.ToString());
+    wikiTable.AddRow("Classes modelled more than once", wikiCorpus.RecurringEntities.Count.ToString());
+    wikiTable.AddRow("Base classes you reused", wikiCorpus.RecurringBaseTypes.Count.ToString());
+    wikiTable.AddRow("Actions written more than once", wikiCorpus.RecurringActions.Count.ToString());
+    wikiTable.AddRow("Names used across applications", wikiCorpus.Conventions.Count.ToString());
+    AnsiConsole.Write(wikiTable);
+
+    foreach (var (name, why) in wikiSkipped)
+        AnsiConsole.MarkupLine($"[yellow]![/] Skipped {Markup.Escape(name)}: {Markup.Escape(why)}");
+
+    // A corpus of one is a legitimate result, not an error, but it is worth saying out loud: the
+    // page will be a single-application index and none of the comparisons will have anything to do.
+    if (wikiApplications.Count == 1)
+    {
+        AnsiConsole.MarkupLine("[grey]One application. Add more with [/][cyan]xaflogic projects add[/]"
+                             + "[grey] to get the comparisons.[/]");
+    }
+
+    AnsiConsole.WriteLine();
+    AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(Path.GetFullPath(wikiFile))}");
+    AnsiConsole.MarkupLine($"[grey]{wikiHtml.Length / 1024:N0} KB · one file, no dependencies.[/]");
+
+    if (wikiOpen)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(Path.GetFullPath(wikiFile)) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Headless, or no handler registered. The path is already printed above.
+            AnsiConsole.MarkupLine("[grey]Could not open a browser; the path is above.[/]");
+        }
+    }
+}, wikiProjectsOption, languageOption, ormOption, wikiOutputOption, wikiTitleOption, wikiOpenOption);
+
+rootCommand.AddCommand(wikiCommand);
+
+// ============================================================
 // COMMAND: mcp
 // ============================================================
 var mcpCommand = new Command(
@@ -1975,6 +2141,18 @@ static async Task GenerateAgentFiles(
 
     AnsiConsole.WriteLine();
     AnsiConsole.MarkupLine("[grey]Ask your agent something only this codebase could answer.[/]");
+}
+
+// The name to show for a project the wiki was pointed at directly, rather than one configured
+// under a profile name of its own.
+static string WikiApplicationName(string path)
+{
+    var folder = new DirectoryInfo(
+        path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)).Name;
+
+    return folder.EndsWith(".Module", StringComparison.OrdinalIgnoreCase) && folder.Length > ".Module".Length
+        ? folder[..^".Module".Length]
+        : folder;
 }
 
 // The tool version, stamped into generated files so a stale one can be identified.
