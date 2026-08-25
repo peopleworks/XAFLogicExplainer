@@ -1,0 +1,49 @@
+<!-- Generated, not drawn. Lifted from the page produced by:
+       xaflogic wiki -p tests/XafLogicExplainer.Tests/Fixtures/ClinicaSolution/Clinica.Module \n                     -p tests/XafLogicExplainer.Tests/Fixtures/TallerSolution/Taller.Module \n                     -p tests/XafLogicExplainer.Tests/Fixtures/FerreteriaSolution/Ferreteria.Module
+     Positions are whatever CorpusGraph.Map computed; only the palette was resolved to
+     literal colours, since a file embedded in a README has no theme to follow. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="175.19 5.37 588.25 396.63" role="img" aria-label="Classes modelled in more than one application, placed between them">
+  <style>
+    .bg { fill: #12161c; }
+    .link { fill: none; stroke: #4d5866; stroke-width: 1; opacity: .45; }
+    .anode circle { fill: #2a1a10; stroke: #ff8a3d; stroke-width: 1.7; }
+    .anode text { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #e8edf3; }
+    .cnode circle { fill: #0e2b28; stroke: #2dd4bf; stroke-width: 1.5; }
+    .cnode text { font: 10px ui-monospace, "Cascadia Mono", Consolas, monospace; fill: #98a4b3; }
+    .cnode.is-named text { fill: #e8edf3; }
+  </style>
+  <rect class="bg" x="175.19" y="5.37" width="588.25" height="396.63" rx="12"/>
+    <path class="link" data-slug="clinica" data-class="Cliente" d="M470,62 Q487.43,172.92 512.5,250"/>
+    <path class="link" data-slug="ferreteria" data-class="Cliente" d="M307.19,344 Q420.67,288.54 512.5,250"/>
+    <path class="link" data-slug="taller" data-class="Cliente" d="M632.81,344 Q554.18,288.54 512.5,250"/>
+    <path class="link" data-slug="clinica" data-class="Factura" d="M470,62 Q461.29,188.01 448.75,286.81"/>
+    <path class="link" data-slug="ferreteria" data-class="Factura" d="M307.19,344 Q394.53,303.63 448.75,286.81"/>
+    <path class="link" data-slug="taller" data-class="Factura" d="M632.81,344 Q528.04,303.63 448.75,286.81"/>
+    <path class="link" data-slug="ferreteria" data-class="AuditedEntity" d="M307.19,344 Q394.53,273.45 448.75,213.19"/>
+    <path class="link" data-slug="clinica" data-class="AuditedEntity" d="M470,62 Q461.29,157.83 448.75,213.19"/>
+    <path class="link" data-slug="taller" data-class="AuditedEntity" d="M632.81,344 Q528.04,273.45 448.75,213.19"/>
+    <g class="cnode is-named" data-class="Cliente" tabindex="0" role="button" aria-label="Cliente, modelled in 3 applications">
+      <circle cx="512.5" cy="250" r="10.3"><title>Cliente — 3 applications</title></circle>
+      <text x="528.8" y="259" text-anchor="start">Cliente</text>
+    </g>
+    <g class="cnode is-named" data-class="Factura" tabindex="0" role="button" aria-label="Factura, modelled in 3 applications">
+      <circle cx="448.75" cy="286.81" r="10.3"><title>Factura — 3 applications</title></circle>
+      <text x="440.6" y="309.92" text-anchor="end">Factura</text>
+    </g>
+    <g class="cnode is-named" data-class="AuditedEntity" tabindex="0" role="button" aria-label="AuditedEntity, modelled in 3 applications">
+      <circle cx="448.75" cy="213.19" r="10.3"><title>AuditedEntity — 3 applications</title></circle>
+      <text x="440.6" y="196.08" text-anchor="end">AuditedEntity</text>
+    </g>
+    <g class="anode" data-slug="clinica" tabindex="0" role="button" aria-label="Clinica, 4 entities">
+      <circle cx="470" cy="62" r="22.63"><title>Clinica — 4 entities</title></circle>
+      <text x="470" y="33.37" text-anchor="middle">Clinica</text>
+    </g>
+    <g class="anode" data-slug="taller" tabindex="0" role="button" aria-label="Taller, 4 entities">
+      <circle cx="632.81" cy="344" r="22.63"><title>Taller — 4 entities</title></circle>
+      <text x="661.07" y="364.31" text-anchor="start">Taller</text>
+    </g>
+    <g class="anode" data-slug="ferreteria" tabindex="0" role="button" aria-label="Ferreteria, 5 entities">
+      <circle cx="307.19" cy="344" r="24"><title>Ferreteria — 5 entities</title></circle>
+      <text x="277.74" y="365" text-anchor="end">Ferreteria</text>
+    </g>
+  </svg>

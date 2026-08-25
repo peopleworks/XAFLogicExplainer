@@ -250,6 +250,59 @@ public class WikiRenderingTests
         Assert.DoesNotContain("Ship & <invoice>", html, StringComparison.Ordinal);
     }
 
+    // ------------------------------------------------------- the whole chain, on source
+
+    /// <summary>
+    /// Three client applications read from source produce every finding the wiki can make.
+    /// </summary>
+    /// <remarks>
+    /// The other tests here build corpora in memory, which proves the analysis but not that any of
+    /// it survives a real read of real files. These three fixtures are ordinary XAF modules on disk,
+    /// deliberately disagreeing the way client work disagrees, and this is the only test that runs
+    /// extraction, analysis and rendering end to end.
+    /// </remarks>
+    [Fact]
+    public void ThreeClientApplicationsProduceEveryFinding()
+    {
+        var taken = new HashSet<string>(StringComparer.Ordinal);
+        var corpus = CorpusAnalyzer.Analyze(SampleProjects.CorpusPaths
+            .Select(path =>
+            {
+                var project = SampleProjects.Extract(path);
+                var name = project.ProjectName;
+
+                return new WikiApplication
+                {
+                    Name = name,
+                    Slug = CorpusAnalyzer.Slug(name, taken),
+                    Project = project,
+                };
+            })
+            .ToList());
+
+        // The class each of them modelled, and the one this exists to catch.
+        Assert.Contains(corpus.RecurringEntities, e => e.ClassName == "Cliente");
+        Assert.Contains(corpus.RecurringEntities, e => e.ClassName == "Factura");
+
+        var total = Assert.Single(corpus.Conventions, c => c.Name == "Total");
+        Assert.True(total.ScalarConflict);
+        Assert.Contains("decimal", total.ConflictingTypes);
+        Assert.Contains("double", total.ConflictingTypes);
+
+        // The audit base each project carries its own copy of: this developer's own layer.
+        var audited = Assert.Single(corpus.RecurringBaseTypes, b => b.Name == "AuditedEntity");
+        Assert.Equal(3, audited.In.Count);
+
+        // The same operation implemented twice.
+        Assert.Contains(corpus.RecurringActions, a => a.ActionId == "Aprobar");
+
+        var html = Render(corpus);
+
+        Assert.Contains("id=\"cmap\"", html, StringComparison.Ordinal);
+        Assert.Contains("The same name, two shapes", html, StringComparison.Ordinal);
+        Assert.Contains("The layer you wrote yourself", html, StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static string Render(WikiCorpus corpus) => new WikiGenerator("0.0.0-test").Generate(corpus);

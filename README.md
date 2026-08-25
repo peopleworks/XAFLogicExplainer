@@ -297,6 +297,20 @@ One HTML file over **all of them**, and a section that exists in no single-proje
 - **Names you keep** — the vocabulary of your applications, which nobody wrote down and everybody
   who joins has to learn by reading code.
 
+And a map of the whole estate, drawn from the same reading:
+
+<img alt="Three client applications on a ring, with the classes all three model drawn between them: AuditedEntity, Cliente and Factura sit at the centre, joined by a line to each application." src="https://raw.githubusercontent.com/peopleworks/XAFLogicExplainer/main/docs/assets/corpus-map.svg" width="100%">
+
+<sub>Real output, from the three sample client modules in this repository. Each class sits at the
+average direction of the applications that model it, at a distance set by how much they agree — so
+a class every application has falls to the centre. The middle is your common ground; the rim is the
+work that belongs to one client.</sub>
+
+Beside it, two more that only a corpus can produce: **which two of your projects are most alike**,
+as a grid you can click to hold the page to just those two, and **the DevExpress releases your
+estate is spread across** — with the one your framework catalog actually describes marked, so every
+claim about DevExpress types says whether it was checked against the right release.
+
 Everything in it is computed from what was read. There is no place in the page to put a sentence
 somebody typed about the corpus, because a hand-written summary of nine applications is wrong the
 day the tenth is added and nobody notices.
@@ -440,7 +454,7 @@ project is a no-op. There is an MSBuild `.targets` file if you want it to run on
 
 ## Status
 
-**v0.16.0.** The extraction engine is the mature part: it runs in production against real XAF
+**v0.17.0.** The extraction engine is the mature part: it runs in production against real XAF
 applications. The agent-facing surface is what is landing now, in the open.
 
 | | |
@@ -459,7 +473,7 @@ applications. The agent-facing surface is what is landing now, in the open.
 | ✅ | Pluggable publishing targets (`IDocumentationSink`) |
 | ✅ | **MCP server** — 12 tools, live against your source |
 | ✅ | **Installable Claude Code plugin** with skill and MCP server |
-| ✅ | **498 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
+| ✅ | **514 tests** over synthetic XPO and EF Core fixtures — no DevExpress needed |
 | ✅ | **DevExpress ground-truth catalog**, generated locally by licensees |
 
 PeopleWorks Copilot, where this tool grew up, is now one sink among several rather than the

@@ -55,6 +55,23 @@ internal static class SampleProjects
     /// <summary>Path to the fixture whose module registers predefined reports.</summary>
     public static string ReportsPath => Path.Combine(FixturesRoot, "ReportsSolution", "Invoicing.Module");
 
+    /// <summary>
+    /// Three modules standing in for the same developer's work for three different clients.
+    /// </summary>
+    /// <remarks>
+    /// Fixtures for one application can only ever exercise half of a corpus. These three are built
+    /// to disagree the way real client work disagrees: each carries its own copy of the same audit
+    /// base, all three model <c>Cliente</c> and <c>Factura</c> with different property sets, two
+    /// declare the same action, and <c>Factura.Total</c> is a <c>decimal</c> in two of them and a
+    /// <c>double</c> in the third.
+    /// </remarks>
+    public static string[] CorpusPaths =>
+    [
+        Path.Combine(FixturesRoot, "ClinicaSolution", "Clinica.Module"),
+        Path.Combine(FixturesRoot, "TallerSolution", "Taller.Module"),
+        Path.Combine(FixturesRoot, "FerreteriaSolution", "Ferreteria.Module"),
+    ];
+
     /// <summary>Path to the fourteen-entity demo module.</summary>
     public static string DemoPath => Path.Combine(FixturesRoot, "DemoSolution", "PharmacyDemo.Module");
 

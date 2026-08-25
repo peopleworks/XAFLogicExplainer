@@ -27,7 +27,7 @@ public sealed class HtmlExplainerGenerator
 
     /// <summary>Creates a generator.</summary>
     /// <param name="toolVersion">Stamped into the footer so a stale page can be identified.</param>
-    public HtmlExplainerGenerator(string toolVersion = "0.10.1") => _toolVersion = toolVersion;
+    public HtmlExplainerGenerator(string toolVersion = GeneratorVersion.Unknown) => _toolVersion = toolVersion;
 
     /// <summary>
     /// Renders the whole page.
