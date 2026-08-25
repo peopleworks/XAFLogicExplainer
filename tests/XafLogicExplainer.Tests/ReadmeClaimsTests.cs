@@ -46,6 +46,39 @@ public class ReadmeClaimsTests
         }
     }
 
+    /// <summary>
+    /// No generator carries a version number as its default.
+    /// </summary>
+    /// <remarks>
+    /// The explainer defaulted to <c>0.10.1</c> six releases after 0.10.1 shipped. Nothing failed,
+    /// because a default every caller overrides is a default nobody rereads — and the one page it
+    /// would ever stamp is a page whose footer then names a release that did not generate it.
+    /// <para>
+    /// The rule this test keeps is not "update the default"; it is that the default must not be the
+    /// kind of thing that can go stale. Anything a reader could mistake for a version fails here.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void NoGeneratorDefaultsToAVersionNumber()
+    {
+        var offenders = Directory
+            .EnumerateFiles(Path.Combine(RepositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Select(file => (File: Path.GetFileName(file), Text: File.ReadAllText(file)))
+            .SelectMany(source => Regex
+                .Matches(source.Text, @"string\s+toolVersion\s*=\s*""(?<default>[^""]*)""")
+                .Cast<Match>()
+                .Where(match => Regex.IsMatch(match.Groups["default"].Value, @"^\d+\.\d+"))
+                .Select(match => $"{source.File} defaults to \"{match.Groups["default"].Value}\""))
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            "A generator defaults to a version number, which will be wrong by the next release: "
+            + string.Join("; ", offenders)
+            + ". Use GeneratorVersion.Unknown instead.");
+    }
+
     private static (string File, string Pattern)[] Manifests =>
     [
         ("plugins/xaf-logic-explainer/.claude-plugin/plugin.json", @"""version"": ""(\d+\.\d+\.\d+)"""),

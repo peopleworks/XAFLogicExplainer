@@ -27,7 +27,7 @@ public sealed class WikiGenerator
     /// <summary>
     /// Creates a generator that stamps the page with the tool version that produced it.
     /// </summary>
-    public WikiGenerator(string toolVersion = "0.16.0") => _toolVersion = toolVersion;
+    public WikiGenerator(string toolVersion = GeneratorVersion.Unknown) => _toolVersion = toolVersion;
 
     /// <summary>
     /// Writes the whole wiki.
@@ -50,6 +50,7 @@ public sealed class WikiGenerator
         WriteNav(sb, corpus);
 
         sb.AppendLine("<main class=\"wrap\">");
+        WritePictures(sb, corpus);
         WriteShared(sb, corpus);
         WriteApplications(sb, corpus);
 
@@ -138,6 +139,9 @@ public sealed class WikiGenerator
     private static void WriteNav(StringBuilder sb, WikiCorpus corpus)
     {
         sb.AppendLine("<nav><div class=\"wrap\"><ul>");
+        if (corpus.Applications.Count > 1 && corpus.RecurringEntities.Count > 0)
+            sb.AppendLine("  <li><a href=\"#map\">The map</a></li>");
+
         sb.AppendLine("  <li><a href=\"#shared\">In common</a></li>");
         sb.AppendLine("  <li><a href=\"#applications\">The applications</a></li>");
 
@@ -146,6 +150,210 @@ public sealed class WikiGenerator
 
         sb.AppendLine("  <li><a href=\"#limits\">What this cannot tell you</a></li>");
         sb.AppendLine("</ul></div></nav>");
+    }
+
+    // ------------------------------------------------------------- pictures
+
+    private static void WritePictures(StringBuilder sb, WikiCorpus corpus)
+    {
+        var map = CorpusGraph.Map(corpus);
+        var overlap = CorpusGraph.Overlap(corpus);
+        var versions = CorpusGraph.Versions(corpus);
+
+        if (map.IsEmpty && overlap.IsEmpty && versions.IsEmpty)
+            return;
+
+        sb.AppendLine("<section id=\"map\">");
+        sb.AppendLine("  <h2>Where your applications meet</h2>");
+
+        WriteConstellation(sb, map);
+        WriteOverlap(sb, overlap);
+        WriteVersions(sb, versions);
+
+        sb.AppendLine("</section>");
+    }
+
+    /// <summary>
+    /// The applications on a ring, and every shared class between the ones that model it.
+    /// </summary>
+    /// <remarks>
+    /// The layout carries the argument, so the picture reads before the caption does: the middle is
+    /// what everybody models and the rim is what belongs to one client. Nothing is placed by hand
+    /// and nothing is random, so two runs of the same corpus draw the same picture.
+    /// </remarks>
+    private static void WriteConstellation(StringBuilder sb, CorpusMap map)
+    {
+        if (map.IsEmpty)
+            return;
+
+        sb.AppendLine("  <p class=\"lede\">Each class modelled in more than one application, placed between "
+                    + "the applications that model it. The closer to the middle, the more of them share it — "
+                    + "a class every application has belongs to no one direction, so it falls to the centre. "
+                    + "Hover to isolate; click a class to jump to its comparison, or an application to jump to it.</p>");
+
+        sb.AppendLine($"  <div class=\"cmap\" id=\"cmap\">");
+        sb.AppendLine($"  <svg viewBox=\"0 0 {N(map.Width)} {N(map.Height)}\" role=\"img\" "
+                    + "aria-label=\"Classes modelled in more than one application, placed between them\">");
+
+        foreach (var link in map.Links)
+        {
+            var application = map.Applications.First(a => a.Slug == link.Slug);
+            var shared = map.Classes.First(c => c.ClassName == link.ClassName);
+
+            sb.AppendLine($"    <path class=\"link\" data-slug=\"{E(link.Slug)}\" data-class=\"{E(link.ClassName)}\" "
+                        + $"d=\"{Bow(application.X, application.Y, shared.X, shared.Y, map)}\"/>");
+        }
+
+        foreach (var shared in map.Classes)
+        {
+            // Named on the picture only when several applications model it. Labelling all of them
+            // turns the middle into a word cloud; the rest answer on hover and in the tooltip.
+            var named = shared.Slugs.Count >= 3 ? " is-named" : string.Empty;
+
+            sb.AppendLine($"    <g class=\"cnode{named}\" data-class=\"{E(shared.ClassName)}\" tabindex=\"0\" role=\"button\" "
+                        + $"aria-label=\"{E(shared.ClassName)}, modelled in {Count(shared.Slugs.Count, "application")}\">");
+            sb.AppendLine($"      <circle cx=\"{N(shared.X)}\" cy=\"{N(shared.Y)}\" r=\"{N(shared.Radius)}\">"
+                        + $"<title>{E(shared.ClassName)} — {Count(shared.Slugs.Count, "application")}</title></circle>");
+            sb.AppendLine($"      <text x=\"{N(shared.LabelX)}\" y=\"{N(shared.LabelY)}\" "
+                        + $"text-anchor=\"{shared.LabelAnchor}\">{E(shared.ClassName)}</text>");
+            sb.AppendLine("    </g>");
+        }
+
+        foreach (var application in map.Applications)
+        {
+            var outward = application.X < map.Width / 2 - 1 ? "end"
+                        : application.X > map.Width / 2 + 1 ? "start"
+                        : "middle";
+            var labelX = application.X + (Math.Cos(application.Angle) * (application.Radius + 10));
+            var labelY = application.Y + (Math.Sin(application.Angle) * (application.Radius + 10)) + 4;
+
+            sb.AppendLine($"    <g class=\"anode\" data-slug=\"{E(application.Slug)}\" tabindex=\"0\" role=\"button\" "
+                        + $"aria-label=\"{E(application.Name)}, {Count(application.EntityCount, "entity")}\">");
+            sb.AppendLine($"      <circle cx=\"{N(application.X)}\" cy=\"{N(application.Y)}\" r=\"{N(application.Radius)}\">"
+                        + $"<title>{E(application.Name)} — {Count(application.EntityCount, "entity")}</title></circle>");
+            sb.AppendLine($"      <text x=\"{N(labelX)}\" y=\"{N(labelY)}\" text-anchor=\"{outward}\">{E(application.Name)}</text>");
+            sb.AppendLine("    </g>");
+        }
+
+        sb.AppendLine("  </svg>");
+        sb.AppendLine("  <div class=\"legend\">"
+                    + "<span><i class=\"dot dot--app\"></i>an application — bigger means more entities</span>"
+                    + "<span><i class=\"dot dot--class\"></i>a class more than one models — bigger means more of them</span>"
+                    + "<span><i class=\"dot dot--mid\"></i>the centre is your common ground</span>"
+                    + "</div>");
+        sb.AppendLine("  </div>");
+    }
+
+    /// <summary>
+    /// Bows a link toward the centre so links leaving one application fan out instead of stacking.
+    /// </summary>
+    private static string Bow(double fromX, double fromY, double toX, double toY, CorpusMap map)
+    {
+        var midX = (fromX + toX) / 2;
+        var midY = (fromY + toY) / 2;
+
+        var controlX = midX + ((map.Width / 2) - midX) * 0.18;
+        var controlY = midY + ((map.Height / 2) - midY) * 0.18;
+
+        return $"M{N(fromX)},{N(fromY)} Q{N(controlX)},{N(controlY)} {N(toX)},{N(toY)}";
+    }
+
+    private static void WriteOverlap(StringBuilder sb, OverlapGrid overlap)
+    {
+        if (overlap.IsEmpty || overlap.Applications.Count < 2)
+            return;
+
+        sb.AppendLine("  <h3 class=\"sub\">Which two are most alike</h3>");
+        sb.AppendLine("  <p class=\"lede\">Class names both applications model. The diagonal is how many each "
+                    + "has of its own. Click any cell to hold the page to just those two.</p>");
+
+        sb.AppendLine("  <div class=\"scroller\">");
+        sb.AppendLine("  <table class=\"heat\"><thead><tr><th></th>");
+
+        // Numbered columns rather than turned-on-their-side names. The row headings carry the names
+        // once, and a rotated column of twenty-character names costs a band of empty page taller
+        // than the grid it labels.
+        for (var index = 0; index < overlap.Applications.Count; index++)
+            sb.AppendLine($"    <th class=\"app\" title=\"{E(overlap.Applications[index].Name)}\">{index + 1}</th>");
+
+        sb.AppendLine("  </tr></thead><tbody>");
+
+        for (var row = 0; row < overlap.Applications.Count; row++)
+        {
+            sb.AppendLine($"    <tr><th class=\"rowhead\"><span class=\"idx\">{row + 1}</span>"
+                        + $"{E(overlap.Applications[row].Name)}</th>");
+
+            foreach (var cell in overlap.Cells.Where(c => c.Row == row).OrderBy(c => c.Column))
+            {
+                if (cell.IsSelf)
+                {
+                    sb.AppendLine($"      <td class=\"self\" title=\"{E(overlap.Applications[row].Name)} models "
+                                + $"{Count(cell.Shared, "class")} of its own\">{cell.Shared}</td>");
+                    continue;
+                }
+
+                var intensity = overlap.Highest == 0 ? 0 : (double)cell.Shared / overlap.Highest;
+                var rowName = overlap.Applications[cell.Row].Name;
+                var columnName = overlap.Applications[cell.Column].Name;
+
+                sb.AppendLine($"      <td class=\"cell{(cell.Shared > 0 ? " is-shared" : string.Empty)}\" "
+                            + $"style=\"--i:{N(intensity)}\" data-pair=\"{E(cell.RowSlug)} {E(cell.ColumnSlug)}\" "
+                            + $"data-label=\"{E(rowName)} + {E(columnName)}\" "
+                            + $"title=\"{E(rowName)} and {E(columnName)} both model {Count(cell.Shared, "class")}\">"
+                            + $"{(cell.Shared == 0 ? "·" : cell.Shared.ToString())}</td>");
+            }
+
+            sb.AppendLine("    </tr>");
+        }
+
+        sb.AppendLine("  </tbody></table>");
+        sb.AppendLine("  </div>");
+    }
+
+    private static void WriteVersions(StringBuilder sb, VersionSpread versions)
+    {
+        if (versions.IsEmpty)
+            return;
+
+        sb.AppendLine("  <h3 class=\"sub\">The releases you are on</h3>");
+        sb.Append("  <p class=\"lede\">");
+        sb.Append(versions.IsSplit
+            ? $"These applications sit on {Count(versions.Stops.Count, "different DevExpress release")}. "
+            : "Every application here declares the same DevExpress release. ");
+        sb.Append("Read from the project file, spaced evenly rather than to scale — nine years between two "
+                + "releases would draw as one dot and a gap.");
+        if (versions.Undeclared > 0)
+            sb.Append($" {Count(versions.Undeclared, "application")} declares no version this could read.");
+        sb.AppendLine("</p>");
+
+        sb.AppendLine("  <div class=\"scroller\"><div class=\"spread\">");
+
+        foreach (var stop in versions.Stops)
+        {
+            var here = versions.Applications.Where(a => a.Version == stop).ToList();
+            var isCatalog = string.Equals(stop, versions.CatalogVersion, StringComparison.Ordinal);
+
+            sb.AppendLine($"    <div class=\"stop{(isCatalog ? " is-catalog" : string.Empty)}\">");
+            sb.AppendLine($"      <div class=\"stop__v\">{E(stop)}</div>");
+            sb.AppendLine("      <div class=\"stop__rule\"></div>");
+
+            foreach (var mark in here)
+                sb.AppendLine($"      <a class=\"stop__app\" href=\"#app-{E(mark.Slug)}\">{E(mark.Name)}</a>");
+
+            sb.AppendLine("    </div>");
+        }
+
+        sb.AppendLine("  </div></div>");
+
+        if (!string.IsNullOrWhiteSpace(versions.CatalogVersion))
+        {
+            var onCatalog = versions.Applications.Count(a => a.Version == versions.CatalogVersion);
+
+            sb.AppendLine($"  <p class=\"caveat\"><b>The framework catalog on this machine describes "
+                        + $"{E(versions.CatalogVersion)}.</b> {Count(onCatalog, "application")} here declares it. "
+                        + "For the rest, anything said about DevExpress types is the closest answer available "
+                        + "rather than a certain one — see <a href=\"#limits\">what this cannot tell you</a>.</p>");
+        }
     }
 
     // ------------------------------------------------------------ in common
@@ -216,7 +424,10 @@ public sealed class WikiGenerator
                 string.Join(" ", recurring.In.Select(s => s.Application)),
                 string.Join(" ", recurring.Properties.Select(p => p.Name + " " + p.TypeName)));
 
-            sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\" data-app=\"{string.Join(" ", apps)}\">");
+            // Addressable, so clicking the class on the map lands on its comparison rather than
+            // typing its name into the search box and hiding everything it could be compared with.
+            sb.AppendLine($"  <article class=\"card\" id=\"shared-{E(recurring.ClassName)}\" "
+                        + $"data-search=\"{haystack}\" data-app=\"{string.Join(" ", apps)}\">");
             sb.AppendLine("    <div class=\"card__head\">");
             sb.AppendLine($"      <span class=\"card__name\">{E(recurring.ClassName)}</span>");
             sb.AppendLine($"      <span class=\"card__meta\">in {Count(recurring.In.Count, "application")}</span>");
@@ -769,8 +980,24 @@ public sealed class WikiGenerator
 
     // ------------------------------------------------------------------ bits
 
-    private static string Count(int value, string noun) =>
-        $"{value} {noun}{(value == 1 ? string.Empty : noun.EndsWith('s') ? "es" : "s")}";
+    private static string Count(int value, string noun)
+    {
+        if (value == 1)
+            return $"{value} {noun}";
+
+        // Enough English to cover the nouns this page counts. "entity" reaching the page as
+        // "entitys" is the kind of thing a reader takes as evidence that nobody looked.
+        var plural =
+            noun.EndsWith('y') && noun.Length > 1 && !"aeiou".Contains(noun[^2]) ? noun[..^1] + "ies"
+            : noun.EndsWith('s') || noun.EndsWith('x') || noun.EndsWith("ch", StringComparison.Ordinal)
+              || noun.EndsWith("sh", StringComparison.Ordinal) ? noun + "es"
+            : noun + "s";
+
+        return $"{value} {plural}";
+    }
+
+    private static string N(double value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string Haystack(params string?[] parts) =>
         E(string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p))).ToLowerInvariant());

@@ -24,7 +24,7 @@ public sealed class AgentFilesSink : IDocumentationSink
     /// <summary>Creates the sink.</summary>
     /// <param name="options">Where and what to write.</param>
     /// <param name="toolVersion">Version stamped into generated headers.</param>
-    public AgentFilesSink(AgentFilesOptions options, string toolVersion = "0.9.0")
+    public AgentFilesSink(AgentFilesOptions options, string toolVersion = Core.Generators.GeneratorVersion.Unknown)
     {
         _options = options;
         _generator = new AgentContextGenerator(toolVersion);

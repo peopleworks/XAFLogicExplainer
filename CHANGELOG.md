@@ -7,6 +7,50 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-08-24
+
+The question one application cannot answer.
+
+Everything here so far reads one XAF application and explains it. That is the right unit for
+inheriting a codebase, and it is the wrong unit for the person who wrote forty of them. Someone who
+has delivered XAF to clients for ten years has a question no single-application tool can be asked:
+**have I built this before?** Somewhere back there is the class about to be modelled again — not a
+similar one, the same one, thought through properly, with the two properties this time will forget.
+
+`xaflogic wiki` reads every configured project into one page and computes what they have in common.
+There is nowhere in that page to type a sentence about the collection, which is deliberate: a
+hand-written summary of nine applications is wrong the day the tenth is added, and nobody notices.
+
+Run over six real applications — 405 entities, 111 controllers — it produced two things worth the
+release on their own. First, the same property name meaning two different scalar shapes: `Total` a
+`decimal` in one application and a `double` in another, and the same for `UnitPrice`, `Cantidad`,
+`Descuento` and `Latitude`. Nothing is broken and everything compiles; it is how a total ends up two
+cents out. Second, **zero shared base classes** across all six — every application rebuilt from XPO
+primitives. That zero is not an empty result, it is the finding, and the page says so rather than
+showing a heading over nothing.
+
+Two of the quality decisions in it came from running against those applications rather than against
+fixtures, because fixtures agree with whatever the code already does. `Double` and `double` are one
+type, and reporting them as a disagreement is a false accusation — a tool that makes one stops being
+believed about the true ones. And a name holding a different collection in each entity is vocabulary
+rather than a conflict; leaving those in buried `decimal` against `double` under seven rows of
+`XPCollection<T>`. A third came from opening the page instead of reading the diff: the comparison
+table silently cropped its last column, which is the failure that matters, because a reader would
+have believed the columns they could see.
+
+It is also the first release with pictures that are arithmetic rather than decoration. The map
+places each shared class at the average direction of the applications that model it, at a distance
+set by how much they agree, so the middle of the picture means *everybody models this* and the rim
+means *this belongs to one client* — and that reads before the caption does. A diagram is believed
+faster than a sentence and checked less, which is why the placement rules are asserted rather than
+eyeballed, and why the same corpus draws the same picture every run.
+
+The release closes with the same correction turned on the tool itself. Four generators carried a
+version number as a default — the explainer stamped `0.10.1` six releases after 0.10.1 shipped, and
+the writer of `AGENTS.md` stamped `0.9.0` eight releases on. Nothing failed, because a default every
+caller overrides is a default nobody rereads. They now say **`of unknown version`**, which cannot go
+stale, and a test refuses any generator default that looks like a version.
+
 ### Added
 
 - **`xaflogic wiki`** — reads every configured project into one self-contained HTML page and computes
@@ -24,6 +68,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - **Names you keep**, **modules more than one application requires**, per-application detail, and
     a filter that shows only what touches one project.
   - Search across every application, one file, no network requests.
+- **Three pictures of the corpus**, computed rather than drawn, in the same one file.
+  - **A map** of the applications on a ring with every shared class placed *between* the ones that
+    model it — at the average direction of those applications, at a distance set by how much they
+    agree, so a class every application has falls to the centre. Hover an application to isolate
+    what it shares; hover a class to see who has it; click a class to land on its comparison.
+  - **An overlap grid**: how many class names each pair of applications both model, with the
+    diagonal held out of the colour scale so one large project cannot wash out every real overlap.
+    Click a cell to hold the whole page to just those two applications.
+  - **A version strip**: the DevExpress releases the estate is spread across, spaced ordinally
+    because nine years between two releases draws as one dot and a gap, with the release the
+    framework catalog actually describes marked on it.
+  - Layout is deterministic: the same corpus draws the same picture every run, because a diagram
+    that moves between two runs cannot be used to compare them.
+- Three sample client modules (`ClinicaSolution`, `TallerSolution`, `FerreteriaSolution`) that
+  disagree the way client work disagrees — each with its own copy of the same audit base, all three
+  modelling `Cliente` and `Factura`, and `Factura.Total` a `decimal` in two of them and a `double`
+  in the third. They exercise extraction, analysis and rendering end to end, and they are what the
+  map in the README is drawn from, so nothing in the documentation is a mock-up.
 - Source citations on every entity and controller in a wiki, so an entry can always tell you which
   file to open.
 
@@ -33,6 +95,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Copilot, which is one publishing target among several and irrelevant to `wiki`, `explain`, `agents`
   and `mcp` — all of which read the configured project list and write locally. Requiring it made the
   multi-project list unreachable without an account somewhere. It now defaults to the profile name.
+
+### Fixed
+
+- Generators no longer default to a version number. `HtmlExplainerGenerator` defaulted to `0.10.1`
+  six releases after 0.10.1 shipped, and `AgentContextGenerator` and `AgentFilesSink` to `0.9.0`
+  eight releases on. Every caller passes the real version, which is exactly why nobody reread the
+  default — and the one page it would ever stamp is a page whose footer then names a release that
+  did not generate it. They now say `of unknown version`, and a test rejects any generator default
+  shaped like a version.
 
 ## [0.16.0] — 2026-08-23
 
@@ -1067,6 +1138,7 @@ applications; this is the point where it becomes a community project.
   Only the Blazor widget does.
 
 [Unreleased]: https://github.com/peopleworks/XAFLogicExplainer/compare/v0.16.0...HEAD
+[0.17.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.17.0
 [0.16.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.16.0
 [0.15.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.15.0
 [0.14.0]: https://github.com/peopleworks/XAFLogicExplainer/releases/tag/v0.14.0

@@ -2159,7 +2159,7 @@ static string WikiApplicationName(string path)
 static string ThisAssemblyVersion() =>
     System.Reflection.Assembly.GetExecutingAssembly().GetName().Version is { } v
         ? $"{v.Major}.{v.Minor}.{v.Build}"
-        : "0.9.0";
+        : GeneratorVersion.Unknown;
 
 static ExtractionOptions BuildExtractionOptions(string language, string? orm = null)
 {

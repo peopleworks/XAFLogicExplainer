@@ -48,7 +48,7 @@ public sealed class AgentContextGenerator
     /// Creates a generator.
     /// </summary>
     /// <param name="toolVersion">Version stamped into the provenance header.</param>
-    public AgentContextGenerator(string toolVersion = "0.9.0")
+    public AgentContextGenerator(string toolVersion = GeneratorVersion.Unknown)
     {
         _toolVersion = toolVersion;
     }
