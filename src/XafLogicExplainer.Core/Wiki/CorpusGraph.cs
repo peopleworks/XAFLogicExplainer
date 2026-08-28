@@ -28,10 +28,16 @@ public static class CorpusGraph
     {
         ArgumentNullException.ThrowIfNull(corpus);
 
+        // Excluded from the diagonal as well as from the pairs. A grid whose totals counted the
+        // scaffold and whose overlaps did not would let a pair read as less alike than it is.
+        var templates = corpus.Templates
+            .Select(r => r.ClassName)
+            .ToHashSet(StringComparer.Ordinal);
+
         var names = corpus.Applications
             .Select(a => a.Project.Entities
                 .Select(e => e.ClassName)
-                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Where(n => !string.IsNullOrWhiteSpace(n) && !templates.Contains(n))
                 .ToHashSet(StringComparer.Ordinal))
             .ToList();
 
@@ -89,7 +95,7 @@ public static class CorpusGraph
 
         var count = corpus.Applications.Count;
 
-        if (count < 2 || corpus.RecurringEntities.Count == 0)
+        if (count < 2 || corpus.ModelledTwiceCount == 0)
             return new CorpusMap { Width = width, Height = height };
 
         var centreX = width / 2;
@@ -125,7 +131,7 @@ public static class CorpusGraph
         var classes = new List<MapClass>();
         var links = new List<MapLink>();
 
-        foreach (var recurring in corpus.RecurringEntities)
+        foreach (var recurring in corpus.ModelledTwice)
         {
             var slugs = recurring.In.Select(s => s.Slug).Distinct(StringComparer.Ordinal).ToList();
 

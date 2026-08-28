@@ -23,6 +23,26 @@ public sealed class WikiCorpus
     public IReadOnlyList<RecurringEntity> RecurringEntities { get; init; } = [];
 
     /// <summary>
+    /// The recurring classes that are a finding: everything the framework did not supply.
+    /// </summary>
+    /// <remarks>
+    /// Every count on the page reads from here rather than from <see cref="RecurringEntities"/>,
+    /// so a scaffold two applications both received cannot be reported as something their author
+    /// built twice. The templates stay on the page, said out loud, under their own heading.
+    /// </remarks>
+    public IEnumerable<RecurringEntity> ModelledTwice => RecurringEntities.Where(r => !r.IsTemplate);
+
+    /// <summary>
+    /// How many classes were modelled more than once, framework templates excluded.
+    /// </summary>
+    public int ModelledTwiceCount => RecurringEntities.Count(r => !r.IsTemplate);
+
+    /// <summary>
+    /// The recurring classes the framework supplied rather than the author.
+    /// </summary>
+    public IEnumerable<RecurringEntity> Templates => RecurringEntities.Where(r => r.IsTemplate);
+
+    /// <summary>
     /// Base classes written here and then reused across applications.
     /// </summary>
     public IReadOnlyList<RecurringBaseType> RecurringBaseTypes { get; init; } = [];
@@ -134,6 +154,24 @@ public sealed class RecurringEntity
     /// True when every application declares exactly the same property names.
     /// </summary>
     public bool Agrees => Properties.All(p => p.Applications.Count == In.Count);
+
+    /// <summary>
+    /// True when every application declares this class with a DevExpress security contract and
+    /// with the same properties -- the framework user type, not a class modelled here.
+    /// </summary>
+    /// <remarks>
+    /// Both halves are load-bearing. The contract alone would call a developer own security user
+    /// template code; agreement alone would call any two identical classes framework. Together
+    /// they claim only what was read: this carries a framework contract, and nobody here changed
+    /// it. Extend it in two applications and it becomes a finding again, which is right -- that
+    /// difference is exactly what the property comparison exists to show.
+    /// </remarks>
+    public bool IsTemplate { get; init; }
+
+    /// <summary>
+    /// The DevExpress security contracts this class carries, if any.
+    /// </summary>
+    public IReadOnlyList<string> Contracts { get; init; } = [];
 }
 
 /// <summary>

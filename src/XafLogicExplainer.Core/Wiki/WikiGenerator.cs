@@ -117,7 +117,7 @@ public sealed class WikiGenerator
         Stat(sb, controllers, "controllers");
         Stat(sb, actions, "actions");
         if (reports > 0) Stat(sb, reports, "reports");
-        Stat(sb, corpus.RecurringEntities.Count, "classes modelled twice");
+        Stat(sb, corpus.ModelledTwiceCount, "classes modelled twice");
         Stat(sb, corpus.RecurringBaseTypes.Count, "base classes reused");
         sb.AppendLine("  </div>");
 
@@ -139,7 +139,7 @@ public sealed class WikiGenerator
     private static void WriteNav(StringBuilder sb, WikiCorpus corpus)
     {
         sb.AppendLine("<nav><div class=\"wrap\"><ul>");
-        if (corpus.Applications.Count > 1 && corpus.RecurringEntities.Count > 0)
+        if (corpus.Applications.Count > 1 && corpus.ModelledTwiceCount > 0)
             sb.AppendLine("  <li><a href=\"#map\">The map</a></li>");
 
         sb.AppendLine("  <li><a href=\"#shared\">In common</a></li>");
@@ -389,7 +389,7 @@ public sealed class WikiGenerator
                  + "the question the wiki exists for.";
         }
 
-        var findings = corpus.RecurringEntities.Count
+        var findings = corpus.ModelledTwiceCount
                      + corpus.RecurringBaseTypes.Count
                      + corpus.RecurringActions.Count
                      + corpus.Conventions.Count;
@@ -406,46 +406,86 @@ public sealed class WikiGenerator
              + "work: <strong>have I built this before?</strong>";
     }
 
+    /// <summary>
+    /// The classes several applications model, and separately the ones the framework supplied.
+    /// </summary>
+    /// <remarks>
+    /// Two headings rather than one list with a badge, because the count beside a heading is read
+    /// as the size of what is under it. A single list saying "4" above six cards asks the reader
+    /// to work out which two do not count, and the first number on the page is exactly the one
+    /// that has to be trustworthy without arithmetic.
+    /// </remarks>
     private static void WriteRecurringEntities(StringBuilder sb, WikiCorpus corpus)
     {
-        if (corpus.RecurringEntities.Count == 0)
+        var modelled = corpus.ModelledTwice.ToList();
+        var templates = corpus.Templates.ToList();
+
+        if (modelled.Count > 0)
+        {
+            sb.AppendLine($"  <h3 class=\"sub\">Classes modelled more than once <span class=\"card__meta\">{modelled.Count}</span></h3>");
+            sb.AppendLine("  <p class=\"lede\">Matched by name. Two classes called <code>Cliente</code> in two "
+                        + "applications may model different things — what is known is that they share a name. "
+                        + "The comparison is what tells you whether they share a shape, and which application "
+                        + "to open before writing it again.</p>");
+
+            foreach (var recurring in modelled)
+                WriteRecurringEntity(sb, recurring);
+        }
+
+        if (templates.Count == 0)
             return;
 
-        sb.AppendLine($"  <h3 class=\"sub\">Classes modelled more than once <span class=\"card__meta\">{corpus.RecurringEntities.Count}</span></h3>");
-        sb.AppendLine("  <p class=\"lede\">Matched by name. Two classes called <code>Cliente</code> in two "
-                    + "applications may model different things — what is known is that they share a name. "
-                    + "The comparison is what tells you whether they share a shape, and which application "
-                    + "to open before writing it again.</p>");
+        sb.AppendLine($"  <h3 class=\"sub\">Carried by the framework, not modelled here <span class=\"card__meta\">{templates.Count}</span></h3>");
+        sb.AppendLine("  <p class=\"lede\">Each of these implements a DevExpress security contract and is "
+                    + "declared with the same properties in every application that has it — the shape the XAF "
+                    + "Project Wizard writes into every solution made with v21.1 or later. Two applications "
+                    + "holding the same one did not build it twice, so it is left out of the count above. "
+                    + "Extend it in two of them and it moves back up, because then there is a difference "
+                    + "worth reading.</p>");
 
-        foreach (var recurring in corpus.RecurringEntities)
-        {
-            var apps = recurring.In.Select(s => s.Slug).Distinct(StringComparer.Ordinal);
-            var haystack = Haystack(recurring.ClassName,
-                string.Join(" ", recurring.In.Select(s => s.Application)),
-                string.Join(" ", recurring.Properties.Select(p => p.Name + " " + p.TypeName)));
+        foreach (var recurring in templates)
+            WriteRecurringEntity(sb, recurring);
+    }
 
-            // Addressable, so clicking the class on the map lands on its comparison rather than
-            // typing its name into the search box and hiding everything it could be compared with.
-            sb.AppendLine($"  <article class=\"card\" id=\"shared-{E(recurring.ClassName)}\" "
-                        + $"data-search=\"{haystack}\" data-app=\"{string.Join(" ", apps)}\">");
-            sb.AppendLine("    <div class=\"card__head\">");
-            sb.AppendLine($"      <span class=\"card__name\">{E(recurring.ClassName)}</span>");
-            sb.AppendLine($"      <span class=\"card__meta\">in {Count(recurring.In.Count, "application")}</span>");
-            sb.AppendLine(recurring.Agrees
+    private static void WriteRecurringEntity(StringBuilder sb, RecurringEntity recurring)
+    {
+        var apps = recurring.In.Select(s => s.Slug).Distinct(StringComparer.Ordinal);
+        var haystack = Haystack(recurring.ClassName,
+            string.Join(" ", recurring.In.Select(s => s.Application)),
+            string.Join(" ", recurring.Properties.Select(p => p.Name + " " + p.TypeName)));
+
+        // Addressable, so clicking the class on the map lands on its comparison rather than
+        // typing its name into the search box and hiding everything it could be compared with.
+        sb.AppendLine($"  <article class=\"card\" id=\"shared-{E(recurring.ClassName)}\" "
+                    + $"data-search=\"{haystack}\" data-app=\"{string.Join(" ", apps)}\">");
+        sb.AppendLine("    <div class=\"card__head\">");
+        sb.AppendLine($"      <span class=\"card__name\">{E(recurring.ClassName)}</span>");
+        sb.AppendLine($"      <span class=\"card__meta\">in {Count(recurring.In.Count, "application")}</span>");
+        sb.AppendLine(recurring.IsTemplate
+            ? "      <span class=\"pill pill--template\">framework</span>"
+            : recurring.Agrees
                 ? "      <span class=\"pill pill--shared\">same properties</span>"
                 : "      <span class=\"pill pill--own\">shapes differ</span>");
-            sb.AppendLine("    </div>");
+        sb.AppendLine("    </div>");
 
-            if (!recurring.Agrees)
-            {
-                sb.AppendLine($"    <p class=\"card__desc\"><strong>{E(recurring.Richest)}</strong> models it in the "
-                            + "most detail. The marked rows are the properties the others do not have.</p>");
-            }
+        if (recurring.IsTemplate && recurring.Contracts.Count > 0)
+        {
+            // The evidence, not a restatement of the heading: which contract this class carries is
+            // checkable against the file cited under the card.
+            var carried = string.Join(", ", recurring.Contracts.Select(name => $"<code>{E(name)}</code>"));
 
-            WriteMatrix(sb, recurring);
-            WriteSites(sb, recurring.In, showWeight: "properties");
-            sb.AppendLine("  </article>");
+            sb.AppendLine($"    <p class=\"card__desc\">Implements {carried}, and every application "
+                        + "declares it with the same properties.</p>");
         }
+        else if (!recurring.Agrees)
+        {
+            sb.AppendLine($"    <p class=\"card__desc\"><strong>{E(recurring.Richest)}</strong> models it in the "
+                        + "most detail. The marked rows are the properties the others do not have.</p>");
+        }
+
+        WriteMatrix(sb, recurring);
+        WriteSites(sb, recurring.In, showWeight: "property");
+        sb.AppendLine("  </article>");
     }
 
     private static void WriteMatrix(StringBuilder sb, RecurringEntity recurring)
@@ -506,7 +546,7 @@ public sealed class WikiGenerator
             sb.AppendLine("    </div>");
             sb.AppendLine($"    <p class=\"card__desc\">Written in <strong>{E(reused.DeclaredAt.Application)}</strong>"
                         + $"{Cite(reused.DeclaredAt.Citation)}.</p>");
-            WriteSites(sb, reused.In, showWeight: reused.Kind == BaseTypeKind.Entity ? "classes" : "controllers");
+            WriteSites(sb, reused.In, showWeight: reused.Kind == BaseTypeKind.Entity ? "class" : "controller");
             sb.AppendLine("  </article>");
         }
     }
@@ -626,7 +666,7 @@ public sealed class WikiGenerator
         sb.AppendLine($"      <span class=\"card__meta\">{Count(convention.TotalUses, "class")} "
                     + $"across {Count(convention.In.Count, "application")}</span>");
         sb.AppendLine("    </div>");
-        WriteSites(sb, convention.In, showWeight: "classes");
+        WriteSites(sb, convention.In, showWeight: "class");
         sb.AppendLine("  </article>");
     }
 
@@ -660,6 +700,10 @@ public sealed class WikiGenerator
         }
     }
 
+    /// <summary>
+    /// The applications a finding was found in, each counted by <paramref name="showWeight"/> --
+    /// which arrives <em>singular</em> and is pluralised on the way out.
+    /// </summary>
     private static void WriteSites(StringBuilder sb, IReadOnlyList<CorpusSite> sites, string? showWeight)
     {
         if (sites.Count == 0)
@@ -671,8 +715,10 @@ public sealed class WikiGenerator
         {
             sb.Append($"      <span class=\"site\"><a href=\"#app-{E(site.Slug)}\"><b>{E(site.Application)}</b></a>");
 
+            // Through Count, not interpolated: the nouns arrive singular so that a site holding
+            // one of something does not read "1 properties" beside a heading that got it right.
             if (showWeight is not null && site.Weight > 0)
-                sb.Append($" · {site.Weight} {E(showWeight)}");
+                sb.Append($" · {E(Count(site.Weight, showWeight))}");
 
             if (!string.IsNullOrWhiteSpace(site.Owner) && showWeight is null)
                 sb.Append($" · {E(site.Owner)}");

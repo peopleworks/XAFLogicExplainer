@@ -1818,7 +1818,9 @@ wikiCommand.SetHandler((wikiPaths, wikiLanguage, wikiOrm, wikiOutput, wikiTitle,
 
     var wikiTable = new Table().Border(TableBorder.Rounded).AddColumn("In common").AddColumn("");
     wikiTable.AddRow("Applications read", wikiApplications.Count.ToString());
-    wikiTable.AddRow("Classes modelled more than once", wikiCorpus.RecurringEntities.Count.ToString());
+    // The same number the page leads with, and it has to agree with it. Framework scaffold two
+    // applications were both given is not something their author modelled twice.
+    wikiTable.AddRow("Classes modelled more than once", wikiCorpus.ModelledTwiceCount.ToString());
     wikiTable.AddRow("Base classes you reused", wikiCorpus.RecurringBaseTypes.Count.ToString());
     wikiTable.AddRow("Actions written more than once", wikiCorpus.RecurringActions.Count.ToString());
     wikiTable.AddRow("Names used across applications", wikiCorpus.Conventions.Count.ToString());

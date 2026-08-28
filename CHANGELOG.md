@@ -7,6 +7,42 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A context deriving from a base in a package registered no entities at all**
+  ([#53](https://github.com/peopleworks/XAFLogicExplainer/issues/53), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). The DbSet roster reached a context by walking base
+  names from a set seeded with `DbContext` and grown only by classes declared in the analyzed
+  source, so a base that lives in a package was never reached. The everyday case is
+  `IdentityDbContext<TUser>`, the base every ASP.NET Core Identity template writes: an application
+  with 56 `DbSet<T>` properties reported **zero entities**, silently, and reported itself as EF Core
+  while doing it. A class that declares `DbSet<T>` properties is now a context, whatever it derives
+  from — the stronger signal, and the only one that does not depend on having the base class to
+  read. A `DbSet<T>` written as a local inside a method body is still not a registration.
+- **The wizard scaffold was counted as classes you had modelled twice**
+  ([#54](https://github.com/peopleworks/XAFLogicExplainer/issues/54), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). The XAF Project Wizard writes `ApplicationUser` and
+  `ApplicationUserLoginInfo` into every solution created with v21.1 or later, so their source is
+  read and the rule that makes a class *yours* — its own source was read here — let them through.
+  Any two XAF applications made since 2021 appeared to share them, and on a corpus of small
+  applications the scaffold can be most of the first number on the page. A class is now shown as
+  **carried by the framework** when every application declares it with a DevExpress security
+  contract *and* with the same properties, and it is left out of the count, the map and the overlap
+  grid. Both halves matter: extend `ApplicationUser` in two applications and it is a finding again,
+  which on the six real applications is exactly what happens — `ApplicationUser` still counts,
+  because one of them added `Email`, `Photo` and `Tasks`, and only `ApplicationUserLoginInfo` drops
+  out.
+- The same scaffold was also supplying "names you keep". Two applications sharing nothing but the
+  wizard output were told that `LoginProviderName` and `ProviderUserKey` were house vocabulary. A
+  class that does not count as modelled twice no longer supplies words that do — which on the real
+  corpus promoted three actual house names into a list that is capped at sixty.
+- The `wiki` summary printed in the terminal now reads the same number as the page it just wrote.
+- A site holding one of something reads `1 property`, not `1 properties`. The page already had a
+  helper that pluralises and says in its own comment why it exists; four call sites went around it.
+- `EntityAnalyzer.cs` carried a literal NUL byte inside a string interpolation, used as a key
+  separator. It compiled, and it made the largest file in the project binary to `grep` and
+  `ripgrep`, which silently refuse to search it. Written as the `\0` escape instead.
+
 ## [0.17.0] — 2026-08-24
 
 The question one application cannot answer.

@@ -29,6 +29,8 @@ internal static class WikiStyles
         :root[data-theme="dark"] { --shared: #2dd4bf; --shared-soft: #0e2b28; }
 
         .pill--shared { color: var(--shared); background: var(--shared-soft); border-color: var(--shared); }
+        /* Deliberately the quietest state on the page: it marks what is not a finding. */
+        .pill--template { color: var(--faint); border-style: dashed; }
         .shared-ink { color: var(--shared); }
 
         /* ---------------------------------------------------- filtering by application */

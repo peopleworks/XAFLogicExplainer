@@ -1,4 +1,4 @@
-namespace XafLogicExplainer.Tests;
+﻿namespace XafLogicExplainer.Tests;
 
 /// <summary>
 /// Entities that an application declares only by registering them in its DbContext.
@@ -67,5 +67,17 @@ public class LegacyEntityDiscoveryTests
         var names = SampleProjects.LegacyEf.Entities.Select(entity => entity.ClassName);
 
         Assert.Contains("ArchivedInvoice", names);
+    }
+
+    [Fact]
+    public void FindsEntitiesRegisteredThroughAContextOnAPackageBase()
+    {
+        // ProfileDbContext derives from IdentityDbContext<AppUser>, which is declared in a package
+        // and so is never read here. Reaching a context by walking to a base class that has to be
+        // in the analyzed source finds nothing to walk to, and the application registers nothing --
+        // the silent zero, on the base every ASP.NET Core Identity template writes.
+        var names = SampleProjects.LegacyEf.Entities.Select(entity => entity.ClassName);
+
+        Assert.Contains("UserProfile", names);
     }
 }
