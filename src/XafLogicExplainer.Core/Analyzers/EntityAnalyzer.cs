@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using XafLogicExplainer.Core.Interfaces;
@@ -969,45 +969,47 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
 
         /// <summary>
-        /// The classes that are a <c>DbContext</c>, following base classes declared in the source.
+        /// The classes that register entities: the ones declaring <c>DbSet&lt;T&gt;</c> properties.
         /// </summary>
         /// <remarks>
-        /// Following the chain matters because an application that writes its own
-        /// <c>AuditedDbContext : DbContext</c> and derives every real context from it would
-        /// otherwise register nothing -- the same silent-empty failure this roster is here to fix.
+        /// Read from the declaration rather than from the base class, because the base is very
+        /// often not there to read. <c>IdentityDbContext&lt;TUser&gt;</c> is the base every
+        /// ASP.NET Core Identity template writes, and it lives in a package -- so a walk that can
+        /// only grow its set from classes declared in the analyzed source never reaches it, and an
+        /// application registers nothing at all however many tables it has.
         /// <para>
-        /// The chain is walked by simple name, which cannot distinguish two same-named classes in
-        /// different namespaces. The cost of being wrong is small in this direction: a class only
-        /// contributes to the roster if it also declares <c>DbSet&lt;T&gt;</c> properties, which
-        /// something that is not a context does not do.
+        /// Declaring a <c>DbSet&lt;T&gt;</c> property is the stronger signal in any case. It is
+        /// the application stating that this is one of its tables, it has to be right for the
+        /// application to run, and it is the only signal that does not depend on having the base
+        /// class in hand. A hand-written <c>AuditedDbContext : DbContext</c> and a context on a
+        /// package base become the same case, rather than one that works and one that does not.
+        /// </para>
+        /// <para>
+        /// It is the property that counts, never a mention of the generic: a <c>DbSet&lt;T&gt;</c>
+        /// declared as a local inside a method body is a type name in a helper, not an
+        /// application saying it owns a table.
         /// </para>
         /// </remarks>
         private static List<ClassDeclarationSyntax> FindContextClasses(List<SyntaxNode> trees)
         {
-            var declared = trees
+            return trees
                 .SelectMany(root => root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+                .Where(DeclaresAnyDbSet)
                 .ToList();
+        }
 
-            var contextNames = new HashSet<string>(StringComparer.Ordinal) { "DbContext" };
-
-            // A fixed point, because a base class may be read after the class deriving from it.
-            bool grew;
-            do
-            {
-                grew = false;
-                foreach (var candidate in declared)
+        /// <summary>
+        /// Whether the class declares at least one <c>DbSet&lt;T&gt;</c> property of its own.
+        /// </summary>
+        private static bool DeclaresAnyDbSet(ClassDeclarationSyntax candidate)
+        {
+            return candidate.Members
+                .OfType<PropertyDeclarationSyntax>()
+                .Any(property => property.Type is GenericNameSyntax
                 {
-                    if (contextNames.Contains(candidate.Identifier.Text)) continue;
-                    if (!GetBaseTypeNames(candidate).Any(contextNames.Contains)) continue;
-
-                    contextNames.Add(candidate.Identifier.Text);
-                    grew = true;
-                }
-            } while (grew);
-
-            return declared
-                .Where(candidate => GetBaseTypeNames(candidate).Any(contextNames.Contains))
-                .ToList();
+                    Identifier.Text: "DbSet",
+                    TypeArgumentList.Arguments.Count: 1,
+                });
         }
     }
 
@@ -1218,7 +1220,7 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// unnamed rules of the same kind on the same property cannot be told apart anyway.
     /// </remarks>
     private static string ValidationRuleKey(ExtractedValidationRule rule)
-        => rule.Id is { Length: > 0 } id ? id : $"{rule.RuleType} {rule.TargetProperty}";
+        => rule.Id is { Length: > 0 } id ? id : $"{rule.RuleType}\0{rule.TargetProperty}";
 
     /// <summary>
     /// What makes two appearance rules the same rule.

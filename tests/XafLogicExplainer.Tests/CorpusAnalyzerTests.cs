@@ -499,6 +499,132 @@ public class CorpusAnalyzerTests
 
     // ---------------------------------------------------------------- helpers
 
+    // ------------------------------------------------- the scaffold everybody was given
+
+    /// <summary>
+    /// The XAF Project Wizard writes the same user classes into every solution, so two
+    /// applications sharing them have not built anything twice.
+    /// </summary>
+    /// <remarks>
+    /// The rule that lets them in is the right rule: a class is yours when its own source was
+    /// read, and the wizard writes these into your tree. What separates them is not their name
+    /// but the framework contract they implement -- so a developer who renamed
+    /// <c>ApplicationUser</c> is caught too, and a future template with new names still is.
+    /// </remarks>
+    [Fact]
+    public void WizardScaffoldIsNotCountedAsAClassModelledTwice()
+    {
+        var corpus = Analyze(
+            App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))),
+            App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))));
+
+        var recurring = Assert.Single(corpus.RecurringEntities);
+
+        Assert.True(recurring.IsTemplate);
+        Assert.Equal(0, corpus.ModelledTwiceCount);
+    }
+
+    /// <summary>
+    /// It is still on the page, with the contract that earned it the label.
+    /// </summary>
+    /// <remarks>
+    /// Excluding it from the count is a judgement; hiding it would be a second one nobody asked
+    /// for. A reader who disagrees has to be able to see what was decided and check it.
+    /// </remarks>
+    [Fact]
+    public void ScaffoldIsStillReportedAndNamesTheContractItCarries()
+    {
+        var corpus = Analyze(
+            App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))),
+            App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))));
+
+        var template = Assert.Single(corpus.Templates);
+
+        Assert.Equal("ApplicationUser", template.ClassName);
+        Assert.Equal(["ISecurityUserWithLoginInfo"], template.Contracts);
+    }
+
+    /// <summary>
+    /// A user class the developer extended is a finding again, because the shapes disagree.
+    /// </summary>
+    /// <remarks>
+    /// Somebody who added the same two properties to the scaffold in two applications really has
+    /// modelled something, and that difference is what the property comparison exists to show.
+    /// The contract alone must never be enough to dismiss a class.
+    /// </remarks>
+    [Fact]
+    public void ASecurityUserTheDeveloperExtendedIsAFindingAgain()
+    {
+        var corpus = Analyze(
+            App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo",
+                Prop("UserName", "String"), Prop("Departamento", "String"))),
+            App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo",
+                Prop("UserName", "String"))));
+
+        var recurring = Assert.Single(corpus.RecurringEntities);
+
+        Assert.False(recurring.IsTemplate);
+        Assert.Equal(1, corpus.ModelledTwiceCount);
+    }
+
+    /// <summary>
+    /// An ordinary class two applications model is untouched by any of this.
+    /// </summary>
+    [Fact]
+    public void AClassCarryingNoContractIsCountedAsBefore()
+    {
+        var corpus = Analyze(
+            App("Legal", Entity("Cliente", Prop("Nombre", "String"))),
+            App("Presupuesto", Entity("Cliente", Prop("Nombre", "String"))));
+
+        var recurring = Assert.Single(corpus.RecurringEntities);
+
+        Assert.False(recurring.IsTemplate);
+        Assert.Equal(1, corpus.ModelledTwiceCount);
+    }
+
+    /// <summary>
+    /// The scaffold does not make two unrelated applications look alike on the overlap grid.
+    /// </summary>
+    /// <remarks>
+    /// The count beside "classes modelled twice" is not the only number the scaffold inflates:
+    /// the grid answers <em>which two of my projects are most alike?</em> from the class names
+    /// they share, and it reads the entities directly rather than the recurring list.
+    /// </remarks>
+    [Fact]
+    public void ScaffoldDoesNotMakeTwoApplicationsOverlapOnTheGrid()
+    {
+        var corpus = Analyze(
+            App("Reportes",
+                Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String")),
+                Entity("Programacion", Prop("Cron", "String"))),
+            App("Lims",
+                Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String")),
+                Entity("Muestra", Prop("Codigo", "String"))));
+
+        var grid = CorpusGraph.Overlap(corpus);
+        var pair = grid.Cells.First(c => !c.IsSelf);
+
+        Assert.Equal(0, pair.Shared);
+    }
+
+    /// <summary>
+    /// Findings come first; the scaffold is context and sorts last.
+    /// </summary>
+    [Fact]
+    public void TemplatesSortAfterEveryRealFinding()
+    {
+        var corpus = Analyze(
+            App("Reportes",
+                Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String")),
+                Entity("Cliente", Prop("Nombre", "String"))),
+            App("Lims",
+                Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String")),
+                Entity("Cliente", Prop("Nombre", "String"))));
+
+        Assert.Equal(["Cliente", "ApplicationUser"], corpus.RecurringEntities.Select(r => r.ClassName));
+    }
+
     private static WikiCorpus Analyze(params WikiApplication[] applications) =>
         CorpusAnalyzer.Analyze(applications);
 
@@ -563,6 +689,21 @@ public class CorpusAnalyzerTests
             FilePath = Path.Combine(Path.GetTempPath(), "App", "Controller.cs"),
             Line = 20,
         };
+
+    private static ExtractedEntity Secured(
+        string className,
+        string contract,
+        params ExtractedProperty[] properties)
+    {
+        var entity = Entity(className, properties);
+
+        // The base list as extraction reads it: the class, then the contract it implements. The
+        // wizard writes `: PermissionPolicyUser, ISecurityUserWithLoginInfo`.
+        entity.BaseType = "PermissionPolicyUser";
+        entity.BaseTypes = ["PermissionPolicyUser", contract];
+
+        return entity;
+    }
 
     private static ExtractedProperty Prop(string name, string typeName) =>
         new() { Name = name, TypeName = typeName };

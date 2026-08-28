@@ -303,6 +303,84 @@ public class WikiRenderingTests
         Assert.Contains("The layer you wrote yourself", html, StringComparison.Ordinal);
     }
 
+    // ------------------------------------------------- the scaffold on the page
+
+    /// <summary>
+    /// The wizard scaffold is shown under its own heading, never under the one that counts.
+    /// </summary>
+    /// <remarks>
+    /// The number beside "classes modelled twice" is the first thing on the page, and a reader who
+    /// trusts it must not be told they have a reusable user model when what they have is what the
+    /// wizard wrote for them.
+    /// </remarks>
+    [Fact]
+    public void ScaffoldIsUnderTheFrameworkHeadingAndNotTheCountedOne()
+    {
+        var html = Render(Corpus(
+            App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string"))),
+            App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string")))));
+
+        Assert.Contains("Carried by the framework, not modelled here", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Classes modelled more than once", html, StringComparison.Ordinal);
+        Assert.Contains("pill--template", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The card carries the evidence for the claim, so a reader can disagree with it.
+    /// </summary>
+    [Fact]
+    public void ScaffoldCardNamesTheContractThatEarnedItTheLabel()
+    {
+        var html = Render(Corpus(
+            App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string"))),
+            App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string")))));
+
+        Assert.Contains("ISecurityUserWithLoginInfo", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Its property names are not reported as vocabulary the applications share either.
+    /// </summary>
+    /// <remarks>
+    /// The classes card is not the only place the scaffold inflates. "Names you keep" reads the
+    /// entities directly, so two applications sharing nothing but the wizard output were being
+    /// told that <c>LoginProviderName</c> and <c>ProviderUserKey</c> are house vocabulary --
+    /// the same false claim, two headings down.
+    /// </remarks>
+    [Fact]
+    public void ScaffoldPropertiesAreNotReportedAsSharedVocabulary()
+    {
+        var html = Render(Corpus(
+            App("Reportes",
+                Secured("ApplicationUserLoginInfo", "ISecurityUserLoginInfo", Prop("LoginProviderName", "string")),
+                Entity("Programacion", Prop("Cron", "string"))),
+            App("Lims",
+                Secured("ApplicationUserLoginInfo", "ISecurityUserLoginInfo", Prop("LoginProviderName", "string")),
+                Entity("Muestra", Prop("Codigo", "string")))));
+
+        Assert.DoesNotContain("Names you keep", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A site holding one of something never reads "1 properties".
+    /// </summary>
+    /// <remarks>
+    /// The page already has a <c>Count</c> helper whose own comment says that "entitys" reading
+    /// back at somebody is taken as evidence nobody looked. The site line went around it and
+    /// interpolated a noun that was already plural.
+    /// </remarks>
+    [Fact]
+    public void ASiteWithOneOfSomethingIsNotPluralised()
+    {
+        var html = Render(Corpus(
+            App("A", Entity("Cliente", Prop("Nombre", "string"))),
+            App("B", Entity("Cliente", Prop("Nombre", "string")))));
+
+        Assert.Contains("1 property", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("1 properties", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("1 classes", html, StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static string Render(WikiCorpus corpus) => new WikiGenerator("0.0.0-test").Generate(corpus);
@@ -336,6 +414,19 @@ public class WikiRenderingTests
             Line = 10,
             Properties = [.. properties],
         };
+
+    private static ExtractedEntity Secured(
+        string className,
+        string contract,
+        params ExtractedProperty[] properties)
+    {
+        var entity = Entity(className, properties);
+
+        entity.BaseType = "PermissionPolicyUser";
+        entity.BaseTypes = ["PermissionPolicyUser", contract];
+
+        return entity;
+    }
 
     private static ExtractedProperty Prop(string name, string typeName) =>
         new() { Name = name, TypeName = typeName };

@@ -76,12 +76,22 @@ public static class CorpusAnalyzer
     {
         ArgumentNullException.ThrowIfNull(applications);
 
-        var conventions = Conventions(applications);
+        var recurring = RecurringEntities(applications);
+
+        // The scaffold is settled once, here, and every other finding reads that answer. Deciding
+        // it twice is how the classes card and the vocabulary card end up disagreeing about the
+        // same two classes.
+        var templates = recurring
+            .Where(r => r.IsTemplate)
+            .Select(r => r.ClassName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var conventions = Conventions(applications, templates);
 
         return new WikiCorpus
         {
             Applications = applications,
-            RecurringEntities = RecurringEntities(applications),
+            RecurringEntities = recurring,
             RecurringBaseTypes = RecurringBaseTypes(applications),
             RecurringActions = RecurringActions(applications),
             Conventions = conventions.Take(ConventionLimit).ToList(),
@@ -173,16 +183,32 @@ public static class CorpusAnalyzer
                 .ThenBy(s => s.Application, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            var properties = CompareProperties(uses);
+
             results.Add(new RecurringEntity
             {
                 ClassName = className,
                 In = sites,
-                Properties = CompareProperties(uses),
+                Properties = properties,
+
+                // Every application has to carry the contract, and they all have to declare the
+                // same properties. One application that extended it is enough to make the class a
+                // real finding, because then the applications disagree -- and the disagreement is
+                // the answer to "have I built this before".
+                IsTemplate = uses.TrueForAll(u => SecurityContract.IsCarriedBy(u.Entity))
+                             && properties.All(p => p.Applications.Count == uses.Count),
+
+                Contracts = [.. uses
+                    .SelectMany(u => SecurityContract.CarriedBy(u.Entity))
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(name => name, StringComparer.Ordinal)],
             });
         }
 
         return results
-            .OrderByDescending(r => r.In.Count)
+            // Templates last: they are context, not findings, and the findings have to lead.
+            .OrderBy(r => r.IsTemplate)
+            .ThenByDescending(r => r.In.Count)
             .ThenByDescending(r => r.Properties.Count)
             .ThenBy(r => r.ClassName, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -409,7 +435,14 @@ public static class CorpusAnalyzer
     // Names that keep coming back
     // ------------------------------------------------------------------
 
-    private static List<RecurringProperty> Conventions(IReadOnlyList<WikiApplication> apps)
+    /// <param name="apps">The applications, in the order they should be shown.</param>
+    /// <param name="templates">
+    /// Classes the framework supplied rather than the author, whose properties are its vocabulary
+    /// and not the author own.
+    /// </param>
+    private static List<RecurringProperty> Conventions(
+        IReadOnlyList<WikiApplication> apps,
+        HashSet<string> templates)
     {
         var byName = new Dictionary<string, List<(WikiApplication App, ExtractedProperty Property)>>(StringComparer.Ordinal);
 
@@ -417,6 +450,14 @@ public static class CorpusAnalyzer
         {
             foreach (var entity in app.Project.Entities)
             {
+                // A class that was not counted as modelled twice cannot supply words that were.
+                // Without this, two applications sharing nothing but the wizard scaffold are told
+                // that LoginProviderName and ProviderUserKey are house vocabulary -- the same
+                // false claim as the classes card, two headings further down. A scaffold somebody
+                // extended is not in this set, so the properties they added still count.
+                if (templates.Contains(entity.ClassName))
+                    continue;
+
                 foreach (var property in Declared(entity))
                 {
                     if (string.IsNullOrWhiteSpace(property.Name))
