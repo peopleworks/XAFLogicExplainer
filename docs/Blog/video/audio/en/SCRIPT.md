@@ -66,9 +66,9 @@ And then the question nothing in the repository answers: what runs when you open
 
 ## 08-roslyn
 
-*46 words · about 17s at a normal pace*
+*42 words · about 15s at a normal pace*
 
-All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its two hundred and seventy tests run free on a public runner.
+All of it is read as syntax, with Roslyn. Your project never compiles and no DevExpress assembly is ever referenced. So it works on a branch that doesn't build, it needs no licence, and its tests run free on a public runner.
 
 ## 09-niveles
 

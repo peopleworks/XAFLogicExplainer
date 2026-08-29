@@ -66,9 +66,9 @@ Y luego la pregunta que nada en el repositorio responde: qué se ejecuta cuando 
 
 ## 08-roslyn
 
-*44 words · about 16s at a normal pace*
+*42 words · about 15s at a normal pace*
 
-Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus doscientos setenta tests corren gratis en un runner público.
+Todo se lee como sintaxis, con Roslyn. Tu proyecto nunca se compila y nunca se referencia un ensamblado de DevExpress. Por eso funciona en una rama que no compila, no hace falta licencia, y sus tests corren gratis en un runner público.
 
 ## 09-niveles
 
