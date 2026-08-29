@@ -320,7 +320,7 @@ public class LogicExtractor : ILogicExtractor
     /// </summary>
     private static void ExtractProjectMetadata(string projectPath, ExtractedProject project)
     {
-        var csprojPath = MainProjectFile(projectPath);
+        var csprojPath = ProjectFile.Main(projectPath);
         if (csprojPath is null) return;
 
         // Properties this file sets are resolved first, so a `Version="$(DevExpressVersion)"` --
@@ -351,43 +351,6 @@ public class LogicExtractor : ILogicExtractor
             Catalog.DeclaredDevExpressVersion.FromProjectFile(csprojContent);
     }
 
-    /// <summary>
-    /// The project file a directory is named for, when several sit side by side.
-    /// </summary>
-    /// <remarks>
-    /// A module folder holding exactly one <c>.csproj</c> is the common case and any rule agrees
-    /// about it. Real solutions do not stop there: one holds
-    /// <c>PWPresupuesto.Module.csproj</c> beside <c>PWPresupuesto.Module.Net10.csproj</c> from a
-    /// framework migration, another holds a hand-made <c>"pwLegalOffice - Backup.Module.csproj"</c>.
-    /// <para>
-    /// Taking the first entry <see cref="Directory.GetFiles(string, string, SearchOption)"/>
-    /// returned made the answer depend on how the file system chose to order the directory, so two
-    /// machines could describe the same application differently and neither would say why. The
-    /// convention every .NET project follows decides it instead: the file named after the folder is
-    /// the project, and a backup or a migration candidate beside it is not.
-    /// </para>
-    /// <para>
-    /// Ordinal ordering is the fallback rather than the enumeration order, so the case this rule
-    /// does not cover is at least the same everywhere.
-    /// </para>
-    /// </remarks>
-    private static string? MainProjectFile(string projectPath)
-    {
-        var candidates = Directory
-            .GetFiles(projectPath, "*.csproj", SearchOption.TopDirectoryOnly)
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToList();
-
-        if (candidates.Count <= 1)
-            return candidates.FirstOrDefault();
-
-        var folderName = new DirectoryInfo(projectPath).Name;
-
-        return candidates.FirstOrDefault(path =>
-                   Path.GetFileNameWithoutExtension(path)
-                       .Equals(folderName, StringComparison.OrdinalIgnoreCase))
-               ?? candidates[0];
-    }
 
     /// <summary>
     /// Enriches entities with BOModel metadata sourced from xafml.

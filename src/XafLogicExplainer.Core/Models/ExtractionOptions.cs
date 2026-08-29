@@ -128,6 +128,21 @@ public class ExtractionOptions
     public bool DiscoverPlatformModels { get; set; } = true;
 
     /// <summary>
+    /// Reads the projects this one references, so a base class declared in one can be resolved.
+    /// </summary>
+    /// <remarks>
+    /// On by default, because without it a module whose entities derive from a base in a shared
+    /// project extracts nothing at all and says nothing about why. Their classes are read for
+    /// resolution only and never join this project inventory.
+    /// <para>
+    /// It is a switch because the cost is not free: a referenced project with no
+    /// <c>BusinessObjects</c> folder is parsed in full, and a large utility library reached
+    /// through two hops is parsed on every extraction.
+    /// </para>
+    /// </remarks>
+    public bool FollowProjectReferences { get; set; } = true;
+
+    /// <summary>
     /// User-configured ORM mode. <see cref="OrmType.Auto"/> triggers runtime detection.
     /// </summary>
     public OrmType Orm { get; set; } = OrmType.Auto;
