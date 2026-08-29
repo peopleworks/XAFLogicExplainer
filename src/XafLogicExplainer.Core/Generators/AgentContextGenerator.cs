@@ -225,6 +225,27 @@ public sealed class AgentContextGenerator
 
         sb.AppendLine();
 
+        // The framework, but only where it forbids something. Written from a reading and never
+        // from a default, the same discipline as the ORM rule above and for the same reason: an
+        // agent cannot tell a guess from a fact, so a constraint stated on an assumption is worse
+        // than no constraint at all. A project that declared no framework gets no rule.
+        //
+        // Narrow on purpose. Most modern C# syntax does compile here once `LangVersion` is set,
+        // and a rule that forbade all of it would be false -- which would cost the true half its
+        // credibility. What is listed is what no compiler switch can supply.
+        if (Analyzers.DeclaredTargetFramework.IsDotNetFramework(project.TargetFramework))
+        {
+            sb.AppendLine($"**{rule++}. This is a .NET Framework application (`{project.TargetFramework}`).**");
+            sb.AppendLine("The C# language version there defaults to **7.3** unless the project file sets");
+            sb.AppendLine("`LangVersion`, and the class library is the .NET Framework one:");
+            sb.AppendLine("`System.Text.Json`, `IAsyncEnumerable<T>`, `Index` and `Range` are absent without a");
+            sb.AppendLine("package, and default interface methods cannot work at all. `record`, init-only");
+            sb.AppendLine("setters and `required` members compile only where a polyfill attribute is supplied.");
+            sb.AppendLine("Match the C# already in these files rather than what you would write by default, and");
+            sb.AppendLine("read the project file before using anything newer.");
+            sb.AppendLine();
+        }
+
         // Rule 2: the closed-world statement. This is the load-bearing one.
         sb.AppendLine($"**{rule++}. The inventories {inventoryLocation} are complete.**");
         sb.AppendLine("They were extracted from the whole source tree, not sampled. If an entity, controller or");

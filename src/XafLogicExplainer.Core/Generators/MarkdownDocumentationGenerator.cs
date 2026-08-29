@@ -47,7 +47,10 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         sb.AppendLine($"# {project.ProjectName} - {_l.FunctionalDocumentation}");
         sb.AppendLine();
         sb.AppendLine($"*Generated: {project.ExtractedAt}*");
-        sb.AppendLine($"*Framework: {project.TargetFramework}*");
+        // Only when one was read. `*Framework: *` is a field with nothing in it, which reads as
+        // a broken document rather than as the honest "this was not declared".
+        if (!string.IsNullOrWhiteSpace(project.TargetFramework))
+            sb.AppendLine($"*Framework: {project.TargetFramework}*");
         sb.AppendLine();
 
         foreach (var section in sections)
@@ -732,7 +735,8 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         sb.AppendLine($"## {_l.Summary}");
         sb.AppendLine();
         sb.AppendLine($"- **{_l.Project}:** {project.ProjectName}");
-        sb.AppendLine($"- **{_l.Framework}:** {project.TargetFramework}");
+        if (!string.IsNullOrWhiteSpace(project.TargetFramework))
+            sb.AppendLine($"- **{_l.Framework}:** {project.TargetFramework}");
         sb.AppendLine($"- **ORM:** {project.OrmType}");
         sb.AppendLine($"- **{_l.BusinessEntitiesCount}:** {project.Entities.Count}");
         sb.AppendLine($"- **{_l.ControllersCount}:** {project.Controllers.Count}");

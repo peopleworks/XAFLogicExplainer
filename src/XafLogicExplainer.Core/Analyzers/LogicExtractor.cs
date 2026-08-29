@@ -330,11 +330,10 @@ public class LogicExtractor : ILogicExtractor
 
         // HACK: Metadata parsing currently relies on simple regex patterns against raw XML text.
         // A future refactor should use XDocument to reliably handle multiline attributes and property groups.
-        // Extract TargetFramework
-        var tfmMatch = System.Text.RegularExpressions.Regex.Match(csprojContent,
-            @"<TargetFramework>(.*?)</TargetFramework>");
-        if (tfmMatch.Success)
-            project.TargetFramework = tfmMatch.Groups[1].Value;
+        // Read through every spelling, because a project from before the SDK format writes
+        // `<TargetFrameworkVersion>v4.8` and no `<TargetFramework>` at all -- and reporting nothing
+        // for it tells an agent it may use modern C# in the one place that will not compile.
+        project.TargetFramework = DeclaredTargetFramework.FromProjectFile(csprojContent) ?? string.Empty;
 
         // Extract PackageReferences
         var packageMatches = System.Text.RegularExpressions.Regex.Matches(csprojContent,
