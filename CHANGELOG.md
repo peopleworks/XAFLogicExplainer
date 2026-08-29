@@ -66,6 +66,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   overview printed a `Framework:` label with nothing after it, the detail page did the same, and
   the MCP overview told an agent `Target framework: .` — all three now omit it, because an empty
   field reads as a document that lost a value rather than as a fact that was never declared.
+- **A module whose entity base lives in a referenced project extracted nothing**
+  ([#52](https://github.com/peopleworks/XAFLogicExplainer/issues/52)). Persistence was decided by
+  matching a class base against known names, with a second pass for bases declared in the same
+  project. Neither reached a base declared in a **referenced** project, so every entity below it
+  was dropped — and not partially: the module reported that it persists nothing, which is a claim
+  rather than a gap. In the layout where the shared project happens to sit beside the module it was
+  worse than empty: the sibling scan contributed the abstract base itself, so the inventory named
+  one business object that is not a table and omitted the two that are.
+- The projects a module references are now read so their base declarations resolve, following the
+  chain transitively — a base is as likely to be two hops away as one — with a visited set and a
+  depth bound so a hand-edited reference cycle terminates instead of hanging. It stays syntax-only:
+  no build, no restore, no MSBuild evaluation, and a reference whose path is not on this machine is
+  skipped rather than reported.
+- **Their classes are read, and are not listed as this application entities.** They belong to the
+  project that declares them. Listing them would put the same shared base in the inventory of every
+  client referencing it, and the wiki would then report one library referenced three times as a
+  class modelled three times — the false-reuse claim
+  [#54](https://github.com/peopleworks/XAFLogicExplainer/issues/54) was about, arriving by a
+  different road. What does travel is what an entity inherits: `Cliente` keeps the `CreatedOn` from
+  a base two projects away, because a reader of one entity is told the whole truth.
+- `ExtractionOptions.FollowProjectReferences` is on by default and can be turned off by a caller
+  of the library, because the cost is not free: a referenced project with no `BusinessObjects`
+  folder is read in full, which is how a primitives library is normally laid out. There is no CLI
+  flag for it yet — it is worth one only if a real project turns out to need it.
 
 ## [0.17.0] — 2026-08-24
 

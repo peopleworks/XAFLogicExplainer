@@ -20,7 +20,17 @@ public class EntityAnalyzer : IEntityAnalyzer
     public List<ExtractedEntity> AnalyzeEntities(string sourceDirectory, ExtractionOptions options)
     {
         var entities = new List<ExtractedEntity>();
-        var csFiles = FindFiles(sourceDirectory, options.BusinessObjectPatterns, options.ExcludePatterns).ToList();
+        var ownFiles = FindFiles(sourceDirectory, options.BusinessObjectPatterns, options.ExcludePatterns).ToList();
+
+        // Borrowed, not owned. A base class declared in a referenced project has to be readable or
+        // every class deriving from it is dropped -- and the module reports that it persists
+        // nothing, which is a claim rather than a gap. These files are parsed alongside the
+        // project own, so the base resolves and its properties fold down, and the entities they
+        // declare are removed again before the result is returned: they belong to the project that
+        // declares them.
+        var borrowedFiles = ReferencedSourceFiles(sourceDirectory, options, ownFiles);
+        var borrowed = borrowedFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var csFiles = ownFiles.Concat(borrowedFiles).ToList();
 
         // Parsed once and kept, because the DbSet roster has to be known before the first class is
         // classified and re-parsing every file to build it costs more than holding the trees.
@@ -73,7 +83,46 @@ public class EntityAnalyzer : IEntityAnalyzer
         // parent's relationship down itself, marked with the class that declared it.
         FoldInheritance(entities, parents);
 
+        // After the fold, which is the whole reason they were read: `Cliente` keeps the
+        // `CreatedOn` it inherits from a base in the shared project, and the shared project own
+        // classes stop being reported as this application business objects.
+        if (borrowed.Count > 0)
+            entities.RemoveAll(entity => borrowed.Contains(entity.FilePath));
+
         return entities;
+    }
+
+    /// <summary>
+    /// The source files of the projects this one references, minus anything already being read.
+    /// </summary>
+    /// <remarks>
+    /// A referenced project with no <c>BusinessObjects</c> folder is read in full, because
+    /// <see cref="FindFiles"/> falls back to the whole directory -- which is the right answer for
+    /// a shared library that keeps its primitives at the root, and the reason this is a switch.
+    /// </remarks>
+    private static List<string> ReferencedSourceFiles(
+        string sourceDirectory,
+        ExtractionOptions options,
+        List<string> ownFiles)
+    {
+        if (!options.FollowProjectReferences)
+            return [];
+
+        // Seeded with what is already being read, so a project referenced twice down two paths --
+        // and a reference that points back at this directory -- contributes its files once.
+        var seen = ownFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var files = new List<string>();
+
+        foreach (var directory in ProjectFile.ReferencedDirectories(sourceDirectory))
+        {
+            foreach (var file in FindFiles(directory, options.BusinessObjectPatterns, options.ExcludePatterns))
+            {
+                if (seen.Add(file))
+                    files.Add(file);
+            }
+        }
+
+        return files;
     }
 
     /// <summary>

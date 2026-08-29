@@ -55,6 +55,16 @@ internal static class SampleProjects
     /// <summary>Path to the fixture whose module registers predefined reports.</summary>
     public static string ReportsPath => Path.Combine(FixturesRoot, "ReportsSolution", "Invoicing.Module");
 
+    /// <summary>
+    /// Path to the module whose entity base is declared two project references away.
+    /// </summary>
+    /// <remarks>
+    /// The shared library deliberately sits outside this module solution folder, so the sibling
+    /// scan cannot reach it and the only route to the base is the reference chain itself.
+    /// </remarks>
+    public static string SharedBasePath =>
+        Path.Combine(FixturesRoot, "SharedBaseSolution", "Client.Module");
+
     /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
     public static string LegacyFrameworkPath =>
         Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
@@ -137,6 +147,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
     private static readonly Lazy<ExtractedProject> LazyReports = new(() => Extract(ReportsPath));
     private static readonly Lazy<ExtractedProject> LazyLegacyFramework = new(() => Extract(LegacyFrameworkPath));
+    private static readonly Lazy<ExtractedProject> LazySharedBase = new(() => Extract(SharedBasePath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -180,6 +191,17 @@ internal static class SampleProjects
     /// in the old shape too: block namespaces, backing fields, no auto properties.
     /// </remarks>
     public static ExtractedProject LegacyFramework => LazyLegacyFramework.Value;
+
+    /// <summary>
+    /// An application whose entities derive from a base in a referenced framework library.
+    /// </summary>
+    /// <remarks>
+    /// <c>Cliente</c> and <c>Factura</c> derive from <c>Audit.Core.AuditedEntity</c>, which
+    /// derives from <c>Audit.Primitives.TrackedObject</c>, which derives from
+    /// <c>BaseObject</c> — three hops through two projects, neither of them beside the module.
+    /// A developer with a shared framework library is who this shape stands for.
+    /// </remarks>
+    public static ExtractedProject SharedBase => LazySharedBase.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.

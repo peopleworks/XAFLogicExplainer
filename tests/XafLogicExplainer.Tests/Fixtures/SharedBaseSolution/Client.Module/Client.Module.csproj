@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Fixture only. Never built.
+
+    The base its entities derive from is declared in neither this project nor any directory beside
+    it: it lives two ProjectReference hops away, outside this solution folder entirely, which is
+    where a framework library shared between clients actually sits. Both fixture shapes that came
+    before this one -- a base in the same project, and each application carrying its own copy --
+    already passed while this case extracted nothing.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SharedFrameworkLibrary\Audit.Core\Audit.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="25.1.5" />
+  </ItemGroup>
+
+</Project>
