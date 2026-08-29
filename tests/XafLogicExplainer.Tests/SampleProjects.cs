@@ -55,6 +55,10 @@ internal static class SampleProjects
     /// <summary>Path to the fixture whose module registers predefined reports.</summary>
     public static string ReportsPath => Path.Combine(FixturesRoot, "ReportsSolution", "Invoicing.Module");
 
+    /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
+    public static string LegacyFrameworkPath =>
+        Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
+
     /// <summary>
     /// Three modules standing in for the same developer's work for three different clients.
     /// </summary>
@@ -132,6 +136,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyDeepXpo = new(() => Extract(DeepXpoPath));
     private static readonly Lazy<ExtractedProject> LazyAuditedXpo = new(() => Extract(AuditedXpoPath));
     private static readonly Lazy<ExtractedProject> LazyReports = new(() => Extract(ReportsPath));
+    private static readonly Lazy<ExtractedProject> LazyLegacyFramework = new(() => Extract(LegacyFrameworkPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -164,6 +169,17 @@ internal static class SampleProjects
     /// <c>.repx</c>, one built in its constructor, and a parameters object.
     /// </summary>
     public static ExtractedProject Reports => LazyReports.Value;
+
+    /// <summary>
+    /// An XPO application in the pre-SDK project format, targeting .NET Framework 4.8.
+    /// </summary>
+    /// <remarks>
+    /// It declares its framework in <c>TargetFrameworkVersion</c> and its DevExpress version in
+    /// assembly references, neither of which the SDK format uses — so it is the fixture that
+    /// fails whenever project-file reading quietly assumes the modern spelling. Its C# is written
+    /// in the old shape too: block namespaces, backing fields, no auto properties.
+    /// </remarks>
+    public static ExtractedProject LegacyFramework => LazyLegacyFramework.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.

@@ -41,7 +41,14 @@ public sealed class XafDiscoveryTools
 
         sb.AppendLine($"# {app.ProjectName}");
         sb.AppendLine();
-        sb.AppendLine($"DevExpress XAF application. Persistence: **{orm}**. Target framework: {app.TargetFramework}.");
+        sb.Append($"DevExpress XAF application. Persistence: **{orm}**.");
+
+        // Omitted rather than printed empty. "Target framework: ." is not a smaller answer than
+        // naming one, it is an unreadable one, and this string is what an agent reasons from.
+        if (!string.IsNullOrWhiteSpace(app.TargetFramework))
+            sb.Append($" Target framework: {app.TargetFramework}.");
+
+        sb.AppendLine();
         sb.AppendLine();
         sb.AppendLine($"- Entities: **{app.Entities.Count}**");
         sb.AppendLine($"- Controllers: **{app.Controllers.Count}** exposing **{actionCount}** actions");

@@ -42,6 +42,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `EntityAnalyzer.cs` carried a literal NUL byte inside a string interpolation, used as a key
   separator. It compiled, and it made the largest file in the project binary to `grep` and
   `ripgrep`, which silently refuse to search it. Written as the `\0` escape instead.
+- **A .NET Framework application told an agent nothing about its framework**
+  ([#50](https://github.com/peopleworks/XAFLogicExplainer/issues/50)). `ExtractProjectMetadata`
+  read `<TargetFramework>` and no other spelling, so a project from before the SDK format —
+  which declares `<TargetFrameworkVersion>v4.8</TargetFrameworkVersion>` and has no
+  `<TargetFramework>` at all — reported an **empty** framework. Not a wrong one: none. Two of the
+  six real applications came out of `xaflogic wiki` with no framework at all beside four that
+  reported `net7.0` and `net9.0`. The framework is now read through every spelling a project file
+  uses, and the pre-SDK one is normalised to its moniker: `v4.8` becomes `net48`, `v4.8.1` becomes
+  `net481` — different frameworks, and kept distinguishable. A multi-targeting
+  `<TargetFrameworks>` list, which the old regex also could not see, is reported as the project
+  declared it.
+- `AGENTS.md` now carries a **ground rule** for a .NET Framework application rather than only
+  naming the framework in its summary. This is what the issue is actually about: an agent told
+  nothing assumes a modern framework and reaches for APIs that are not there. The rule is
+  deliberately narrow — most modern C# *syntax* does compile there once `LangVersion` is set, and
+  a rule that forbade all of it would be false and would cost the true half its credibility. It
+  names only what no compiler switch supplies: the C# 7.3 default, the missing
+  `System.Text.Json`/`IAsyncEnumerable<T>`/`Index`/`Range`, default interface methods being
+  impossible, and the polyfill attributes `record` and `required` need. Written from a reading and
+  never from a default, the same discipline the ORM rule keeps.
+- A project whose framework was never declared no longer renders an empty field. The Markdown
+  overview printed a `Framework:` label with nothing after it, the detail page did the same, and
+  the MCP overview told an agent `Target framework: .` — all three now omit it, because an empty
+  field reads as a document that lost a value rather than as a fact that was never declared.
 
 ## [0.17.0] — 2026-08-24
 
