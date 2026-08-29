@@ -986,10 +986,22 @@ def retime(guiones: dict) -> None:
         print()
 
 
-def ensure_stills(page_obj) -> dict:
-    """Capture the real report sections the evidence scenes pan over."""
+def ensure_stills(page_obj, refresh: bool = False) -> dict:
+    """Capture the real report sections the evidence scenes pan over.
+
+    Captured once and kept, because the run behind them is slow. That is also how they go stale
+    without anyone noticing: these sat sixteen days and ten releases behind the tool whose output
+    they are supposed to BE, and the only reason the film was not showing something untrue is
+    that the fixture happened to extract identically. `--restills` is the way to check that
+    rather than assume it -- and a byte-identical recapture is itself the useful answer.
+    """
     STILLS.mkdir(parents=True, exist_ok=True)
     wanted = {key: STILLS / f"{key}.png" for key, _, _ in STILLS_WANTED}
+
+    if refresh:
+        REPORT.unlink(missing_ok=True)
+        for path in wanted.values():
+            path.unlink(missing_ok=True)
 
     if any(not path.exists() for path in wanted.values()):
         if not REPORT.exists():
@@ -1046,6 +1058,10 @@ def main() -> None:
     parser.add_argument("--assemble", action="store_true",
                         help="join the rendered scenes into one film per language, carrying "
                              "each scene's narration if audio/<lang>/<scene>.mp3 exists")
+    parser.add_argument("--restills", action="store_true",
+                        help="recapture the evidence stills from a fresh run of the tool. They "
+                             "are captured once and kept, so without this they outlive the "
+                             "output they are supposed to be evidence of")
     parser.add_argument("--retime", action="store_true",
                         help="rewrite each scene's length from its recorded take, or from its "
                              "word count until one exists, and print the chapter list")
@@ -1076,7 +1092,7 @@ def main() -> None:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         helper = browser.new_page()
-        stills = ensure_stills(helper)
+        stills = ensure_stills(helper, refresh=args.restills)
         helper.close()
         print()
         for still in stills.values():
