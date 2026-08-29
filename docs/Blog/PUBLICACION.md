@@ -163,9 +163,9 @@ CHAPTERS
 01:25  Migrations that run once per database
 01:49  What runs when you open a screen
 02:16  Roslyn: no compile, no licence
-02:34  Why most docs are NOT in AGENTS.md
-02:54  The domain map nobody has seen
-03:12  Try it on your application
+02:32  Why most docs are NOT in AGENTS.md
+02:52  The domain map nobody has seen
+03:10  Try it on your application
 
 #DevExpress #XAF #dotnet #AI #OpenSource
 ```
@@ -211,9 +211,9 @@ CAPÍTULOS
 01:30  Migraciones: como mucho una vez por base de datos
 01:59  Qué se ejecuta cuando abres una pantalla
 02:33  Roslyn: sin compilar, sin licencia
-02:51  Por qué la mayoría de la documentación NO está en AGENTS.md
-03:10  El mapa de dominio que nadie ha visto
-03:32  Pruébalo en tu aplicación
+02:50  Por qué la mayoría de la documentación NO está en AGENTS.md
+03:09  El mapa de dominio que nadie ha visto
+03:31  Pruébalo en tu aplicación
 
 #DevExpress #XAF #dotnet #IA #OpenSource
 ```
