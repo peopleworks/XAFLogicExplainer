@@ -91,6 +91,38 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   folder is read in full, which is how a primitives library is normally laid out. There is no CLI
   flag for it yet — it is worth one only if a real project turns out to need it.
 
+- **A class the module and a referenced project both declared was merged across the boundary**
+  ([#61](https://github.com/peopleworks/XAFLogicExplainer/issues/61), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). `MergePartialDeclarations` keyed parts on namespace
+  and name alone, so two projects declaring one name under one namespace looked like two halves of
+  a partial class. When the borrowed half became primary the merged entity inherited its file path
+  and the removal that drops borrowed classes deleted the module own class with it — the module
+  reported **no entities at all**. When the local half stayed primary it silently absorbed the
+  library properties instead. Parts now merge only within their own pool, and where the two still
+  meet — folding inherited properties — the local declaration wins, which is what C# does
+  (CS0436). Reachable by nothing worse than a file copied into a client and left in the library
+  namespace.
+- **An XPO module that references an EF Core utility was reported as EF Core**
+  ([#62](https://github.com/peopleworks/XAFLogicExplainer/issues/62), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). The `DbSet` roster was built over both pools and ORM
+  detection answered EF Core the moment anything registered, so a cache store next door decided how
+  the application persists. A caching, telemetry or Identity database beside XAF security is a real
+  layout, and the ORM is what `AGENTS.md` and the MCP overview hand an agent as a **hard rule** —
+  one that forbids the whole API surface of whichever ORM it did not name. Detection now reads the
+  project own files first and only falls back to what it references when its own files name no ORM
+  at all, which keeps the opposite layout working: a module whose entities all derive from a base
+  in the framework project it references.
+- **The change hash stopped covering everything the extraction reads**
+  ([#63](https://github.com/peopleworks/XAFLogicExplainer/issues/63), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). Referenced source became readable without the hash
+  following, so editing an inherited property in a shared base left `.xaflogicexplainer` untouched
+  and every command answered "no changes detected" — documentation that is wrong and says it is
+  current, which is worse than having no change detection at all, because nobody re-runs a command
+  that just said there was nothing to do. The hash now covers the referenced source and the project
+  files, so adding or removing a `<ProjectReference>` invalidates too. It errs wide on purpose:
+  with reference following switched off it covers more than is read, and one extra run is the
+  cheaper mistake.
+
 ## [0.17.0] — 2026-08-24
 
 The question one application cannot answer.

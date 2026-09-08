@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Fixture only. Never built. An XPO application that references an EF Core utility. -->
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="25.1.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\SharedFrameworkLibrary\Cache.EfCore\Cache.EfCore.csproj" />
+  </ItemGroup>
+</Project>

@@ -46,12 +46,21 @@ public class EntityAnalyzer : IEntityAnalyzer
             .Select(file => (File: file, Root: CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file).GetRoot()))
             .ToList();
 
+        // Two rosters, because they answer different questions. Acceptance may read a context in
+        // a referenced project: a shared `DbContext` registering a class declared here is a real
+        // layout. Detection may not -- an EF Core utility beside an XPO application is also a real
+        // layout, and it must not make the application EF Core.
         var roster = DbSetRoster.Read(parsedFiles.Select(parsed => parsed.Root));
+
+        var ownRoots = parsedFiles
+            .Where(parsed => !borrowed.Contains(parsed.File))
+            .Select(parsed => parsed.Root)
+            .ToList();
 
         // Resolved after the parse, because the roster is the best evidence there is and it only
         // exists once the trees do.
         var ormType = options.Orm == OrmType.Auto
-            ? DetectOrmType(parsedFiles.Select(parsed => parsed.Root), roster)
+            ? DetectOrm(ownRoots, parsedFiles.Select(parsed => parsed.Root).ToList(), roster)
             : options.Orm;
         options.ResolvedOrm = ormType;
 
@@ -71,7 +80,7 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
 
         // One entity per class, not per declaration -- a partial split across files is one thing.
-        entities = MergePartialDeclarations(entities);
+        entities = MergePartialDeclarations(entities, borrowed);
 
         // Post-extraction: infer EF Core relationships from navigation properties
         if (ormType == OrmType.EfCore)
@@ -81,7 +90,7 @@ public class EntityAnalyzer : IEntityAnalyzer
         // after relationship inference, so an inherited navigation property is not inferred a
         // second time under the descendant that received a copy of it — the fold carries the
         // parent's relationship down itself, marked with the class that declared it.
-        FoldInheritance(entities, parents);
+        FoldInheritance(entities, parents, borrowed);
 
         // After the fold, which is the whole reason they were read: `Cliente` keeps the
         // `CreatedOn` it inherits from a base in the shared project, and the shared project own
@@ -846,6 +855,32 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// default in the same voice as everything that was actually read.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// What this project persists with, decided first by what it declares itself.
+    /// </summary>
+    /// <remarks>
+    /// A referenced project only ever breaks a tie. An XPO application that references an EF Core
+    /// utility -- a cache, a telemetry store, an Identity database beside XAF security -- is not
+    /// an EF Core application, and reading it as one is expensive: the ORM is what
+    /// <c>AGENTS.md</c> and the MCP overview hand an agent as a hard rule, and the rule forbids
+    /// the whole API surface of whichever ORM it did not name.
+    /// <para>
+    /// The fallback is for the opposite layout, which is just as real: a module whose own files
+    /// name no ORM at all because every entity derives from a base in the framework project it
+    /// references. Answering <see cref="OrmType.Unknown"/> there would throw away a reading that
+    /// was available.
+    /// </para>
+    /// </remarks>
+    private static OrmType DetectOrm(
+        List<SyntaxNode> ownRoots,
+        List<SyntaxNode> allRoots,
+        DbSetRoster roster)
+    {
+        var own = DetectOrmType(ownRoots, DbSetRoster.Read(ownRoots));
+
+        return own != OrmType.Unknown ? own : DetectOrmType(allRoots, roster);
+    }
+
     private static OrmType DetectOrmType(IEnumerable<SyntaxNode> roots, DbSetRoster roster)
     {
         // The application cannot run without its registrations being right, which makes them the
@@ -1077,14 +1112,26 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// part carries <c>: BaseObject</c> and a generated part carries half the columns.
     /// </para>
     /// </remarks>
-    private static List<ExtractedEntity> MergePartialDeclarations(List<ExtractedEntity> entities)
+    /// <param name="entities">Every entity extracted, from both pools.</param>
+    /// <param name="borrowed">
+    /// Files read from referenced projects. Parts are merged only within their own pool, because
+    /// a class two projects both declare under one namespace is two classes, not two halves of
+    /// one. C# compiles that shape -- the local type wins, with a warning -- so it is reachable
+    /// by nothing worse than a file copied into a client and left in the library's namespace.
+    /// Merging across the boundary let the borrowed half become primary, which handed the module
+    /// the other project's properties and then deleted the module's own class along with the
+    /// borrowed file it had inherited a path from.
+    /// </param>
+    private static List<ExtractedEntity> MergePartialDeclarations(
+        List<ExtractedEntity> entities,
+        HashSet<string> borrowed)
     {
-        var parts = new Dictionary<(string Namespace, string ClassName), List<ExtractedEntity>>();
-        var order = new List<(string Namespace, string ClassName)>();
+        var parts = new Dictionary<(bool Borrowed, string Namespace, string ClassName), List<ExtractedEntity>>();
+        var order = new List<(bool Borrowed, string Namespace, string ClassName)>();
 
         foreach (var entity in entities)
         {
-            var key = (entity.Namespace, entity.ClassName);
+            var key = (borrowed.Contains(entity.FilePath), entity.Namespace, entity.ClassName);
             if (!parts.TryGetValue(key, out var group))
             {
                 parts[key] = group = [];
@@ -1165,11 +1212,31 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// descendant and each listing names its own declarer.
     /// </para>
     /// </remarks>
+    /// <param name="entities">Every entity extracted, from both pools.</param>
+    /// <param name="parents">Each accepted class and the class it derives from.</param>
+    /// <param name="borrowed">
+    /// Files read from referenced projects. Since the pools stopped merging, a class two projects
+    /// both declare under one namespace reaches this point twice, and the collision is real rather
+    /// than a bug to route around: C# binds the local type there, warning about the other, so the
+    /// local one is what a descendant inherits from and the one whose ancestry is folded.
+    /// </param>
     private static void FoldInheritance(
         List<ExtractedEntity> entities,
-        Dictionary<(string Namespace, string Name), (string Namespace, string Name)> parents)
+        Dictionary<(string Namespace, string Name), (string Namespace, string Name)> parents,
+        HashSet<string> borrowed)
     {
-        var byClass = entities.ToDictionary(entity => (entity.Namespace, entity.ClassName));
+        var byClass = new Dictionary<(string Namespace, string Name), ExtractedEntity>();
+
+        foreach (var entity in entities)
+        {
+            var key = (entity.Namespace, entity.ClassName);
+
+            if (!byClass.TryGetValue(key, out var held)
+                || (!borrowed.Contains(entity.FilePath) && borrowed.Contains(held.FilePath)))
+            {
+                byClass[key] = entity;
+            }
+        }
         var folded = new HashSet<(string Namespace, string Name)>();
 
         foreach (var entity in entities)

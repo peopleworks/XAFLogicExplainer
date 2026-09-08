@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Fixture only. Never built. Declares a class the module declares too, in the same namespace. -->
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+</Project>

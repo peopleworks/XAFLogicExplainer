@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Fixture only. Never built.
+
+    It declares Cliente in the same namespace as the project it references. C# compiles that
+    (CS0436: the local type wins), so it is reachable by nothing worse than a file copied into a
+    client and left in the library's namespace -- and it used to delete the module's own class.
+  -->
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\SharedFrameworkLibrary\Homonym.Core\Homonym.Core.csproj" />
+  </ItemGroup>
+</Project>
