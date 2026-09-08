@@ -60,7 +60,18 @@ tool never links against DevExpress assemblies:
 
 - **Entities** — properties, types, associations, and the XAF attributes that give them meaning
   (`[Association]`, `[Aggregated]`, `[RuleRequiredField]`, `[Appearance]`, `[ModelDefault]`, …).
-  **XPO and EF Core**, auto-detected from your `using` statements.
+  Found **however your application declares them**: through an XPO base, through a `DbSet<T>` in
+  any spelling a real project uses, through the type argument of a generic context base, and
+  through a base class that lives in a **referenced project**. An empty answer is a claim, so the
+  rule leans towards reading more — and what it still does not read is written down and asserted
+  rather than remembered.
+- **Which ORM the application persists with** — decided by what the project itself declares, not by
+  what sits beside it. An EF Core cache next to an XPO application does not make it EF Core, and
+  the answer becomes a hard rule in the agent file.
+- **The framework it targets** — in every spelling a project file uses, including the pre-SDK
+  `<TargetFrameworkVersion>v4.8` that no modern reader looks for. On .NET Framework the agent file
+  gains a ground rule for what is genuinely unavailable there, which is narrower than most people
+  assume and stated that way.
 - **Controllers and actions** — `SimpleAction`, `PopupWindowShowAction`, `SingleChoiceAction`,
   their target criteria, and the handler code that runs when they fire.
 - **Business rules** — validation attributes and code rules, with the conditions attached.
@@ -460,7 +471,9 @@ applications. The agent-facing surface is what is landing now, in the open.
 | | |
 | --- | --- |
 | ✅ | Roslyn extraction — entities, controllers, rules, updater, navigation, `.xafml` |
-| ✅ | XPO and EF Core, auto-detected |
+| ✅ | XPO and EF Core, decided by what the project itself declares |
+| ✅ | **Reads base classes from referenced projects**, so a shared framework library is not a blank page |
+| ✅ | Target framework in every project-file spelling, and a .NET Framework ground rule in `AGENTS.md` |
 | ✅ | **Custom property and list editors**, their client assets, and built-in editors reconfigured at run time |
 | ✅ | **Version-gated data migrations** — what happened to databases that were not fresh |
 | ✅ | Incremental change detection, diff reports, multi-project, watch mode |

@@ -1275,6 +1275,18 @@ footer p { max-width: 44rem; }
         <p>The vocabulary of your applications, which nobody wrote down and everybody who joins has
            to learn by reading code.</p>
       </div>
+      <div class="card card--lit">
+        <h3>What the wizard gave everybody</h3>
+        <p><code>ApplicationUser</code> is in every XAF solution made since 2021, because the
+           Project Wizard writes it. Two applications holding the same one did not build it twice,
+           so it is shown and left out of the count. Extend it in two of them and it comes back.</p>
+      </div>
+      <div class="card card--lit">
+        <h3>A name, and nothing else</h3>
+        <p>An Identity <code>ApplicationUser</code> and an XAF one share a name and not one
+           property. The page says so, rather than leaving you to work it out row by row from a
+           comparison where everything differs.</p>
+      </div>
     </div>
 
     <p style="margin-top:2.2rem">
@@ -1287,6 +1299,13 @@ footer p { max-width: 44rem; }
       Two classes are matched <strong>by name</strong>. So the wiki tells you they share a name — the
       comparison beside it is what tells you whether they share an idea. It says which of those two
       things it knows, on the page, next to the finding.
+    </p>
+    <p>
+      Which is why the count is worth less than what it excludes. A class every XAF solution was
+      given is not reuse; a pair that shares a name and <em>no base, no contract and not one
+      property</em> was probably never the same idea. Both are still on the page, said out loud —
+      one shared property name is enough to withdraw the second remark, because a concept rebuilt
+      on another framework is still one concept.
     </p>
   </section>
 
