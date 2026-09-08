@@ -65,6 +65,16 @@ internal static class SampleProjects
     public static string SharedBasePath =>
         Path.Combine(FixturesRoot, "SharedBaseSolution", "Client.Module");
 
+    /// <summary>
+    /// Path to the module that declares a class its referenced project also declares.
+    /// </summary>
+    public static string HomonymPath =>
+        Path.Combine(FixturesRoot, "HomonymSolution", "Homonym.Module");
+
+    /// <summary>Path to the XPO module that references an EF Core utility project.</summary>
+    public static string XpoWithEfUtilPath =>
+        Path.Combine(FixturesRoot, "XpoWithEfUtilSolution", "XpoUtil.Module");
+
     /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
     public static string LegacyFrameworkPath =>
         Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
@@ -148,6 +158,8 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyReports = new(() => Extract(ReportsPath));
     private static readonly Lazy<ExtractedProject> LazyLegacyFramework = new(() => Extract(LegacyFrameworkPath));
     private static readonly Lazy<ExtractedProject> LazySharedBase = new(() => Extract(SharedBasePath));
+    private static readonly Lazy<ExtractedProject> LazyHomonym = new(() => Extract(HomonymPath));
+    private static readonly Lazy<ExtractedProject> LazyXpoWithEfUtil = new(() => Extract(XpoWithEfUtilPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -202,6 +214,17 @@ internal static class SampleProjects
     /// A developer with a shared framework library is who this shape stands for.
     /// </remarks>
     public static ExtractedProject SharedBase => LazySharedBase.Value;
+
+    /// <summary>
+    /// A module whose <c>Cliente</c> shares a namespace with a <c>Cliente</c> in the project it
+    /// references. C# binds the local one; the extraction has to agree with C#.
+    /// </summary>
+    public static ExtractedProject Homonym => LazyHomonym.Value;
+
+    /// <summary>
+    /// An XPO application that references an EF Core utility — a cache, which is a real reason.
+    /// </summary>
+    public static ExtractedProject XpoWithEfUtil => LazyXpoWithEfUtil.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.
