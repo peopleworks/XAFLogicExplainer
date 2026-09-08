@@ -192,16 +192,25 @@ public static class CorpusAnalyzer
                 Properties = properties,
 
                 // Every application has to carry the contract, and they all have to declare the
-                // same properties. One application that extended it is enough to make the class a
-                // real finding, because then the applications disagree -- and the disagreement is
-                // the answer to "have I built this before".
+                // same properties, with the same type for each. One application that extended it
+                // is enough to make the class a real finding, because then the applications
+                // disagree -- and the disagreement is the answer to "have I built this before".
+                //
+                // A null TypeName is CompareProperties reporting that the applications gave one
+                // name two types. That is the finding the page has a whole section for, so a
+                // template must never be able to swallow one: before this clause, `Department`
+                // being a string in one application and an int in the other was reported as
+                // identical, and the class was dropped from the count entirely.
                 IsTemplate = uses.TrueForAll(u => SecurityContract.IsCarriedBy(u.Entity))
-                             && properties.All(p => p.Applications.Count == uses.Count),
+                             && properties.All(p => p.Applications.Count == uses.Count
+                                                    && p.TypeName is not null),
 
                 Contracts = [.. uses
                     .SelectMany(u => SecurityContract.CarriedBy(u.Entity))
                     .Distinct(StringComparer.Ordinal)
                     .OrderBy(name => name, StringComparer.Ordinal)],
+
+                PossibleHomonym = SharesNothingButTheName(uses),
             });
         }
 
@@ -212,6 +221,62 @@ public static class CorpusAnalyzer
             .ThenByDescending(r => r.Properties.Count)
             .ThenBy(r => r.ClassName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>
+    /// Whether every pair of these declarations shares the name and nothing else that was read.
+    /// </summary>
+    /// <remarks>
+    /// Three tests, all over what the source actually wrote: the first base differs, the written
+    /// base and contract lists have nothing in common, and both sides declare properties whose
+    /// names have nothing in common. Nothing here is a list of known types, so it holds for a
+    /// framework nobody has thought of yet.
+    /// <para>
+    /// Pairwise and unanimous, so one pair with anything in common silences the whole finding. A
+    /// single shared property name is enough, which is the false positive worth protecting
+    /// against: one concept migrated between frameworks with every property renamed is still one
+    /// concept, and calling it a coincidence would be worse than saying nothing.
+    /// </para>
+    /// <para>
+    /// "Written base list" rather than "interfaces": the resolver reads syntax, and syntax cannot
+    /// tell an interface from a class base.
+    /// </para>
+    /// </remarks>
+    private static bool SharesNothingButTheName(
+        List<(WikiApplication App, ExtractedEntity Entity)> uses)
+    {
+        for (var i = 0; i < uses.Count; i++)
+        {
+            for (var j = i + 1; j < uses.Count; j++)
+            {
+                if (!SharesNothing(uses[i].Entity, uses[j].Entity))
+                    return false;
+            }
+        }
+
+        return uses.Count > 1;
+    }
+
+    private static bool SharesNothing(ExtractedEntity left, ExtractedEntity right)
+    {
+        if (string.Equals(StripGenerics(left.BaseType), StripGenerics(right.BaseType),
+                          StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var leftBases = left.BaseTypes.Select(StripGenerics).ToHashSet(StringComparer.Ordinal);
+        if (right.BaseTypes.Select(StripGenerics).Any(leftBases.Contains))
+            return false;
+
+        var leftProperties = Declared(left).Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+        var rightProperties = Declared(right).Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+
+        // Two classes that declare nothing share no property name for an uninteresting reason.
+        if (leftProperties.Count == 0 || rightProperties.Count == 0)
+            return false;
+
+        return !rightProperties.Any(leftProperties.Contains);
     }
 
     /// <summary>

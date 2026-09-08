@@ -435,13 +435,17 @@ public sealed class WikiGenerator
         if (templates.Count == 0)
             return;
 
-        sb.AppendLine($"  <h3 class=\"sub\">Carried by the framework, not modelled here <span class=\"card__meta\">{templates.Count}</span></h3>");
+        sb.AppendLine($"  <h3 class=\"sub\">Carried by the framework, unchanged everywhere <span class=\"card__meta\">{templates.Count}</span></h3>");
+        // What was measured, then what is inferred from it, in that order and marked as such.
+        // The measurement is a contract and an identical shape; that the wizard wrote it is the
+        // likeliest reading of that, not a second thing that was read.
         sb.AppendLine("  <p class=\"lede\">Each of these implements a DevExpress security contract and is "
-                    + "declared with the same properties in every application that has it — the shape the XAF "
-                    + "Project Wizard writes into every solution made with v21.1 or later. Two applications "
-                    + "holding the same one did not build it twice, so it is left out of the count above. "
-                    + "Extend it in two of them and it moves back up, because then there is a difference "
-                    + "worth reading.</p>");
+                    + "declared with the same property names <em>and the same types</em> in every application "
+                    + "that has it. That is what was measured. The likeliest reading is the XAF Project "
+                    + "Wizard, which writes this shape into every solution made with v21.1 or later — so "
+                    + "holding the same one is not something these applications built twice, and it is left "
+                    + "out of the count above. Change it in two of them, in a name or in a type, and it "
+                    + "moves back up, because then there is a difference worth reading.</p>");
 
         foreach (var recurring in templates)
             WriteRecurringEntity(sb, recurring);
@@ -467,6 +471,15 @@ public sealed class WikiGenerator
                 ? "      <span class=\"pill pill--shared\">same properties</span>"
                 : "      <span class=\"pill pill--own\">shapes differ</span>");
         sb.AppendLine("    </div>");
+
+        if (recurring.PossibleHomonym)
+        {
+            sb.AppendLine("    <p class=\"card__desc\"><strong>Possibly two different things.</strong> "
+                        + "These declarations share this name and nothing else that was read \u2014 not a "
+                        + "base, not a contract, not one property name. Compared anyway, because the "
+                        + "reading could be wrong; a single shared property would have withdrawn this "
+                        + "line.</p>");
+        }
 
         if (recurring.IsTemplate && recurring.Contracts.Count > 0)
         {

@@ -1010,14 +1010,19 @@ public class EntityAnalyzer : IEntityAnalyzer
 
                 foreach (var property in context.Members.OfType<PropertyDeclarationSyntax>())
                 {
-                    if (property.Type is not GenericNameSyntax generic) continue;
-                    if (generic.Identifier.Text != "DbSet") continue;
-                    if (generic.TypeArgumentList.Arguments.Count != 1) continue;
+                    if (AsDbSet(property.Type) is not { } generic) continue;
 
                     var argument = generic.TypeArgumentList.Arguments[0].ToString();
                     if (argument.Length > 0)
                         roster._registrations.Add((argument, scopes));
                 }
+
+                // A generic context base registers its type arguments without a property saying so.
+                // `IdentityDbContext<AppUser>` is the whole registration of the user table in the
+                // template ASP.NET Core writes, and reading only properties leaves that table out
+                // of an application that certainly has it.
+                foreach (var argument in GenericContextBaseArguments(context))
+                    roster._registrations.Add((argument, scopes));
             }
 
             return roster;
@@ -1029,8 +1034,15 @@ public class EntityAnalyzer : IEntityAnalyzer
         /// </summary>
         public bool Registers(string @namespace, string className)
         {
-            foreach (var (argument, scopes) in _registrations)
+            foreach (var (registered, scopes) in _registrations)
             {
+                // `DbSet<global::Shop.Invoice>` names the same class as `DbSet<Shop.Invoice>`.
+                // The alias qualifier survived into the namespace comparison below and made every
+                // such registration match nothing.
+                var argument = registered.StartsWith("global::", StringComparison.Ordinal)
+                    ? registered["global::".Length..]
+                    : registered;
+
                 var dot = argument.LastIndexOf('.');
                 var simpleName = dot < 0 ? argument : argument[(dot + 1)..];
                 if (!string.Equals(simpleName, className, StringComparison.Ordinal)) continue;
@@ -1073,6 +1085,30 @@ public class EntityAnalyzer : IEntityAnalyzer
         /// declared as a local inside a method body is a type name in a helper, not an
         /// application saying it owns a table.
         /// </para>
+        /// <para>
+        /// <strong>What this deliberately does not read</strong>, measured rather than guessed and
+        /// written here so the gap is not rediscovered:
+        /// </para>
+        /// <list type="bullet">
+        /// <item><description>
+        /// <c>modelBuilder.Entity&lt;T&gt;().ToTable(...)</c> in <c>OnModelCreating</c>. A real
+        /// registration, and reading it means reading a method body for calls rather than a
+        /// declaration for a shape -- a different kind of evidence, and one that a fluent chain
+        /// built in a loop or a helper would defeat anyway.
+        /// </description></item>
+        /// <item><description>
+        /// A context outside the business-object folder. Discovery narrows to
+        /// <c>BusinessObjects/</c> when it exists, so a <c>Data/AppDbContext.cs</c> beside it is
+        /// never parsed and everything it alone registers is missed. Widening the scan is the fix,
+        /// and it changes what every project pays to extract, so it is its own decision.
+        /// </description></item>
+        /// <item><description>
+        /// A class that is not a context but hands out a <c>DbSet&lt;T&gt;</c> -- a repository
+        /// wrapper -- is read as one. Kept on purpose: the type it names really is mapped
+        /// somewhere, and the alternative is demanding evidence of a base this rule exists
+        /// precisely to stop needing.
+        /// </description></item>
+        /// </list>
         /// </remarks>
         private static List<ClassDeclarationSyntax> FindContextClasses(List<SyntaxNode> trees)
         {
@@ -1088,12 +1124,79 @@ public class EntityAnalyzer : IEntityAnalyzer
         private static bool DeclaresAnyDbSet(ClassDeclarationSyntax candidate)
         {
             return candidate.Members
-                .OfType<PropertyDeclarationSyntax>()
-                .Any(property => property.Type is GenericNameSyntax
+                       .OfType<PropertyDeclarationSyntax>()
+                       .Any(property => AsDbSet(property.Type) is not null)
+                   || GenericContextBaseArguments(candidate).Count > 0;
+        }
+
+        /// <summary>
+        /// The <c>DbSet&lt;T&gt;</c> a type reference names, however it is written.
+        /// </summary>
+        /// <remarks>
+        /// A property may spell its type <c>Microsoft.EntityFrameworkCore.DbSet&lt;T&gt;</c> or
+        /// <c>global::Microsoft.EntityFrameworkCore.DbSet&lt;T&gt;</c>, which are the same declaration
+        /// and used to be invisible: the pattern demanded a bare generic name, so a context written
+        /// that way registered nothing at all.
+        /// </remarks>
+        private static GenericNameSyntax? AsDbSet(TypeSyntax? type)
+        {
+            var generic = type switch
+            {
+                GenericNameSyntax bare => bare,
+                QualifiedNameSyntax { Right: GenericNameSyntax right } => right,
+                AliasQualifiedNameSyntax { Name: GenericNameSyntax aliased } => aliased,
+                _ => null,
+            };
+
+            return generic is { Identifier.Text: "DbSet", TypeArgumentList.Arguments.Count: 1 }
+                ? generic
+                : null;
+        }
+
+        /// <summary>
+        /// The type arguments of a generic context base, which are registrations in their own right.
+        /// </summary>
+        /// <remarks>
+        /// Matched on the base's own name ending in <c>DbContext</c> rather than on a list of known
+        /// bases, so it holds for <c>IdentityDbContext</c>, for a team's
+        /// <c>TenantDbContext&lt;T&gt;</c>, and for whatever the next template writes. The base itself
+        /// is never needed: what it does with the argument is the framework's business, and that it
+        /// maps it is the thing worth knowing.
+        /// <para>
+        /// Every argument is offered, not just the first. A type argument that names no class the
+        /// application declares matches nothing when the roster is asked, so a <c>string</c> key costs
+        /// only the lookup.
+        /// </para>
+        /// </remarks>
+        private static List<string> GenericContextBaseArguments(ClassDeclarationSyntax candidate)
+        {
+            var arguments = new List<string>();
+
+            if (candidate.BaseList is null)
+                return arguments;
+
+            foreach (var baseType in candidate.BaseList.Types)
+            {
+                var generic = baseType.Type switch
                 {
-                    Identifier.Text: "DbSet",
-                    TypeArgumentList.Arguments.Count: 1,
-                });
+                    GenericNameSyntax bare => bare,
+                    QualifiedNameSyntax { Right: GenericNameSyntax right } => right,
+                    AliasQualifiedNameSyntax { Name: GenericNameSyntax aliased } => aliased,
+                    _ => null,
+                };
+
+                if (generic is null) continue;
+                if (!generic.Identifier.Text.EndsWith("DbContext", StringComparison.Ordinal)) continue;
+
+                foreach (var argument in generic.TypeArgumentList.Arguments)
+                {
+                    var name = argument.ToString();
+                    if (name.Length > 0)
+                        arguments.Add(name);
+                }
+            }
+
+            return arguments;
         }
     }
 

@@ -625,6 +625,118 @@ public class CorpusAnalyzerTests
         Assert.Equal(["Cliente", "ApplicationUser"], corpus.RecurringEntities.Select(r => r.ClassName));
     }
 
+    // ------------------------------------------- a template cannot swallow a type conflict
+
+    /// <summary>
+    /// Two applications that gave one property two types have not declared the same class.
+    /// </summary>
+    /// <remarks>
+    /// The comparison already recorded the disagreement as a null type; the template test never
+    /// read it. So a `Department` that is a string in one application and an int in the other was
+    /// reported as identical, and the class left the count altogether — the page suppressing the
+    /// exact finding its own "same name, two shapes" section exists for.
+    /// </remarks>
+    [Fact]
+    public void APropertyWhoseTypeDisagreesKeepsTheClassOutOfTheTemplates()
+    {
+        var corpus = Analyze(
+            App("Uno", Secured("ApplicationUser", "ISecurityUserWithLoginInfo",
+                Prop("Department", "String"), Prop("Photo", "Byte[]"))),
+            App("Dos", Secured("ApplicationUser", "ISecurityUserWithLoginInfo",
+                Prop("Department", "Int32"), Prop("Photo", "Byte[]"))));
+
+        var recurring = Assert.Single(corpus.RecurringEntities);
+
+        Assert.False(recurring.IsTemplate);
+        Assert.Equal(1, corpus.ModelledTwiceCount);
+    }
+
+    /// <summary>
+    /// Agreeing on the name and the type is still a template.
+    /// </summary>
+    [Fact]
+    public void AgreeingOnNameAndTypeIsStillATemplate()
+    {
+        var corpus = Analyze(
+            App("Uno", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))),
+            App("Dos", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "String"))));
+
+        Assert.True(Assert.Single(corpus.RecurringEntities).IsTemplate);
+    }
+
+    // ------------------------------------------------------- a name is not a shared idea
+
+    /// <summary>
+    /// Two classes sharing a name and nothing else are flagged as possibly two different things.
+    /// </summary>
+    /// <remarks>
+    /// An Identity <c>ApplicationUser</c> and an XAF one were never the same idea, and "shapes
+    /// differ" is true of them while telling nobody anything. Nothing in the rule is a list of
+    /// known types: the bases differ, the written base lists have nothing in common, and neither
+    /// declared property name appears on the other side.
+    /// </remarks>
+    [Fact]
+    public void AClassSharingOnlyItsNameIsFlagged()
+    {
+        var corpus = Analyze(
+            App("Identity", Shaped("ApplicationUser", "IdentityUser",
+                Prop("ApprovedAt", "DateTime"), Prop("AuthSource", "String"))),
+            App("Xaf", Shaped("ApplicationUser", "RoleChooserUserBase",
+                Prop("Voornaam", "String"), Prop("Telefoon", "String"))));
+
+        Assert.True(Assert.Single(corpus.RecurringEntities).PossibleHomonym);
+    }
+
+    /// <summary>
+    /// One property name in common withdraws the flag.
+    /// </summary>
+    /// <remarks>
+    /// The false positive worth protecting against: one concept migrated between frameworks, with
+    /// almost everything renamed, is still one concept. The rule errs towards saying nothing.
+    /// </remarks>
+    [Fact]
+    public void OneSharedPropertyNameWithdrawsTheFlag()
+    {
+        var corpus = Analyze(
+            App("Identity", Shaped("ApplicationUser", "IdentityUser",
+                Prop("ApprovedAt", "DateTime"), Prop("Email", "String"))),
+            App("Xaf", Shaped("ApplicationUser", "RoleChooserUserBase",
+                Prop("Voornaam", "String"), Prop("Email", "String"))));
+
+        Assert.False(Assert.Single(corpus.RecurringEntities).PossibleHomonym);
+    }
+
+    /// <summary>
+    /// So does a base the two have in common.
+    /// </summary>
+    [Fact]
+    public void ASharedBaseWithdrawsTheFlag()
+    {
+        var corpus = Analyze(
+            App("Uno", Shaped("Cliente", "BaseObject", Prop("Nombre", "String"))),
+            App("Dos", Shaped("Cliente", "BaseObject", Prop("Rnc", "String"))));
+
+        Assert.False(Assert.Single(corpus.RecurringEntities).PossibleHomonym);
+    }
+
+    /// <summary>
+    /// An ordinary shared class is not flagged, and the flag changes no count.
+    /// </summary>
+    /// <remarks>
+    /// Advisory only. Two classes really can share a name, share no property, and be one idea that
+    /// was rebuilt, so the comparison stays on the page either way.
+    /// </remarks>
+    [Fact]
+    public void TheFlagChangesNoCount()
+    {
+        var corpus = Analyze(
+            App("Identity", Shaped("ApplicationUser", "IdentityUser", Prop("ApprovedAt", "DateTime"))),
+            App("Xaf", Shaped("ApplicationUser", "RoleChooserUserBase", Prop("Voornaam", "String"))));
+
+        Assert.Equal(1, corpus.ModelledTwiceCount);
+        Assert.Single(corpus.RecurringEntities[0].Properties, p => p.Name == "ApprovedAt");
+    }
+
     private static WikiCorpus Analyze(params WikiApplication[] applications) =>
         CorpusAnalyzer.Analyze(applications);
 
@@ -701,6 +813,19 @@ public class CorpusAnalyzerTests
         // wizard writes `: PermissionPolicyUser, ISecurityUserWithLoginInfo`.
         entity.BaseType = "PermissionPolicyUser";
         entity.BaseTypes = ["PermissionPolicyUser", contract];
+
+        return entity;
+    }
+
+    private static ExtractedEntity Shaped(
+        string className,
+        string baseType,
+        params ExtractedProperty[] properties)
+    {
+        var entity = Entity(className, properties);
+
+        entity.BaseType = baseType;
+        entity.BaseTypes = [baseType];
 
         return entity;
     }
