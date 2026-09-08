@@ -123,6 +123,44 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with reference following switched off it covers more than is read, and one extra run is the
   cheaper mistake.
 
+- **A template could swallow a type conflict**
+  ([#64](https://github.com/peopleworks/XAFLogicExplainer/issues/64), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). `IsTemplate` asked whether every application declared
+  the same property *names* and never read the type, which the comparison had already recorded as
+  a disagreement. So a `Department` that is a `string` in one application and an `int` in the other
+  counted as identical, the class was called framework scaffold, and it left the count — the page
+  suppressing the exact finding its own "same name, two shapes" section exists for. One clause.
+  The card heading now says **"carried by the framework, unchanged everywhere"**: that the wizard
+  wrote it is the likeliest reading of a contract plus an identical shape, not a second thing that
+  was read, and the lede now says which is which.
+- **Three more spellings of an EF Core registration are read**
+  ([#65](https://github.com/peopleworks/XAFLogicExplainer/issues/65), surveyed by
+  [@MBrekhof](https://github.com/MBrekhof) on a fixture of six). A fully qualified
+  `Microsoft.EntityFrameworkCore.DbSet<T>` property and a `global::`-qualified type argument both
+  registered **nothing** — the first because the pattern demanded a bare generic name, the second
+  because the alias qualifier survived into the namespace comparison. And the type argument of a
+  generic context base is now a registration in its own right, which is the whole declaration of
+  the user table in the template ASP.NET Core writes. Matched on the base name ending in
+  `DbContext` rather than on a list of known bases, so it holds for a team own generic context and
+  needs the base itself no more than the rest of this reader does.
+- The two spellings that are still **not** read are now fixtures and tests rather than a memory: a
+  fluent `modelBuilder.Entity<T>()` mapping, and a context outside the business-object folder. Both
+  are real registrations and both are deliberate limits, written down where the next person looks.
+
+### Added
+
+- **A name match that shares nothing else is flagged as a possible homonym**
+  ([#66](https://github.com/peopleworks/XAFLogicExplainer/issues/66), suggested by
+  [@MBrekhof](https://github.com/MBrekhof)). The page matches classes by name and says so, which
+  left a reader to work out row by row that an Identity `ApplicationUser` and an XAF one were never
+  the same idea — "shapes differ" is true of them and tells nobody anything. A pair is flagged when
+  the first bases differ, the written base and contract lists have nothing in common, and both
+  declare properties whose names have nothing in common. No list of known types, so it holds for a
+  framework nobody has thought of yet. Advisory: it changes no count and hides no comparison, and a
+  single shared property name withdraws it — one concept migrated between frameworks with
+  everything renamed is still one concept. On the six real applications it flags exactly one of
+  sixteen, `Cobro`.
+
 ## [0.17.0] — 2026-08-24
 
 The question one application cannot answer.

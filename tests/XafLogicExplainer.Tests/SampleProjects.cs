@@ -71,6 +71,10 @@ internal static class SampleProjects
     public static string HomonymPath =>
         Path.Combine(FixturesRoot, "HomonymSolution", "Homonym.Module");
 
+    /// <summary>Path to the module that spells one registration six different ways.</summary>
+    public static string RegistrationSpellingsPath =>
+        Path.Combine(FixturesRoot, "RegistrationSpellingsSolution", "Shapes.Module");
+
     /// <summary>Path to the XPO module that references an EF Core utility project.</summary>
     public static string XpoWithEfUtilPath =>
         Path.Combine(FixturesRoot, "XpoWithEfUtilSolution", "XpoUtil.Module");
@@ -159,6 +163,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyLegacyFramework = new(() => Extract(LegacyFrameworkPath));
     private static readonly Lazy<ExtractedProject> LazySharedBase = new(() => Extract(SharedBasePath));
     private static readonly Lazy<ExtractedProject> LazyHomonym = new(() => Extract(HomonymPath));
+    private static readonly Lazy<ExtractedProject> LazySpellings = new(() => Extract(RegistrationSpellingsPath));
     private static readonly Lazy<ExtractedProject> LazyXpoWithEfUtil = new(() => Extract(XpoWithEfUtilPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
@@ -220,6 +225,12 @@ internal static class SampleProjects
     /// references. C# binds the local one; the extraction has to agree with C#.
     /// </summary>
     public static ExtractedProject Homonym => LazyHomonym.Value;
+
+    /// <summary>
+    /// One EF Core context registering six classes, each in a different spelling — including the
+    /// two this reader does not follow, so the gap stays measured rather than remembered.
+    /// </summary>
+    public static ExtractedProject RegistrationSpellings => LazySpellings.Value;
 
     /// <summary>
     /// An XPO application that references an EF Core utility — a cache, which is a real reason.

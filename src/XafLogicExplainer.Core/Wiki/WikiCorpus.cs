@@ -172,6 +172,21 @@ public sealed class RecurringEntity
     /// The DevExpress security contracts this class carries, if any.
     /// </summary>
     public IReadOnlyList<string> Contracts { get; init; } = [];
+
+    /// <summary>
+    /// True when the applications share this name and nothing else that was read.
+    /// </summary>
+    /// <remarks>
+    /// The page matches classes by name and says so, which is honest and still leaves a reader to
+    /// work out, row by row, that an Identity <c>ApplicationUser</c> and an XAF one were never the
+    /// same idea. "Shapes differ" is true of them and tells nobody anything.
+    /// <para>
+    /// Advisory only. It changes no count and hides no comparison -- two classes really can share
+    /// a name, share no property, and still be one concept that was rebuilt. It adds a sentence
+    /// where the reader would otherwise have to derive it.
+    /// </para>
+    /// </remarks>
+    public bool PossibleHomonym { get; init; }
 }
 
 /// <summary>

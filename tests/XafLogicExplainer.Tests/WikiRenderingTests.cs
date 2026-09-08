@@ -320,7 +320,7 @@ public class WikiRenderingTests
             App("Reportes", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string"))),
             App("Lims", Secured("ApplicationUser", "ISecurityUserWithLoginInfo", Prop("UserName", "string")))));
 
-        Assert.Contains("Carried by the framework, not modelled here", html, StringComparison.Ordinal);
+        Assert.Contains("Carried by the framework, unchanged everywhere", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Classes modelled more than once", html, StringComparison.Ordinal);
         Assert.Contains("pill--template", html, StringComparison.Ordinal);
     }
