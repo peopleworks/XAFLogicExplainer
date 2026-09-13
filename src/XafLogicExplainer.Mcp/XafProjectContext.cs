@@ -118,9 +118,15 @@ public sealed class XafProjectContext
     /// </summary>
     /// <remarks>
     /// Deliberately not the SHA-256 the CLI uses for change detection: that reads every file, which
-    /// would cost as much as the extraction it is meant to avoid. Sizes and write times over the
-    /// same file set are enough to notice an edit between two questions, and being wrong in the
-    /// conservative direction only costs one unnecessary re-parse.
+    /// would cost as much as the extraction it is meant to avoid. Sizes and write times are enough to
+    /// notice an edit between two questions, and being wrong in the conservative direction only costs
+    /// one unnecessary re-parse.
+    /// <para>
+    /// The cost is not shared, but the file set is. This used to walk only the module's own
+    /// <c>.cs</c> and <c>.xafml</c>, so a sibling project, a referenced base, a project file or a
+    /// report layout could change while the server went on answering from its cache.
+    /// <see cref="SourceRoster"/> is the list the extraction itself reads from.
+    /// </para>
     /// </remarks>
     private static long ComputeFingerprint(string projectPath)
     {
@@ -131,16 +137,13 @@ public sealed class XafProjectContext
 
         try
         {
-            var files = Directory
-                .EnumerateFiles(projectPath, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                         || f.EndsWith(".xafml", StringComparison.OrdinalIgnoreCase))
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                         && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+            var files = SourceRoster.Files(projectPath);
+            fingerprint = unchecked(fingerprint * 31 + files.Count);
 
             foreach (var file in files)
             {
                 var info = new FileInfo(file);
+                fingerprint = unchecked(fingerprint * 31 + StringComparer.Ordinal.GetHashCode(file));
                 fingerprint = unchecked(fingerprint * 31 + info.Length);
                 fingerprint = unchecked(fingerprint * 31 + info.LastWriteTimeUtc.Ticks);
             }

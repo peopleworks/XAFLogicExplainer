@@ -146,6 +146,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The two spellings that are still **not** read are now fixtures and tests rather than a memory: a
   fluent `modelBuilder.Entity<T>()` mapping, and a context outside the business-object folder. Both
   are real registrations and both are deliberate limits, written down where the next person looks.
+- **Change detection missed most of what the extraction reads beside the module**, found by probing
+  an outside review of the project. The CLI hash never covered a sibling project's source, which
+  is where Blazor.Server and Win controllers and editors live, and covered no `.repx` anywhere. The
+  MCP server's cache fingerprint covered only the module's own `.cs` and `.xafml`, so #63 had fixed
+  one of the two. Add a controller to the Blazor.Server project and `extract`, `agents`, `status`
+  and sync all answered "no source changes", while the server kept answering from its cache; `watch`
+  never saw the edit at all. All three now walk one roster, `SourceRoster`, built from the
+  extraction's own discovery: the module, its siblings, whatever any of them references, the model
+  files beside them and every report layout. The CLI hashes those files' paths and bytes, the server
+  keeps its cheap size-and-write-time check, and `watch` watches the directories they span. A test
+  fails the day the extraction cites a file the roster does not list. Every saved hash changes with
+  this release, so the first run after upgrading extracts once.
+- **The report search no longer walks into restored packages and build output.** It used to enter
+  `bin`, `obj`, `packages`, `node_modules` and dot-directories below the solution folder and discard
+  what it found there; once change detection shared that walk, it was nearly all of the server's
+  check on a .NET Framework solution. Pruned, the check on two real applications of that kind went
+  from about 300 ms to under 50, and none of six real applications kept a layout in any of those
+  directories. A `.repx` inside one is a package's content or a build's copy, and is no longer listed
+  as the application's own.
 
 ### Added
 
