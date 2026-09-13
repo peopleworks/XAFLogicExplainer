@@ -21,7 +21,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   declares a class of that name itself. A class on a non-persistent base is marked as not persistent,
   and so is every class below it, and the view inventory generates views for non-persistent classes, as
   XAF does. A report's parameters dialog is still read with its report rather than listed as a class.
-  Entity counts move for any application built on these bases.
+  The `AGENTS.md` entity table and the explain page mark a class that is not stored, so a dialog listed
+  beside the tables does not read as one. Entity counts move for any application built on these bases.
 
 ## [0.17.1] — 2026-09-13
 

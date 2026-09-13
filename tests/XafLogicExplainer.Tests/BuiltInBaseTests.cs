@@ -1,3 +1,4 @@
+using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Tests;
@@ -92,6 +93,38 @@ public class BuiltInBaseTests
 
         Assert.DoesNotContain("StatementParameters", names);
         Assert.DoesNotContain("OverdueParameters", names);
+    }
+
+    [Fact]
+    public void TheAgentIndexSaysWhichClassesAreNotStored()
+    {
+        // The index calls its entity list complete, and a class that stores nothing sits in it now.
+        // Unmarked, it reads like a table an agent can query.
+        var lines = new AgentContextGenerator().GenerateIndex(Staffing, []).Split('\n');
+
+        Assert.Contains("(not stored)", Row(lines, "StaffingBoard"));
+        Assert.Contains("(not stored)", Row(lines, "ShiftSettings"));
+        Assert.DoesNotContain("(not stored)", Row(lines, "Employee"));
+    }
+
+    [Fact]
+    public void TheExplainPageSaysWhichClassesAreNotStored()
+    {
+        var page = new HtmlExplainerGenerator("0.0.0").Generate(Staffing);
+
+        Assert.EndsWith("not stored", CardMeta(page, "OvertimeBoard"));
+        Assert.DoesNotContain("not stored", CardMeta(page, "Employee"));
+    }
+
+    private static string Row(string[] lines, string className) =>
+        lines.Single(line => line.StartsWith($"| **{className}** ", StringComparison.Ordinal));
+
+    private static string CardMeta(string page, string className)
+    {
+        var card = page.IndexOf($"id=\"entity-{className}\"", StringComparison.Ordinal);
+        var start = page.IndexOf("card__meta\">", card, StringComparison.Ordinal) + "card__meta\">".Length;
+
+        return page[start..page.IndexOf('<', start)];
     }
 
     private static ExtractedProject Staffing => SampleProjects.BuiltInBases;

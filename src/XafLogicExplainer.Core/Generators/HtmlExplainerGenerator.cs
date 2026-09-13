@@ -229,7 +229,7 @@ public sealed class HtmlExplainerGenerator
     {
         sb.AppendLine("<section id=\"entities\">");
         sb.AppendLine($"  <h2>Business entities <span class=\"card__meta\">{project.Entities.Count}</span></h2>");
-        sb.AppendLine("  <p class=\"lede\">Everything the application stores. Markers show what each property is: a key, required, or calculated by the database rather than in C#.</p>");
+        sb.AppendLine("  <p class=\"lede\">Every business class the application declares, and what each one holds. Markers show what each property is: a key, required, or calculated by the database rather than in C#. A class marked not stored is shown with no table behind it.</p>");
 
         foreach (var entity in project.Entities.OrderBy(e => e.ClassName, StringComparer.Ordinal))
         {
@@ -240,7 +240,7 @@ public sealed class HtmlExplainerGenerator
             sb.AppendLine($"  <article class=\"card\" id=\"entity-{E(entity.ClassName)}\" data-search=\"{haystack}\">");
             sb.AppendLine("    <div class=\"card__head\">");
             sb.AppendLine($"      <span class=\"card__name\">{E(entity.ClassName)}</span>");
-            sb.AppendLine($"      <span class=\"card__meta\">{E(entity.BaseType)} · {entity.Properties.Count} properties</span>");
+            sb.AppendLine($"      <span class=\"card__meta\">{E(entity.BaseType)} · {entity.Properties.Count} properties{(entity.IsPersistent ? "" : " · not stored")}</span>");
             if (!string.IsNullOrWhiteSpace(entity.ModelCaption))
                 sb.AppendLine($"      <span class=\"pill\">shown as “{E(entity.ModelCaption)}”</span>");
             sb.AppendLine("    </div>");
