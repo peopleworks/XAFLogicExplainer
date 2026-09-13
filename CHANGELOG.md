@@ -7,6 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-09-13
+
+The documents are current when they say they are.
+
+A patch release, and a larger one than the number suggests, because most of it came from other
+people reading the code: nine defects and a suggestion from [@MBrekhof](https://github.com/MBrekhof),
+and an outside review whose claims were probed before any of them were believed. The fix that
+matters most is the quietest. Three things decide whether an application is read again: the CLI
+hash, the MCP server's cache and `watch`. Each covered only part of what the extraction reads. So an
+edit to a Blazor.Server controller, a report layout or a referenced base left documentation that was
+wrong and said it was current. All three now walk one list, built from the extraction's own
+discovery.
+
+Every saved change hash moves with this release, so the first run after upgrading extracts once.
+
 ### Fixed
 
 - **A context deriving from a base in a package registered no entities at all**
@@ -146,8 +161,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The two spellings that are still **not** read are now fixtures and tests rather than a memory: a
   fluent `modelBuilder.Entity<T>()` mapping, and a context outside the business-object folder. Both
   are real registrations and both are deliberate limits, written down where the next person looks.
-- **Change detection missed most of what the extraction reads beside the module**, found by probing
-  an outside review of the project. The CLI hash never covered a sibling project's source, which
+- **Change detection missed most of what the extraction reads beside the module**
+  ([#75](https://github.com/peopleworks/XAFLogicExplainer/pull/75)), found by probing an outside
+  review of the project. The CLI hash never covered a sibling project's source, which
   is where Blazor.Server and Win controllers and editors live, and covered no `.repx` anywhere. The
   MCP server's cache fingerprint covered only the module's own `.cs` and `.xafml`, so #63 had fixed
   one of the two. Add a controller to the Blazor.Server project and `extract`, `agents`, `status`
@@ -165,8 +181,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from about 300 ms to under 50, and none of six real applications kept a layout in any of those
   directories. A `.repx` inside one is a package's content or a build's copy, and is no longer listed
   as the application's own.
-- **Text copied out of the application could break the file it was written into**, found probing
-  the same outside review. `AGENTS.md`, `CLAUDE.md` and the Copilot instructions keep generated
+- **Text copied out of the application could break the file it was written into**
+  ([#78](https://github.com/peopleworks/XAFLogicExplainer/pull/78)), found probing the same outside
+  review. `AGENTS.md`, `CLAUDE.md` and the Copilot instructions keep generated
   content between two markers, and the first closing marker in the file was taken as the end. When a
   criteria string, a caption or a comment held that marker, everything after it was kept as the
   developer's own text, and the file gained a block on every regeneration. A marker inside generated
@@ -177,7 +194,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   starting with three backticks closed the block, and the rest was read as Markdown. The fence is
   now one backtick longer than the longest run inside it, and still three for the code nearly every
   application has.
-- **A citation depended on how the project path was typed.** `--project C:/Apps/App.Module` from
+- **A citation depended on how the project path was typed**
+  ([#78](https://github.com/peopleworks/XAFLogicExplainer/pull/78)). `--project C:/Apps/App.Module` from
   bash cited a layout inside the module as `../App.Module/Reports/Statement.repx`, and the same
   directory typed with backslashes cited `Reports/Statement.repx`. A committed document changed its
   citations with the shell that last regenerated it. Paths are now compared the way the file system
