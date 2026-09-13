@@ -38,6 +38,7 @@ public sealed class HtmlExplainerGenerator
     {
         var sb = new StringBuilder();
         var graph = EntityGraph.Build(project);
+        var directory = new EntityDirectory(project.Entities);
 
         sb.AppendLine("<!doctype html>");
         sb.AppendLine($"<html lang=\"en\">");
@@ -49,14 +50,14 @@ public sealed class HtmlExplainerGenerator
 
         sb.AppendLine("<main class=\"wrap\">");
         WriteMap(sb, graph);
-        WriteEntities(sb, project);
+        WriteEntities(sb, project, directory);
         WriteOperations(sb, project);
-        WriteScreens(sb, project);
-        WriteReports(sb, project);
+        WriteScreens(sb, project, directory);
+        WriteReports(sb, project, directory);
         WriteRules(sb, project);
         WriteCriteria(sb, project);
         WriteModelEditor(sb, project);
-        WriteEditors(sb, project);
+        WriteEditors(sb, project, directory);
         WriteSeedData(sb, project);
         WriteMigrations(sb, project);
         sb.AppendLine("</main>");
@@ -228,13 +229,11 @@ public sealed class HtmlExplainerGenerator
 
     // -------------------------------------------------------------- entities
 
-    private static void WriteEntities(StringBuilder sb, ExtractedProject project)
+    private static void WriteEntities(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         sb.AppendLine("<section id=\"entities\">");
         sb.AppendLine($"  <h2>Business entities <span class=\"card__meta\">{project.Entities.Count}</span></h2>");
         sb.AppendLine("  <p class=\"lede\">Every business class the application declares, and what each one holds. Markers show what each property is: a key, required, or calculated by the database rather than in C#. A class marked not stored is shown with no table behind it.</p>");
-
-        var directory = new EntityDirectory(project.Entities);
 
         foreach (var entity in project.Entities
                      .OrderBy(e => e.ClassName, StringComparer.Ordinal)
@@ -423,7 +422,7 @@ public sealed class HtmlExplainerGenerator
     /// exist in no file; and a controller's activation is four conditions the framework ands
     /// together, evaluated at run time against a view nobody wrote down.
     /// </remarks>
-    private static void WriteScreens(StringBuilder sb, ExtractedProject project)
+    private static void WriteScreens(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         if (project.Views.Count == 0)
             return;
@@ -475,7 +474,7 @@ public sealed class HtmlExplainerGenerator
                 if (view.OwnerProperty is { } ownerProperty)
                 {
                     sb.AppendLine("      <tr><th>Shown by</th><td class=\"mono\">" +
-                                  $"{EntityLink(new EntityDirectory(project.Entities), view.OwnerEntity)}.{E(ownerProperty)}</td></tr>");
+                                  $"{EntityLink(directory, view.OwnerEntity)}.{E(ownerProperty)}</td></tr>");
                 }
 
                 var mine = view.Activates.Where(a => !a.Framework).ToList();
@@ -626,7 +625,7 @@ public sealed class HtmlExplainerGenerator
     /// one thing the extraction never claims: with <c>ReportsModuleV2</c> registered, users design
     /// reports at run time and those live in the database.
     /// </remarks>
-    private static void WriteReports(StringBuilder sb, ExtractedProject project)
+    private static void WriteReports(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         if (!HasReports(project))
             return;
@@ -640,7 +639,7 @@ public sealed class HtmlExplainerGenerator
         var alreadyShown = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var report in project.Reports)
-            WriteReport(sb, project, report, alreadyShown);
+            WriteReport(sb, project, directory, report, alreadyShown);
 
         WriteUnregisteredReports(sb, project);
 
@@ -667,14 +666,15 @@ public sealed class HtmlExplainerGenerator
     }
 
     private static void WriteReport(
-        StringBuilder sb, ExtractedProject project, ExtractedReport report, Dictionary<string, string> alreadyShown)
+        StringBuilder sb, ExtractedProject project, EntityDirectory directory, ExtractedReport report,
+        Dictionary<string, string> alreadyShown)
     {
         var haystack = Haystack(report.DisplayName, report.DataType, report.ReportType, report.Layout?.FilterString);
 
         sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
         sb.AppendLine("    <div class=\"card__head\">");
         sb.AppendLine($"      <span class=\"card__name card__name--prose\">{E(report.DisplayName)}</span>");
-        sb.AppendLine($"      <span class=\"card__meta\">over {EntityReference(project, report.DataType)}</span>");
+        sb.AppendLine($"      <span class=\"card__meta\">over {EntityReference(directory, report.DataType)}</span>");
         sb.AppendLine("    </div>");
 
         sb.AppendLine("    <table><tbody>");
@@ -868,10 +868,8 @@ public sealed class HtmlExplainerGenerator
     };
 
     /// <summary>The entity a report is over, linked to its card when the page has one.</summary>
-    private static string EntityReference(ExtractedProject project, string dataType)
+    private static string EntityReference(EntityDirectory directory, string dataType)
     {
-        var directory = new EntityDirectory(project.Entities);
-
         return directory.Resolve(dataType) is { } entity
             ? $"<a class=\"mono\" href=\"#entity-{E(directory.Anchor(entity))}\">{E(dataType)}</a>"
             : $"<span class=\"mono\">{E(dataType)}</span>";
@@ -1060,7 +1058,7 @@ public sealed class HtmlExplainerGenerator
 
     // --------------------------------------------------------- custom editors
 
-    private static void WriteEditors(StringBuilder sb, ExtractedProject project)
+    private static void WriteEditors(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         var customized = project.Controllers
             .Where(c => c.CustomizedEditors.Count > 0)
@@ -1109,7 +1107,6 @@ public sealed class HtmlExplainerGenerator
                 sb.AppendLine($"      <tr><th>Based on</th><td class=\"mono t\">{E(editor.BaseType)}</td></tr>");
             if (editor.UsedBy.Count > 0)
             {
-                var directory = new EntityDirectory(project.Entities);
                 var links = editor.UsedBy.Select(e => EntityLink(directory, e));
                 sb.AppendLine($"      <tr><th>Used by</th><td>{string.Join(", ", links)}</td></tr>");
             }
