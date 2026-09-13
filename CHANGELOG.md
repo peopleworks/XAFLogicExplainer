@@ -23,6 +23,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   XAF does. A report's parameters dialog is still read with its report rather than listed as a class.
   The `AGENTS.md` entity table and the explain page mark a class that is not stored, so a dialog listed
   beside the tables does not read as one. Entity counts move for any application built on these bases.
+- **Two business classes of one name stopped the explain page**
+  ([#84](https://github.com/peopleworks/XAFLogicExplainer/issues/84)). XAF accepts two classes named
+  alike in two namespaces once `ModelNodesGeneratorSettings.SetIdPrefix` gives one of them its own view
+  ids. The entity map kept its classes in a dictionary keyed by the bare name, so `xaflogic explain`
+  threw, and two report parameters dialogs of one name made the extraction itself throw. A name is now
+  resolved where it is written: a bare name means the class in the declaring namespace, a name with its
+  namespace in front of it is found by that namespace, and a name two classes still share is linked to
+  neither rather than to whichever was read first. Two classes of one name get their own cards, anchors
+  and map nodes in the explain page, the wiki and the `AGENTS.md` entity table, labelled with as much of
+  the namespace as tells them apart. The view inventory reads `SetIdPrefix`, so a prefixed class's views
+  carry the ids XAF generates, and the `typeof` in that call is no longer counted as a registered type.
+  A relationship written with its namespace in front, such as `Catalog.Tag`, is now drawn on the map and
+  has its nested list view listed; both used to be dropped. A relationship to a type that is not one of
+  the application's classes is shown without a link, instead of a link to a card that does not exist.
 
 ## [0.17.1] — 2026-09-13
 

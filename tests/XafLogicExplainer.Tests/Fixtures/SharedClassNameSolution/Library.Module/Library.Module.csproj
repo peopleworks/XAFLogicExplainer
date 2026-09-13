@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Fixture only. Never built: it is input to the extractor, which reads it as text.
+    Two business classes named Tag, in two namespaces, both compiled. XAF accepts that only when one
+    of them is given its own view id prefix, which Module.cs does.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="25.2.4" />
+    <PackageReference Include="DevExpress.Persistent.BaseImpl.Xpo" Version="25.2.4" />
+    <PackageReference Include="DevExpress.ExpressApp.ReportsV2" Version="25.2.4" />
+  </ItemGroup>
+
+</Project>

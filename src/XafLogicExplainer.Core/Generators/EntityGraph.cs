@@ -1,3 +1,4 @@
+using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Core.Generators;
@@ -54,13 +55,14 @@ public sealed class EntityGraph
         var count = Math.Max(project.Entities.Count, 1);
         height ??= Math.Clamp(300 + count * 20, 340, 660);
         width ??= Math.Max(height.Value * 1.5, 560);
-        var names = project.Entities
-            .Select(e => e.ClassName)
-            .ToHashSet(StringComparer.Ordinal);
+
+        // Classes, not names: two classes can share a name in two namespaces, and keying the
+        // drawing by the name threw on exactly the application that needed the map most (#84).
+        var directory = new EntityDirectory(project.Entities);
 
         // Only relationships between entities this application defines. A property pointing at a
         // framework type is real, but drawing it adds a node nobody can navigate to.
-        var pairs = new List<(string From, string To, bool Aggregated, string Label)>();
+        var pairs = new List<(ExtractedEntity From, ExtractedEntity To, bool Aggregated, string Label)>();
 
         foreach (var entity in project.Entities)
         {
@@ -69,7 +71,9 @@ public sealed class EntityGraph
             // wrote it, not one from each class that received it.
             foreach (var relationship in entity.Relationships.Where(r => r.InheritedFrom is null))
             {
-                if (!names.Contains(relationship.RelatedEntity))
+                // Read where it is written, so a bare name means the class in the declaring
+                // namespace and a name with its namespace in front of it is still found.
+                if (directory.Resolve(relationship.RelatedEntity, entity.Namespace) is not { } related)
                     continue;
 
                 // An association appears on both ends. Keep the side that owns or that points to
@@ -77,12 +81,14 @@ public sealed class EntityGraph
                 if (relationship.Type == RelationshipType.ManyToOne && !relationship.IsAggregated)
                     continue;
 
-                pairs.Add((entity.ClassName, relationship.RelatedEntity, relationship.IsAggregated,
-                           relationship.PropertyName));
+                pairs.Add((entity, related, relationship.IsAggregated, relationship.PropertyName));
             }
         }
 
-        var degrees = names.ToDictionary(n => n, _ => 0, StringComparer.Ordinal);
+        var degrees = new Dictionary<ExtractedEntity, int>(ReferenceEqualityComparer.Instance);
+        foreach (var entity in project.Entities)
+            degrees[entity] = 0;
+
         foreach (var (from, to, _, _) in pairs)
         {
             degrees[from]++;
@@ -98,7 +104,7 @@ public sealed class EntityGraph
         var ring = Math.Min(canvasWidth, canvasHeight) / 2 - 74;
 
         var nodes = new List<GraphNode>();
-        var byName = new Dictionary<string, GraphNode>(StringComparer.Ordinal);
+        var byEntity = new Dictionary<ExtractedEntity, GraphNode>(ReferenceEqualityComparer.Instance);
 
         for (var i = 0; i < ordered.Count; i++)
         {
@@ -112,21 +118,22 @@ public sealed class EntityGraph
             var y = ordered.Count == 1 ? centreY : centreY + ring * Math.Sin(angle);
 
             var node = new GraphNode(
-                Name: entity.ClassName,
+                Name: directory.Label(entity),
+                Anchor: directory.Anchor(entity),
                 X: Math.Round(x, 2),
                 Y: Math.Round(y, 2),
                 Radius: RadiusFor(entity.Properties.Count),
                 PropertyCount: entity.Properties.Count,
-                Degree: degrees.GetValueOrDefault(entity.ClassName),
+                Degree: degrees.GetValueOrDefault(entity),
                 Angle: angle);
 
             nodes.Add(node);
-            byName[entity.ClassName] = node;
+            byEntity[entity] = node;
         }
 
         var edges = pairs
-            .Where(p => byName.ContainsKey(p.From) && byName.ContainsKey(p.To))
-            .Select(p => new GraphEdge(byName[p.From], byName[p.To], p.Aggregated, p.Label))
+            .Where(p => byEntity.ContainsKey(p.From) && byEntity.ContainsKey(p.To))
+            .Select(p => new GraphEdge(byEntity[p.From], byEntity[p.To], p.Aggregated, p.Label))
             .ToList();
 
         return new EntityGraph(nodes, edges, canvasWidth, canvasHeight);
@@ -151,13 +158,13 @@ public sealed class EntityGraph
     /// </remarks>
     private static List<ExtractedEntity> OrderToReduceCrossings(
         List<ExtractedEntity> entities,
-        List<(string From, string To, bool Aggregated, string Label)> pairs,
-        Dictionary<string, int> degrees)
+        List<(ExtractedEntity From, ExtractedEntity To, bool Aggregated, string Label)> pairs,
+        Dictionary<ExtractedEntity, int> degrees)
     {
-        var neighbours = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var neighbours = new Dictionary<ExtractedEntity, HashSet<ExtractedEntity>>(ReferenceEqualityComparer.Instance);
 
         foreach (var entity in entities)
-            neighbours[entity.ClassName] = new HashSet<string>(StringComparer.Ordinal);
+            neighbours[entity] = new HashSet<ExtractedEntity>(ReferenceEqualityComparer.Instance);
 
         foreach (var (from, to, _, _) in pairs)
         {
@@ -165,33 +172,25 @@ public sealed class EntityGraph
             if (neighbours.TryGetValue(to, out var b)) b.Add(from);
         }
 
-        var byName = entities.ToDictionary(e => e.ClassName, StringComparer.Ordinal);
-        var remaining = new HashSet<string>(byName.Keys, StringComparer.Ordinal);
+        var remaining = new HashSet<ExtractedEntity>(entities, ReferenceEqualityComparer.Instance);
         var order = new List<ExtractedEntity>();
 
         while (remaining.Count > 0)
         {
             // Start each connected group at its busiest entity, so the hub of a cluster anchors it.
-            // Ties break alphabetically to keep the layout stable across runs.
-            var seed = remaining
-                .OrderByDescending(n => degrees.GetValueOrDefault(n))
-                .ThenBy(n => n, StringComparer.Ordinal)
-                .First();
+            // Ties break alphabetically, then by namespace, to keep the layout stable across runs.
+            var seed = Busiest(remaining, degrees).First();
 
-            var queue = new Queue<string>();
+            var queue = new Queue<ExtractedEntity>();
             queue.Enqueue(seed);
             remaining.Remove(seed);
 
             while (queue.Count > 0)
             {
                 var current = queue.Dequeue();
-                order.Add(byName[current]);
+                order.Add(current);
 
-                var children = neighbours[current]
-                    .Where(remaining.Contains)
-                    .OrderByDescending(n => degrees.GetValueOrDefault(n))
-                    .ThenBy(n => n, StringComparer.Ordinal)
-                    .ToList();
+                var children = Busiest(neighbours[current].Where(remaining.Contains), degrees).ToList();
 
                 foreach (var child in children)
                 {
@@ -203,6 +202,14 @@ public sealed class EntityGraph
 
         return order;
     }
+
+    private static IOrderedEnumerable<ExtractedEntity> Busiest(
+        IEnumerable<ExtractedEntity> entities,
+        Dictionary<ExtractedEntity, int> degrees) =>
+        entities
+            .OrderByDescending(entity => degrees.GetValueOrDefault(entity))
+            .ThenBy(entity => entity.ClassName, StringComparer.Ordinal)
+            .ThenBy(entity => entity.Namespace, StringComparer.Ordinal);
 
     /// <summary>
     /// Sizes a node by how much it carries.
@@ -216,7 +223,8 @@ public sealed class EntityGraph
 }
 
 /// <summary>One entity, placed.</summary>
-/// <param name="Name">Class name.</param>
+/// <param name="Name">What the drawing prints: the class name, with as much of its namespace as tells it from another class of that name.</param>
+/// <param name="Anchor">The entity's fragment identifier on the page, unique within the application.</param>
 /// <param name="X">Centre X.</param>
 /// <param name="Y">Centre Y.</param>
 /// <param name="Radius">Drawn radius.</param>
@@ -225,6 +233,7 @@ public sealed class EntityGraph
 /// <param name="Angle">Angle on the circle, in radians, used to place the label outward.</param>
 public sealed record GraphNode(
     string Name,
+    string Anchor,
     double X,
     double Y,
     double Radius,

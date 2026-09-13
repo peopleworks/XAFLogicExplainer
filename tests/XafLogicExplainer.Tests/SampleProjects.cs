@@ -85,6 +85,10 @@ internal static class SampleProjects
     public static string BuiltInBasesPath =>
         Path.Combine(FixturesRoot, "BuiltInBasesSolution", "Staffing.Module");
 
+    /// <summary>Path to the module that declares two business classes of one name.</summary>
+    public static string SharedClassNamePath =>
+        Path.Combine(FixturesRoot, "SharedClassNameSolution", "Library.Module");
+
     /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
     public static string LegacyFrameworkPath =>
         Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
@@ -172,6 +176,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazySpellings = new(() => Extract(RegistrationSpellingsPath));
     private static readonly Lazy<ExtractedProject> LazyXpoWithEfUtil = new(() => Extract(XpoWithEfUtilPath));
     private static readonly Lazy<ExtractedProject> LazyBuiltInBases = new(() => Extract(BuiltInBasesPath));
+    private static readonly Lazy<ExtractedProject> LazySharedClassName = new(() => Extract(SharedClassNamePath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -251,6 +256,17 @@ internal static class SampleProjects
     /// and a homonym that must stay out of the list.
     /// </summary>
     public static ExtractedProject BuiltInBases => LazyBuiltInBases.Value;
+
+    /// <summary>
+    /// A library application with two business classes named <c>Tag</c> in two namespaces, both
+    /// compiled, one given its own view id prefix — and two report dialogs of one name.
+    /// </summary>
+    /// <remarks>
+    /// Different from <see cref="Homonym"/>, where the two classes share a namespace and C# binds the
+    /// module's own. Here both are classes of the application, and every place that looks a class up
+    /// by its bare name has to say which one it means.
+    /// </remarks>
+    public static ExtractedProject SharedClassName => LazySharedClassName.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.

@@ -191,4 +191,27 @@ public class ExtractedModuleInfo
     /// Required modules referenced by the module configuration.
     /// </summary>
     public List<string> RequiredModules { get; set; } = [];
+
+    /// <summary>
+    /// Classes whose generated view ids start with something other than their name, set through
+    /// <c>ModelNodesGeneratorSettings.SetIdPrefix</c>.
+    /// </summary>
+    public List<ModelIdPrefix> IdPrefixes { get; set; } = [];
+}
+
+/// <summary>
+/// One <c>ModelNodesGeneratorSettings.SetIdPrefix(typeof(X), "Prefix")</c> call.
+/// </summary>
+/// <remarks>
+/// XAF names every view it generates for a class after the class: <c>Tag_ListView</c>. Two classes
+/// of one name would claim the same ids and stop the application at startup, so one of them is
+/// given a prefix, and its views become <c>CatalogTag_ListView</c> and so on.
+/// </remarks>
+public class ModelIdPrefix
+{
+    /// <summary>The class, as the <c>typeof</c> writes it.</summary>
+    public string TypeName { get; set; } = string.Empty;
+
+    /// <summary>What its view ids start with instead of its name.</summary>
+    public string Prefix { get; set; } = string.Empty;
 }

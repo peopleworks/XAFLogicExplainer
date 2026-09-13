@@ -79,7 +79,12 @@ public class ReportAnalyzer
                 .Select(c => ReadParametersObject(c, file, options)));
         }
 
-        var byName = declared.ToDictionary(p => p.ClassName, StringComparer.Ordinal);
+        // Two dialogs can share a name in two namespaces. A registration naming that bare name could
+        // mean either, so it is attached to neither rather than to whichever file was read first.
+        var byName = declared
+            .GroupBy(p => p.ClassName, StringComparer.Ordinal)
+            .Where(sameName => sameName.Count() == 1)
+            .ToDictionary(sameName => sameName.Key, sameName => sameName.Single(), StringComparer.Ordinal);
         var claimed = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var report in reports)
