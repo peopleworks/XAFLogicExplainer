@@ -202,4 +202,121 @@ public class ReportRenderingTests
         Assert.Contains("no report in source", context, StringComparison.Ordinal);
         Assert.Contains("unknown, not zero", context, StringComparison.Ordinal);
     }
+
+    // ------------------------------------------------- the page a person is shown
+
+    private static string Page(ExtractedProject project) => new HtmlExplainerGenerator().Generate(project);
+
+    /// <summary>The page's reports section, from its opening tag to its close; null when absent.</summary>
+    private static string? ReportsOnPage(ExtractedProject project)
+    {
+        var html = Page(project);
+        var start = html.IndexOf("<section id=\"reports\">", StringComparison.Ordinal);
+
+        if (start < 0)
+            return null;
+
+        var end = html.IndexOf("</section>", start, StringComparison.Ordinal);
+        return html[start..(end + "</section>".Length)];
+    }
+
+    [Fact]
+    public void ThePageSaysTheListIsALowerBound()
+    {
+        // #73: the page was the one output of four that said nothing about reports, and it is the
+        // one that gets sent to a person.
+        var project = Reports();
+        var section = ReportsOnPage(project);
+
+        Assert.NotNull(section);
+        Assert.Contains("lower bound", section, StringComparison.Ordinal);
+        Assert.Contains("href=\"#reports\"", Page(project), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThePageRefusesToSayAnApplicationHasNoReports()
+    {
+        // The state #73 was measured on: the module registered, no report registered in source, and
+        // fourteen layouts bound to a SQL data source rather than to the business model. A page that
+        // lists the entities and says nothing about reports reads as an application that has none.
+        var project = Reports(withReports: false);
+        var reporting = Path.Combine(Path.GetDirectoryName(project.ProjectPath)!, "Reporting");
+
+        project.UnregisteredReportLayouts = Enumerable.Range(1, 14)
+            .Select(i => new ReportLayout
+            {
+                Source = ReportLayoutSource.Repx,
+                FilePath = Path.Combine(reporting, $"Sample{i}.repx"),
+                DataSourceKind = "SqlDataSource",
+                DataSource = "Labware8",
+            })
+            .ToList();
+
+        var section = ReportsOnPage(project);
+
+        Assert.NotNull(section);
+        Assert.Contains("declares no reports in source", section, StringComparison.Ordinal);
+        Assert.Contains("not zero but unknown", section, StringComparison.Ordinal);
+        Assert.Contains("Layouts nothing registers", section, StringComparison.Ordinal);
+        Assert.Equal(14, section.Split("Labware8").Length - 1);
+        Assert.Contains("SqlDataSource", section, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThePageSaysTheListIsCompleteWithoutTheModule()
+    {
+        var section = ReportsOnPage(Reports(referencesModule: false));
+
+        Assert.NotNull(section);
+        Assert.Contains("these are all of them", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("lower bound", section, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThePageHasNoReportsSectionWhenThereIsNothingToSay()
+    {
+        Assert.Null(ReportsOnPage(SampleProjects.Xpo));
+        Assert.DoesNotContain("href=\"#reports\"", Page(SampleProjects.Xpo), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThePageCarriesTheDecisionsInsideAReport()
+    {
+        var section = ReportsOnPage(Reports());
+
+        Assert.NotNull(section);
+
+        // Escaped: a filter compares with > and <, and this is HTML.
+        Assert.Contains("[IsApproved] = True And [Date] &gt;= ?From", section, StringComparison.Ordinal);
+        Assert.Contains("[Total] / 1.21", section, StringComparison.Ordinal);
+        Assert.Contains("Customer.Name", section, StringComparison.Ordinal);
+
+        // What the dialog turns its answers into, once, however many registrations share it.
+        Assert.Contains("Same layout and dialog as", section, StringComparison.Ordinal);
+        Assert.Equal(1, section.Split("GetCriteria()").Length - 1);
+    }
+
+    [Fact]
+    public void ThePageDoesNotTurnAnUnstatedInPlaceIntoNo()
+    {
+        var project = Reports();
+        var quiet = project.Reports.First(report => report.IsInplaceReport is null);
+        var section = ReportsOnPage(project);
+
+        Assert.NotNull(section);
+
+        var card = section.Split("<article").First(part => part.Contains($">{quiet.DisplayName}</span>", StringComparison.Ordinal));
+        Assert.DoesNotContain("Offered in place", card, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NoCitationOnThePageNamesADriveOnThisMachine()
+    {
+        var section = ReportsOnPage(Reports());
+
+        Assert.NotNull(section);
+        Assert.DoesNotContain(":/", section, StringComparison.Ordinal);
+        Assert.DoesNotContain(":\\", section, StringComparison.Ordinal);
+        Assert.Contains("../Reporting/RegionSummary.repx", section, StringComparison.Ordinal);
+    }
 }
