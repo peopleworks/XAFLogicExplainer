@@ -37,6 +37,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   A relationship written with its namespace in front, such as `Catalog.Tag`, is now drawn on the map and
   has its nested list view listed; both used to be dropped. A relationship to a type that is not one of
   the application's classes is shown without a link, instead of a link to a card that does not exist.
+- **Source the project file removes from the build was documented as part of the application**
+  ([#86](https://github.com/peopleworks/XAFLogicExplainer/issues/86)). Analyzers found `.cs` files by
+  folder and never read `<Compile Remove>`, so a draft set aside, a copy under another namespace or a
+  backup was listed with its classes, controllers and screens, and the index called the list complete.
+  The largest of six real applications had two such classes, one in a navigation group. Entities,
+  controllers, editors, reports, the module class and the updater are now read only from files the
+  project compiles, as far as an SDK-style project file says: exact paths and `**` patterns, relative to
+  the project file. A removal under a `Condition`, or built from a property, is not applied, and a
+  pre-SDK project file's `Compile Include` list is not trusted, because in a folder mid-migration the
+  folder-named pre-SDK file is often the abandoned one. Change detection still watches removed files.
 
 ## [0.17.1] — 2026-09-13
 

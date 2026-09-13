@@ -1760,6 +1760,11 @@ public class EntityAnalyzer : IEntityAnalyzer
     {
         var allFiles = new HashSet<string>();
 
+        // What the project file keeps out of the build is not a class of the application, however
+        // many attributes it carries. Read from this directory's own project file, so a referenced
+        // project answers with its own.
+        var removed = CompileExclusions.For(sourceDirectory);
+
         foreach (var pattern in patterns)
         {
             // Convert glob pattern to directory search
@@ -1785,7 +1790,7 @@ public class EntityAnalyzer : IEntityAnalyzer
                 {
                     // NOTE: the configured glob-like exclude patterns are still not evaluated;
                     // only build output is filtered. Applying them properly is tracked separately.
-                    if (BuildOutputFilter.IsAnalyzable(file, dir))
+                    if (BuildOutputFilter.IsAnalyzable(file, dir) && !removed.Excludes(file))
                         allFiles.Add(file);
                 }
             }

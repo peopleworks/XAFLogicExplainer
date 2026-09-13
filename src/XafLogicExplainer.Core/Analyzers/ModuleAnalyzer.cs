@@ -193,10 +193,12 @@ public class ModuleAnalyzer
     /// </summary>
     private static string? FindModuleFile(string sourceDirectory)
     {
+        var removed = CompileExclusions.For(sourceDirectory);
+
         var candidate = Path.Combine(sourceDirectory, "Module.cs");
-        if (File.Exists(candidate)) return candidate;
+        if (File.Exists(candidate) && !removed.Excludes(candidate)) return candidate;
 
         return Directory.GetFiles(sourceDirectory, "Module.cs", SearchOption.AllDirectories)
-            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory));
+            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory) && !removed.Excludes(f));
     }
 }

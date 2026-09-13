@@ -455,14 +455,16 @@ public class UpdaterAnalyzer
             Path.Combine(sourceDirectory, "Updater.cs"),
         };
 
+        var removed = CompileExclusions.For(sourceDirectory);
+
         foreach (var candidate in candidates)
         {
-            if (File.Exists(candidate))
+            if (File.Exists(candidate) && !removed.Excludes(candidate))
                 return candidate;
         }
 
         var byName = Directory.GetFiles(sourceDirectory, "Updater.cs", SearchOption.AllDirectories)
-            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory));
+            .FirstOrDefault(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory) && !removed.Excludes(f));
 
         if (byName != null)
             return byName;
@@ -476,7 +478,7 @@ public class UpdaterAnalyzer
         // class in it, so the search would end on a file guaranteed to yield nothing.
         foreach (var file in Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories))
         {
-            if (!BuildOutputFilter.IsAnalyzable(file, sourceDirectory))
+            if (!BuildOutputFilter.IsAnalyzable(file, sourceDirectory) || removed.Excludes(file))
                 continue;
 
             try

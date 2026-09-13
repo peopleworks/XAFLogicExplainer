@@ -315,6 +315,7 @@ public class EditorAnalyzer
     private static IEnumerable<string> EnumerateSource(string sourceDirectory)
     {
         IEnumerable<string> files;
+        var removed = CompileExclusions.For(sourceDirectory);
 
         try
         {
@@ -327,7 +328,7 @@ public class EditorAnalyzer
 
         foreach (var file in files)
         {
-            if (BuildOutputFilter.IsAnalyzable(file, sourceDirectory))
+            if (BuildOutputFilter.IsAnalyzable(file, sourceDirectory) && !removed.Excludes(file))
                 yield return file;
         }
     }

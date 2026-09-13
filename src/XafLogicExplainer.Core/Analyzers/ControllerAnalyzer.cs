@@ -27,8 +27,9 @@ public class ControllerAnalyzer : IControllerAnalyzer
             controllerDir = sourceDirectory;
         }
 
+        var removed = CompileExclusions.For(sourceDirectory);
         var files = Directory.GetFiles(controllerDir, "*.cs", SearchOption.AllDirectories)
-            .Where(file => BuildOutputFilter.IsAnalyzable(file, controllerDir));
+            .Where(file => BuildOutputFilter.IsAnalyzable(file, controllerDir) && !removed.Excludes(file));
 
         return Build(files.SelectMany(ReadClasses).ToList(), options);
     }

@@ -218,11 +218,16 @@ public class ReportAnalyzer
     private static string ShortName(TypeSyntax type) =>
         type is QualifiedNameSyntax qualified ? qualified.Right.ToString() : type.ToString();
 
-    private static IEnumerable<string> AnalyzableFiles(string sourceDirectory) =>
-        Directory.Exists(sourceDirectory)
-            ? Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories)
-                .Where(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory))
-            : [];
+    private static IEnumerable<string> AnalyzableFiles(string sourceDirectory)
+    {
+        if (!Directory.Exists(sourceDirectory))
+            return [];
+
+        var removed = CompileExclusions.For(sourceDirectory);
+
+        return Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(f => BuildOutputFilter.IsAnalyzable(f, sourceDirectory) && !removed.Excludes(f));
+    }
 
     /// <summary>Cheap gate before parsing: a file without the word cannot contain the call.</summary>
     private static bool ContainsWord(string file, string word)
