@@ -105,6 +105,40 @@ public class ManagedBlockTests
         Assert.DoesNotContain("\n\n\n", result);
     }
 
+    [Fact]
+    public void GeneratedContentQuotingTheMarkersCannotSplitTheBlock()
+    {
+        // Generated content copies text out of the application: criteria, captions, comments. When
+        // that text held the END marker, the first END was the quoted one, everything after it was
+        // kept as the developer's own text, and the file gained a block on every regeneration.
+        var quoting = $"## Criteria\n\n{ManagedBlock.BeginMarker}\nIsActive = True {ManagedBlock.EndMarker} tail";
+
+        var first = ManagedBlock.Apply("# My notes\n", quoting);
+        var second = ManagedBlock.Apply(first, quoting);
+        var third = ManagedBlock.Apply(second, quoting);
+
+        Assert.Equal(first, second);
+        Assert.Equal(second, third);
+        Assert.Single(Occurrences(third, ManagedBlock.BeginMarker));
+        Assert.Single(Occurrences(third, ManagedBlock.EndMarker));
+        Assert.Contains("IsActive = True", third);
+    }
+
+    [Fact]
+    public void HandWrittenTextQuotingTheEndMarkerAboveTheBlockIsKept()
+    {
+        // A note that explains the markers, above them, used to be taken for the end of a block that
+        // had not started yet, and every run appended another block below.
+        var notes = $"# Notes\n\nThe generated part ends at `{ManagedBlock.EndMarker}`.\n";
+
+        var first = ManagedBlock.Apply(notes, Generated);
+        var second = ManagedBlock.Apply(first, Generated);
+
+        Assert.Equal(first, second);
+        Assert.Single(Occurrences(second, ManagedBlock.BeginMarker));
+        Assert.Contains("The generated part ends at", second);
+    }
+
     private static List<int> Occurrences(string haystack, string needle)
     {
         var found = new List<int>();

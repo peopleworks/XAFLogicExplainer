@@ -165,6 +165,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from about 300 ms to under 50, and none of six real applications kept a layout in any of those
   directories. A `.repx` inside one is a package's content or a build's copy, and is no longer listed
   as the application's own.
+- **Text copied out of the application could break the file it was written into**, found probing
+  the same outside review. `AGENTS.md`, `CLAUDE.md` and the Copilot instructions keep generated
+  content between two markers, and the first closing marker in the file was taken as the end. When a
+  criteria string, a caption or a comment held that marker, everything after it was kept as the
+  developer's own text, and the file gained a block on every regeneration. A marker inside generated
+  content is now written in a quoted form that no longer matches, and the closing marker is looked
+  for after the opening one, so a note above the block that quotes it is left alone. Separately,
+  source copied into a code block (action bodies, seed methods, a report dialog's criteria, the
+  criteria examples in `AGENTS.md`) was fenced with three backticks whatever it held. A line in it
+  starting with three backticks closed the block, and the rest was read as Markdown. The fence is
+  now one backtick longer than the longest run inside it, and still three for the code nearly every
+  application has.
+- **A citation depended on how the project path was typed.** `--project C:/Apps/App.Module` from
+  bash cited a layout inside the module as `../App.Module/Reports/Statement.repx`, and the same
+  directory typed with backslashes cited `Reports/Statement.repx`. A committed document changed its
+  citations with the shell that last regenerated it. Paths are now compared the way the file system
+  reads them. Found while opening the `explain` page's new report section.
 
 ### Added
 
