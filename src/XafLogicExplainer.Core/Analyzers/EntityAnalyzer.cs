@@ -154,7 +154,8 @@ public class EntityAnalyzer : IEntityAnalyzer
             IsDefaultClassOptions = HasAttribute(classDecl, "DefaultClassOptions"),
             IsPersistent = !HasAttribute(classDecl, "NonPersistent")
                            && !HasAttribute(classDecl, "DomainComponent")
-                           && !HasAttribute(classDecl, "NotMapped"),
+                           && !HasAttribute(classDecl, "NotMapped")
+                           && !GetBaseTypeNames(classDecl).Any(NonPersistentBaseTypeNames.Contains),
             IsAbstract = classDecl.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.AbstractKeyword)),
         };
 
@@ -732,11 +733,14 @@ public class EntityAnalyzer : IEntityAnalyzer
         }
 
         var accepted = new HashSet<(string Namespace, string Name)>();
+        var declared = candidates.Select(candidate => (candidate.Namespace, candidate.Name)).ToHashSet();
 
         foreach (var candidate in candidates)
         {
             if (IsXafBusinessObject(candidate.Declaration, options.BaseTypeNames)
-                || roster.Registers(candidate.Namespace, candidate.Name))
+                || roster.Registers(candidate.Namespace, candidate.Name)
+                || DeclaresItselfABusinessClass(candidate.Declaration)
+                || DerivesFromTheLibrary(candidate.Declaration, candidate.Scopes, declared))
                 accepted.Add((candidate.Namespace, candidate.Name));
         }
 
@@ -1368,6 +1372,11 @@ public class EntityAnalyzer : IEntityAnalyzer
 
         Fold(parent, byClass, parents, folded);
 
+        // A class deriving from one that stores nothing stores nothing either, and need not say so
+        // itself: only the base in the library, or an attribute on the base, does.
+        if (!parent.IsPersistent)
+            entity.IsPersistent = false;
+
         var own = entity.Properties.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
         var inherited = new List<ExtractedProperty>();
 
@@ -1453,6 +1462,106 @@ public class EntityAnalyzer : IEntityAnalyzer
     /// </remarks>
     private static string AppearanceRuleKey(ExtractedAppearanceRule rule)
         => rule.Id is { Length: > 0 } id ? id : $"Appearance {rule.TargetItems}";
+
+    /// <summary>
+    /// The class attributes with which an application puts a class into its XAF model, whatever the
+    /// class derives from.
+    /// </summary>
+    /// <remarks>
+    /// A base list cannot answer that on its own. A <c>[DomainComponent]</c> may declare no base at all,
+    /// and a class may derive from anything DevExpress ships; the attribute is the application saying
+    /// the class is a business class. On six real applications (#82) these were exactly the classes a
+    /// base-list test missed, the one a staffing module is built on among them.
+    /// </remarks>
+    private static readonly string[] BusinessClassAttributes =
+        ["DefaultClassOptions", "DomainComponent", "NavigationItem", "CreatableItem", "MapInheritance"];
+
+    /// <summary>
+    /// The classes of DevExpress's business class library that applications derive their own business
+    /// classes from.
+    /// </summary>
+    /// <remarks>
+    /// Names only, taken from the documentation (Built-in Business Classes and Interfaces, and the 25.2
+    /// note removing the demo classes), because Core references no DevExpress assembly.
+    /// <c>Person</c>, <c>Party</c>, <c>Organization</c>, <c>Address</c>, <c>Note</c> and <c>Task</c>
+    /// left the library in 25.2: an application on an earlier version still derives from them, and one
+    /// that upgraded copied them into its own source, where they are read like any other class.
+    /// <para>
+    /// A name is not an identity, so it loses to a class of the same name that the deriving file can
+    /// see. C# binds that declaration, and so does this.
+    /// </para>
+    /// </remarks>
+    private static readonly HashSet<string> LibraryBaseTypeNames = new(StringComparer.Ordinal)
+    {
+        // XPO and EF Core.
+        "BaseObjectWithNotifyPropertyChanged", "DashboardData", "Event", "FileAttachment", "FileAttachmentBase",
+        "FileData", "HCategory", "MediaDataObject", "MediaResourceObject", "ModelDifference",
+        "ModelDifferenceAspect", "PermissionPolicyRole", "PermissionPolicyRoleBase", "ReportData",
+        "ReportDataV2", "Resource",
+        // The demo classes, removed in 25.2.
+        "Address", "Analysis", "Note", "Organization", "Party", "Person", "PhoneNumber", "Task",
+        // Non-persistent, from DevExpress.ExpressApp.
+        "NonPersistentBaseObject", "NonPersistentEntityObject", "NonPersistentLiteObject", "NonPersistentObjectImpl",
+    };
+
+    /// <summary>The library's non-persistent bases. A class deriving from one stores nothing.</summary>
+    private static readonly HashSet<string> NonPersistentBaseTypeNames = new(StringComparer.Ordinal)
+    {
+        "NonPersistentBaseObject", "NonPersistentEntityObject", "NonPersistentLiteObject", "NonPersistentObjectImpl",
+    };
+
+    private const string ReportParametersBase = "ReportParametersObjectBase";
+
+    /// <summary>
+    /// Whether the class carries an attribute that puts it in the application model.
+    /// </summary>
+    /// <remarks>
+    /// A report's parameters dialog is a <c>[DomainComponent]</c> too, and is left out. The report
+    /// extraction reads it as that report's parameters, criteria included; listed beside the business
+    /// classes, it would say the application stores a class of that name.
+    /// </remarks>
+    private static bool DeclaresItselfABusinessClass(ClassDeclarationSyntax classDecl) =>
+        BusinessClassAttributes.Any(attribute => HasAttribute(classDecl, attribute))
+        && !GetBaseTypeNames(classDecl).Contains(ReportParametersBase);
+
+    /// <summary>
+    /// Whether the class derives from a class of the business class library, rather than from a class
+    /// of the application's own that happens to share its name.
+    /// </summary>
+    private static bool DerivesFromTheLibrary(
+        ClassDeclarationSyntax classDecl,
+        HashSet<string> scopes,
+        HashSet<(string Namespace, string Name)> declared)
+    {
+        foreach (var baseType in classDecl.BaseList?.Types ?? default)
+        {
+            var written = baseType.Type.ToString();
+
+            var generic = written.IndexOf('<');
+            if (generic > 0) written = written[..generic];
+
+            var dot = written.LastIndexOf('.');
+            var simpleName = dot < 0 ? written : written[(dot + 1)..];
+
+            if (!LibraryBaseTypeNames.Contains(simpleName))
+                continue;
+
+            // The same resolution ResolveBase applies: unqualified, the name reaches a declaration in a
+            // namespace the file can see; qualified, one whose namespace ends with the qualifier.
+            var qualifier = dot < 0 ? null : written[..dot];
+            var ownDeclaration = declared.Any(declaration =>
+                declaration.Name.Equals(simpleName, StringComparison.Ordinal)
+                && (qualifier is null
+                    ? scopes.Contains(declaration.Namespace)
+                    : declaration.Namespace.Equals(qualifier, StringComparison.Ordinal)
+                      || declaration.Namespace.EndsWith("." + qualifier, StringComparison.Ordinal)));
+
+            if (!ownDeclaration)
+                return true;
+        }
+
+        return false;
+    }
 
     private static bool IsXafBusinessObject(ClassDeclarationSyntax classDecl, string[] baseTypeNames)
     {

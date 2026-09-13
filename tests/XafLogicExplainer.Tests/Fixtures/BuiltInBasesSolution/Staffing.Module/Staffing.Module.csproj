@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Fixture only. Never built: it is input to the extractor, which reads it as text.
+    23.2 on purpose: Person is one of the business class library's demo classes, which DevExpress
+    removed in 25.2, and an application still deriving from it is on a version that shipped it.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="23.2.6" />
+    <PackageReference Include="DevExpress.Persistent.BaseImpl.Xpo" Version="23.2.6" />
+    <PackageReference Include="DevExpress.ExpressApp.ReportsV2" Version="23.2.6" />
+    <PackageReference Include="DevExpress.ExpressApp.Dashboards" Version="23.2.6" />
+  </ItemGroup>
+
+</Project>

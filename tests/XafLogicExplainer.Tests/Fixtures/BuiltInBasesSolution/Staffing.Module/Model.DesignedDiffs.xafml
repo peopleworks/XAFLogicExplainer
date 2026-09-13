@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application Title="Staffing">
+  <Views>
+    <ListView Id="StaffingBoard_Available_ListView">
+      <Columns>
+        <ColumnInfo Id="Salary" Width="80" />
+      </Columns>
+    </ListView>
+  </Views>
+</Application>

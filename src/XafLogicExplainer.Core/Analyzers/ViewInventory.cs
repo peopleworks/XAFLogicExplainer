@@ -28,7 +28,9 @@ public static class ViewInventory
         var views = new Dictionary<string, ExtractedView>(StringComparer.Ordinal);
         var known = project.Entities.Select(e => e.ClassName).ToHashSet(StringComparer.Ordinal);
 
-        foreach (var entity in project.Entities.Where(e => e.IsPersistent))
+        // Every class, persistent or not. XAF generates the same views for a class that stores
+        // nothing, and they are the only way such a class is ever shown.
+        foreach (var entity in project.Entities)
             AddGenerated(views, entity, known);
 
         MergeModelViews(views, project.ModelEditorInfo);
