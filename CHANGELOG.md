@@ -179,6 +179,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   single shared property name withdraws it — one concept migrated between frameworks with
   everything renamed is still one concept. On the six real applications it flags exactly one of
   sixteen, `Cobro`.
+- **The `explain` page says what the extraction knows about reports**
+  ([#73](https://github.com/peopleworks/XAFLogicExplainer/issues/73), reported by
+  [@MBrekhof](https://github.com/MBrekhof)). It was the one output of four with no report section,
+  and it is the one a person is shown: a page that lists two hundred entities and says nothing about
+  reports reads as an application that has none, which is exactly what the extraction never claims.
+  The page now carries the markdown's three states — all of them, a lower bound, or a number that is
+  unknown rather than zero — then each report with its filter, groupings, calculated fields,
+  bindings and parameters dialog, and the layouts nothing registers, each with the data source it
+  binds to. A layout bound to a SQL data source rather than to the business model says so.
 
 ## [0.17.0] — 2026-08-24
 

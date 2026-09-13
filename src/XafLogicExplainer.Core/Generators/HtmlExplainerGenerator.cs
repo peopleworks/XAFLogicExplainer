@@ -51,6 +51,7 @@ public sealed class HtmlExplainerGenerator
         WriteEntities(sb, project);
         WriteOperations(sb, project);
         WriteScreens(sb, project);
+        WriteReports(sb, project);
         WriteRules(sb, project);
         WriteCriteria(sb, project);
         WriteModelEditor(sb, project);
@@ -136,6 +137,7 @@ public sealed class HtmlExplainerGenerator
         sb.AppendLine("  <li><a href=\"#entities\">Entities</a></li>");
         sb.AppendLine("  <li><a href=\"#operations\">Operations</a></li>");
         if (project.Views.Count > 0) sb.AppendLine("  <li><a href=\"#screens\">Screens</a></li>");
+        if (HasReports(project)) sb.AppendLine("  <li><a href=\"#reports\">Reports</a></li>");
         sb.AppendLine("  <li><a href=\"#rules\">Rules</a></li>");
         sb.AppendLine("  <li><a href=\"#criteria\">Criteria</a></li>");
         if (project.ModelEditorInfo is not null) sb.AppendLine("  <li><a href=\"#model\">Model Editor</a></li>");
@@ -590,6 +592,289 @@ public sealed class HtmlExplainerGenerator
 
         return $"{kind} view, {where}";
     }
+
+    // --------------------------------------------------------------- reports
+
+    /// <summary>
+    /// Whether the page has anything to say about reports.
+    /// </summary>
+    /// <remarks>
+    /// The markdown's condition. An application that never registered <c>ReportsModuleV2</c> and
+    /// ships no layout gets no section: "no reports" is worth printing when it is a finding, not
+    /// when it is the default. The tests hold both outputs to the same three states, so the page and
+    /// the markdown cannot drift into disagreeing about one application.
+    /// </remarks>
+    private static bool HasReports(ExtractedProject project) =>
+        project.ReferencesReportsModule
+        || project.Reports.Count > 0
+        || project.UnregisteredReportLayouts.Count > 0;
+
+    /// <summary>
+    /// The reports an application declares, and what reading the repository cannot show.
+    /// </summary>
+    /// <remarks>
+    /// The last of the four outputs to get this section, and the one it matters most on (#73). An
+    /// entity list implies its screens; a report implies nothing. So a page that lists two hundred
+    /// entities and says nothing about reports reads as an application that has none, which is the
+    /// one thing the extraction never claims: with <c>ReportsModuleV2</c> registered, users design
+    /// reports at run time and those live in the database.
+    /// </remarks>
+    private static void WriteReports(StringBuilder sb, ExtractedProject project)
+    {
+        if (!HasReports(project))
+            return;
+
+        sb.AppendLine("<section id=\"reports\">");
+        sb.AppendLine("  <h2>Reports</h2>");
+        sb.AppendLine($"  <p class=\"lede\">{ReportsLede(project)}</p>");
+
+        // One layout can carry several registrations: the same .repx offered from the navigation
+        // and in place on a list view. Its filter, bindings and dialog are shown under the first.
+        var alreadyShown = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var report in project.Reports)
+            WriteReport(sb, project, report, alreadyShown);
+
+        WriteUnregisteredReports(sb, project);
+
+        sb.AppendLine("</section>");
+    }
+
+    /// <summary>What the list is: all of them, a lower bound, or an absence whose size is unknown.</summary>
+    private static string ReportsLede(ExtractedProject project)
+    {
+        var read = $"{project.Reports.Count} report{(project.Reports.Count == 1 ? "" : "s")} read from source.";
+
+        if (!project.ReferencesReportsModule)
+            return $"{read} This application does not register <code>ReportsModuleV2</code>, so these are all of them.";
+
+        if (project.Reports.Count == 0)
+        {
+            return "This application registers <code>ReportsModuleV2</code> and <strong>declares no reports in source</strong>. "
+                 + "That rarely means it has none: with that module in, users design reports at run time and they are stored "
+                 + "as rows in the database. Reading the repository cannot show them, and the true number is not zero but unknown.";
+        }
+
+        return $"{read} This application also registers <code>ReportsModuleV2</code>, so users can build their own at run "
+             + "time; those live in the database, which makes <strong>this list a lower bound</strong>.";
+    }
+
+    private static void WriteReport(
+        StringBuilder sb, ExtractedProject project, ExtractedReport report, Dictionary<string, string> alreadyShown)
+    {
+        var haystack = Haystack(report.DisplayName, report.DataType, report.ReportType, report.Layout?.FilterString);
+
+        sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
+        sb.AppendLine("    <div class=\"card__head\">");
+        sb.AppendLine($"      <span class=\"card__name card__name--prose\">{E(report.DisplayName)}</span>");
+        sb.AppendLine($"      <span class=\"card__meta\">over {EntityReference(project, report.DataType)}</span>");
+        sb.AppendLine("    </div>");
+
+        sb.AppendLine("    <table><tbody>");
+        sb.AppendLine($"      <tr><th>Report class</th><td class=\"mono\">{E(report.ReportType)}</td></tr>");
+
+        if (report.ParametersType is { Length: > 0 } parametersType)
+            sb.AppendLine($"      <tr><th>Opens with</th><td class=\"mono\">{E(parametersType)}</td></tr>");
+
+        // Null is not false. The overload that says nothing about in-place reporting leaves XAF's own
+        // default in charge, and printing "no" there would be an invention.
+        if (report.IsInplaceReport is { } inplace)
+            sb.AppendLine($"      <tr><th>Offered in place</th><td>{(inplace ? "yes" : "no")}</td></tr>");
+
+        if (Cite(project, report.FilePath, report.Line) is { Length: > 0 } registeredAt)
+            sb.AppendLine($"      <tr><th>Registered at</th><td class=\"mono t\">{registeredAt}</td></tr>");
+
+        // Keyed by what is actually shared. Two registrations of one layout differ in the options
+        // above, and in nothing below.
+        var key = $"{report.Layout?.FilePath}|{report.Layout?.Line}|{report.ParametersObject?.ClassName}";
+
+        if (report.Layout is not null || report.ParametersObject is not null)
+        {
+            if (alreadyShown.TryGetValue(key, out var shownUnder))
+            {
+                sb.AppendLine($"      <tr><th>Layout</th><td class=\"t\">Same layout and dialog as <strong>{E(shownUnder)}</strong>, above.</td></tr>");
+                sb.AppendLine("    </tbody></table>");
+                sb.AppendLine("  </article>");
+                return;
+            }
+
+            alreadyShown[key] = report.DisplayName;
+        }
+
+        if (report.Layout is { } layout)
+            WriteLayoutRows(sb, project, layout);
+
+        sb.AppendLine("    </tbody></table>");
+
+        if (report.Layout is { } shownLayout)
+            WriteLayoutTables(sb, shownLayout);
+
+        if (report.ParametersObject is { } dialog)
+            WriteParametersObject(sb, project, dialog);
+
+        sb.AppendLine("  </article>");
+    }
+
+    /// <summary>What a report shows: the decisions in its layout, never its appearance.</summary>
+    private static void WriteLayoutRows(StringBuilder sb, ExtractedProject project, ReportLayout layout)
+    {
+        var at = Cite(project, layout.FilePath, layout.Line);
+
+        sb.AppendLine($"      <tr><th>Layout</th><td>read from {LayoutSource(layout.Source)}"
+                    + (at.Length > 0 ? $", <span class=\"mono t\">{at}</span>" : "") + "</td></tr>");
+
+        if (DataSource(layout) is { Length: > 0 } source)
+            sb.AppendLine($"      <tr><th>Data source</th><td class=\"mono\">{source}</td></tr>");
+
+        // The filter is the most consequential line in a report and the one nothing else in the
+        // repository mentions: "approved only", "this fiscal year", "excluding cancelled".
+        if (layout.FilterString is { Length: > 0 } filter)
+            sb.AppendLine($"      <tr><th>Filters on</th><td><code class=\"crit\">{E(filter)}</code></td></tr>");
+
+        if (layout.GroupFields.Count > 0)
+            sb.AppendLine($"      <tr><th>Grouped by</th><td class=\"mono\">{E(string.Join(", ", layout.GroupFields))}</td></tr>");
+    }
+
+    private static void WriteLayoutTables(StringBuilder sb, ReportLayout layout)
+    {
+        if (layout.CalculatedFields.Count > 0)
+        {
+            sb.AppendLine("    <table><thead><tr><th>Calculated field</th><th>Expression</th></tr></thead><tbody>");
+            foreach (var field in layout.CalculatedFields)
+                sb.AppendLine($"      <tr><td class=\"mono\">{E(field.Name)}</td><td><code class=\"crit\">{E(field.Expression)}</code></td></tr>");
+            sb.AppendLine("    </tbody></table>");
+        }
+
+        if (layout.Bindings.Count > 0)
+        {
+            sb.AppendLine("    <table><thead><tr><th>Control</th><th>Property</th><th>Expression in the layout</th></tr></thead><tbody>");
+            foreach (var binding in layout.Bindings)
+            {
+                sb.AppendLine($"      <tr><td class=\"mono\">{E(binding.Control)}</td><td class=\"mono t\">{E(binding.Property)}</td>" +
+                              $"<td><code class=\"crit\">{E(binding.Expression)}</code></td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+        }
+    }
+
+    private static void WriteParametersObject(StringBuilder sb, ExtractedProject project, ReportParametersObject parameters)
+    {
+        var at = Cite(project, parameters.FilePath, parameters.Line);
+
+        sb.AppendLine($"    <p class=\"card__desc\">The dialog asks for <span class=\"mono\">{E(parameters.ClassName)}</span>"
+                    + (at.Length > 0 ? $", <span class=\"mono t\">{at}</span>" : "") + ".</p>");
+
+        if (parameters.Fields.Count > 0)
+        {
+            sb.AppendLine("    <table><thead><tr><th>Field</th><th>Type</th><th>Default</th></tr></thead><tbody>");
+            foreach (var field in parameters.Fields)
+            {
+                sb.AppendLine($"      <tr><td class=\"mono\">{E(field.Name)}</td><td class=\"mono t\">{E(field.Type)}</td>" +
+                              $"<td class=\"mono\">{E(field.Default)}</td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+        }
+
+        // What the answers are turned into: the business logic of the dialog, and the reason the
+        // parameters object is worth reading rather than merely naming.
+        if (parameters.CriteriaSource is { Length: > 0 } criteria)
+            sb.AppendLine($"    <details><summary>Those answers become the filter</summary><pre><code>{E(Snippet(criteria))}</code></pre></details>");
+
+        if (parameters.SortingSource is { Length: > 0 } sorting)
+            sb.AppendLine($"    <details><summary>And the sort order</summary><pre><code>{E(Snippet(sorting))}</code></pre></details>");
+    }
+
+    /// <summary>
+    /// Layouts and dialogs in the repository that no registration names.
+    /// </summary>
+    /// <remarks>
+    /// A shop that designs reports outside Visual Studio keeps the exports beside the module and
+    /// imports them into the database by hand. They are real work no registration claims, and
+    /// silence about them reads as their not existing. The data source is shown for each, because
+    /// a layout bound to a SQL data source reads columns of a query rather than properties of an
+    /// entity, and nothing else on the page would say what it shows.
+    /// </remarks>
+    private static void WriteUnregisteredReports(StringBuilder sb, ExtractedProject project)
+    {
+        var layouts = project.UnregisteredReportLayouts.Count;
+        var dialogs = project.UnregisteredReportParameters.Count;
+
+        if (layouts == 0 && dialogs == 0)
+            return;
+
+        sb.AppendLine("  <article class=\"card\" data-search=\"layouts nothing registers unregistered repx report dialog\">");
+        sb.AppendLine("    <div class=\"card__head\">");
+        sb.AppendLine("      <span class=\"card__name card__name--prose\">Layouts nothing registers</span>");
+        sb.Append($"      <span class=\"card__meta\">{layouts} layout{(layouts == 1 ? "" : "s")}");
+        if (dialogs > 0)
+            sb.Append($" · {dialogs} dialog{(dialogs == 1 ? "" : "s")}");
+        sb.AppendLine("</span>");
+        sb.AppendLine("    </div>");
+        sb.AppendLine("    <p class=\"card__desc\">These files are in the repository and no registration call names them. Usually they are layouts exported from the running application and imported into the database by hand — real work that the code never mentions.</p>");
+
+        if (layouts > 0)
+        {
+            sb.AppendLine("    <table><thead><tr><th>File</th><th>Data source</th><th>Filters on</th></tr></thead><tbody>");
+            foreach (var layout in project.UnregisteredReportLayouts)
+            {
+                var filter = layout.FilterString is { Length: > 0 } criteria
+                    ? $"<code class=\"crit\">{E(criteria)}</code>"
+                    : "";
+
+                sb.AppendLine($"      <tr><td class=\"mono t\">{Cite(project, layout.FilePath, layout.Line)}</td>" +
+                              $"<td class=\"mono\">{DataSource(layout)}</td><td>{filter}</td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+        }
+
+        if (dialogs > 0)
+        {
+            sb.AppendLine("    <table><thead><tr><th>Parameters dialog no report names</th><th>Declared at</th></tr></thead><tbody>");
+            foreach (var parameters in project.UnregisteredReportParameters)
+            {
+                sb.AppendLine($"      <tr><td class=\"mono\">{E(parameters.ClassName)}</td>" +
+                              $"<td class=\"mono t\">{Cite(project, parameters.FilePath, parameters.Line)}</td></tr>");
+            }
+            sb.AppendLine("    </tbody></table>");
+        }
+
+        sb.AppendLine("  </article>");
+    }
+
+    /// <summary>What a layout is bound to, with the kind of source when the layout names one.</summary>
+    private static string DataSource(ReportLayout layout)
+    {
+        var kind = layout.DataSourceKind is { Length: > 0 } sourceKind ? E(sourceKind) : "";
+
+        if (layout.DataSource is not { Length: > 0 } source)
+            return kind;
+
+        var member = layout.DataMember is { Length: > 0 } dataMember ? $" / {E(dataMember)}" : "";
+        return $"{E(source)}{member}" + (kind.Length > 0 ? $" <span class=\"t\">({kind})</span>" : "");
+    }
+
+    private static string LayoutSource(ReportLayoutSource source) => source switch
+    {
+        ReportLayoutSource.DesignerCode => "designer code",
+        ReportLayoutSource.Repx => "a <span class=\"mono\">.repx</span> file",
+        _ => "the report's own code",
+    };
+
+    /// <summary>The entity a report is over, linked to its card when the page has one.</summary>
+    private static string EntityReference(ExtractedProject project, string dataType)
+    {
+        var name = dataType.Split('.').Last();
+
+        return project.Entities.Any(entity => entity.ClassName == name)
+            ? $"<a class=\"mono\" href=\"#entity-{E(name)}\">{E(dataType)}</a>"
+            : $"<span class=\"mono\">{E(dataType)}</span>";
+    }
+
+    /// <summary>
+    /// A citation in the form every other output prints: relative to the project, with its line.
+    /// </summary>
+    private static string Cite(ExtractedProject project, string? filePath, int line) =>
+        E(SourceCitation.Of(project, filePath, line).Trim('`'));
 
     // ----------------------------------------------------------------- rules
 
