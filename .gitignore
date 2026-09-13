@@ -70,6 +70,12 @@ coverage*.xml
 temp/
 scratch/
 
+# Task hand-off between models: a task goes in, a model works it, another verifies it. The same
+# folder layout is committed in private repositories; this one is public, and a task file quotes
+# client code, local paths and unverified findings as freely as a conversation does. What has to
+# be on the record from here goes into a GitHub issue, not into this folder.
+AI_Tasks/
+
 # ---------------------------------------------------------------------------
 # Pre-0.9 presentation material, held back rather than deleted.
 #
