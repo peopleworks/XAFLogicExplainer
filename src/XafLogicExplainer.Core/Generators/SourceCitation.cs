@@ -59,17 +59,38 @@ public static class SourceCitation
         if (project.ProjectPath.Length == 0)
             return filePath;
 
-        if (Below(project.ProjectPath, filePath) is { } insideProject)
+        // Compared as the file system reads them, not as they were typed. `C:/Apps/App.Module` from
+        // a bash prompt and `C:\Apps\App.Module` from PowerShell are one directory, and comparing the
+        // strings cited a file inside it as `../App.Module/...` from one shell and not the other, so
+        // a committed document changed its citations with whoever regenerated it last.
+        var projectPath = Normalize(project.ProjectPath);
+        var file = Normalize(filePath);
+
+        if (Below(projectPath, file) is { } insideProject)
             return insideProject;
 
         // The directory holding the module usually holds the whole solution, which is where the
         // platform projects and the loose report exports live.
-        var solutionRoot = Path.GetDirectoryName(project.ProjectPath.TrimEnd('/', '\\'));
+        var solutionRoot = Path.GetDirectoryName(projectPath);
 
-        if (solutionRoot is { Length: > 0 } && Below(solutionRoot, filePath) is { } insideSolution)
+        if (solutionRoot is { Length: > 0 } && Below(solutionRoot, file) is { } insideSolution)
             return $"../{insideSolution}";
 
         return Path.GetFileName(filePath);
+    }
+
+    /// <summary>A path in the file system's own spelling, without a trailing separator.</summary>
+    private static string Normalize(string path)
+    {
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            // Not a path this machine can resolve. Compared as written, which is what happened before.
+            return path.TrimEnd('/', '\\');
+        }
     }
 
     /// <summary>The part of a path below a directory, or null when it is not below it.</summary>
