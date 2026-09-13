@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Fixture only. Never built: it is input to the extractor, which reads it as text.
+    Source that sits in the project folder and is not compiled, removed every way the corpus does it.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- A folder of drafts, a copy of a class under another namespace, and backups by pattern. -->
+    <Compile Remove="BusinessObjects\Drafts\**" />
+    <Compile Remove="BusinessObjects\Catalog\Invoice.cs" />
+    <Compile Remove="Controllers\Old\**" />
+    <Compile Remove="**\*.Backup.cs" />
+    <EmbeddedResource Remove="BusinessObjects\Drafts\**" />
+    <None Remove="BusinessObjects\Drafts\**" />
+  </ItemGroup>
+
+  <!-- Removed only in a configuration nobody builds by default, so it is compiled in the others. -->
+  <ItemGroup Condition=" '$(Configuration)' == 'Legacy' ">
+    <Compile Remove="BusinessObjects\Supplier.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.ExpressApp.Xpo" Version="25.2.4" />
+    <PackageReference Include="DevExpress.Persistent.BaseImpl.Xpo" Version="25.2.4" />
+  </ItemGroup>
+
+</Project>

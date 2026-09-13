@@ -89,6 +89,14 @@ internal static class SampleProjects
     public static string SharedClassNamePath =>
         Path.Combine(FixturesRoot, "SharedClassNameSolution", "Library.Module");
 
+    /// <summary>Path to the module whose project file removes source from the build.</summary>
+    public static string CompileRemovePath =>
+        Path.Combine(FixturesRoot, "CompileRemoveSolution", "Archive.Module");
+
+    /// <summary>Path to the module with a pre-SDK project file beside the SDK one that replaced it.</summary>
+    public static string MigratedProjectPath =>
+        Path.Combine(FixturesRoot, "MigratedProjectSolution", "Ledger.Module");
+
     /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
     public static string LegacyFrameworkPath =>
         Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
@@ -177,6 +185,8 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyXpoWithEfUtil = new(() => Extract(XpoWithEfUtilPath));
     private static readonly Lazy<ExtractedProject> LazyBuiltInBases = new(() => Extract(BuiltInBasesPath));
     private static readonly Lazy<ExtractedProject> LazySharedClassName = new(() => Extract(SharedClassNamePath));
+    private static readonly Lazy<ExtractedProject> LazyCompileRemove = new(() => Extract(CompileRemovePath));
+    private static readonly Lazy<ExtractedProject> LazyMigratedProject = new(() => Extract(MigratedProjectPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -267,6 +277,19 @@ internal static class SampleProjects
     /// by its bare name has to say which one it means.
     /// </remarks>
     public static ExtractedProject SharedClassName => LazySharedClassName.Value;
+
+    /// <summary>
+    /// A billing application whose folder holds source its project file removes from the build: a
+    /// folder of drafts, a copy of a class under another namespace, a controller folder and backups
+    /// by pattern — beside a class removed only under a condition, which is still compiled.
+    /// </summary>
+    public static ExtractedProject CompileRemove => LazyCompileRemove.Value;
+
+    /// <summary>
+    /// A ledger application mid-migration: a folder-named pre-SDK project file that lists its sources
+    /// by hand and misses one added since, beside the SDK project the application is built from.
+    /// </summary>
+    public static ExtractedProject MigratedProject => LazyMigratedProject.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.
