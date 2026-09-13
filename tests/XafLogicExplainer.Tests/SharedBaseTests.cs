@@ -146,12 +146,19 @@ public class SharedBaseTests
     }
 
     /// <summary>
-    /// With reference following switched off, the old answer comes back.
+    /// With reference following switched off, the classes are still listed and inherit nothing.
     /// </summary>
     /// <remarks>
     /// Pinned so the switch is known to do something. It exists because the cost is not free: a
     /// referenced project with no <c>BusinessObjects</c> folder is parsed in full, which is
     /// exactly what <c>Audit.Primitives</c> is here to represent.
+    /// <para>
+    /// This used to assert that nothing was listed at all. Both classes carry
+    /// <c>[DefaultClassOptions]</c>, so that was the defect in
+    /// <see href="https://github.com/peopleworks/XAFLogicExplainer/issues/82"/>, pinned: a class the
+    /// application declares a business class disappeared because its base could not be read. What
+    /// the switch really decides is what they inherit.
+    /// </para>
     /// </remarks>
     [Fact]
     public void TheSwitchTurnsItOff()
@@ -162,8 +169,12 @@ public class SharedBaseTests
             FollowProjectReferences = false,
         };
 
-        var entities = new EntityAnalyzer().AnalyzeEntities(SampleProjects.SharedBasePath, options);
+        var cliente = new EntityAnalyzer().AnalyzeEntities(SampleProjects.SharedBasePath, options)
+            .Single(entity => entity.ClassName == "Cliente");
+        var names = cliente.Properties.Select(property => property.Name).ToList();
 
-        Assert.Empty(entities);
+        Assert.Contains("Nombre", names);
+        Assert.DoesNotContain("CreatedBy", names);
+        Assert.DoesNotContain("CreatedOn", names);
     }
 }

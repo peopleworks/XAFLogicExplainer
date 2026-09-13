@@ -7,6 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A business class built on a class DevExpress ships was not listed at all**
+  ([#82](https://github.com/peopleworks/XAFLogicExplainer/issues/82)). A class was accepted only when it
+  derived, directly or through the application's own classes, from one of seven root bases. So
+  `Employee : Person`, `Shift : Event`, an attachment on `FileAttachmentBase`, the application's own
+  `ReportDataV2` and `DashboardData` storage classes, anything on `NonPersistentBaseObject`, and a
+  `[DomainComponent]` with no base were all dropped, and `AGENTS.md` then said they did not exist. On six
+  real applications the largest lost twelve classes of its own module, and all eight of its one-ended
+  associations were this. A class is now also accepted when it carries an attribute that puts it in the
+  XAF model, or when it derives from a business class library class by name, unless the application
+  declares a class of that name itself. A class on a non-persistent base is marked as not persistent,
+  and so is every class below it, and the view inventory generates views for non-persistent classes, as
+  XAF does. A report's parameters dialog is still read with its report rather than listed as a class.
+  The `AGENTS.md` entity table and the explain page mark a class that is not stored, so a dialog listed
+  beside the tables does not read as one. Entity counts move for any application built on these bases.
+
 ## [0.17.1] — 2026-09-13
 
 The documents are current when they say they are.

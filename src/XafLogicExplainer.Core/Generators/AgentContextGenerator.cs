@@ -334,13 +334,19 @@ public sealed class AgentContextGenerator
             var more = entity.Relationships.Count > 4 ? $" +{entity.Relationships.Count - 4}" : "";
 
             sb.Append($"| **{entity.ClassName}** ");
-            sb.Append($"| `{Cell(entity.BaseType)}` ");
+            // A dialog or a planning screen sits in this list beside the classes that are tables, and
+            // a row that does not say so invites a query against something no database holds.
+            sb.Append($"| `{Cell(entity.BaseType)}`{(entity.IsPersistent ? "" : " (not stored)")} ");
             sb.Append($"| {Cell(string.Join(", ", notable))} ");
             sb.AppendLine($"| {Cell(string.Join(", ", relationships) + more)} |");
         }
 
         sb.AppendLine();
         sb.AppendLine("Markers: `*` required · `=` calculated · `#` key.");
+
+        if (project.Entities.Any(entity => !entity.IsPersistent))
+            sb.AppendLine("A class marked *(not stored)* is shown by XAF with no table behind it: a dialog, or a screen assembled in memory.");
+
         sb.AppendLine();
     }
 

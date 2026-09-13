@@ -79,6 +79,12 @@ internal static class SampleProjects
     public static string XpoWithEfUtilPath =>
         Path.Combine(FixturesRoot, "XpoWithEfUtilSolution", "XpoUtil.Module");
 
+    /// <summary>
+    /// Path to the module whose business classes derive from classes DevExpress ships, or from none.
+    /// </summary>
+    public static string BuiltInBasesPath =>
+        Path.Combine(FixturesRoot, "BuiltInBasesSolution", "Staffing.Module");
+
     /// <summary>Path to the fixture written in the pre-SDK project format.</summary>
     public static string LegacyFrameworkPath =>
         Path.Combine(FixturesRoot, "LegacyFrameworkSolution", "SampleFx.Module");
@@ -165,6 +171,7 @@ internal static class SampleProjects
     private static readonly Lazy<ExtractedProject> LazyHomonym = new(() => Extract(HomonymPath));
     private static readonly Lazy<ExtractedProject> LazySpellings = new(() => Extract(RegistrationSpellingsPath));
     private static readonly Lazy<ExtractedProject> LazyXpoWithEfUtil = new(() => Extract(XpoWithEfUtilPath));
+    private static readonly Lazy<ExtractedProject> LazyBuiltInBases = new(() => Extract(BuiltInBasesPath));
 
     /// <summary>The XPO sample: Customer, Order, OrderLine, one controller, seed data, xafml.</summary>
     public static ExtractedProject Xpo => LazyXpo.Value;
@@ -236,6 +243,14 @@ internal static class SampleProjects
     /// An XPO application that references an EF Core utility — a cache, which is a real reason.
     /// </summary>
     public static ExtractedProject XpoWithEfUtil => LazyXpoWithEfUtil.Value;
+
+    /// <summary>
+    /// A staffing application built on the business class library: an <c>Employee</c> on
+    /// <c>Person</c>, a <c>Shift</c> on <c>Event</c>, report and dashboard storage classes of its
+    /// own, an attachment, and three classes that store nothing — beside a report dialog, a helper
+    /// and a homonym that must stay out of the list.
+    /// </summary>
+    public static ExtractedProject BuiltInBases => LazyBuiltInBases.Value;
 
     /// <summary>
     /// An XPO application on an audit base wider than the entities that derive from it.
