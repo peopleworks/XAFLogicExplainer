@@ -345,21 +345,25 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
         // reason the parameters object is worth reading rather than merely naming.
         if (parameters.CriteriaSource is { Length: > 0 } criteria)
         {
+            var fence = MarkdownFence.For(criteria);
+
             sb.AppendLine(L("Con esas respuestas filtra", "Those answers become the filter") + ":");
             sb.AppendLine();
-            sb.AppendLine("```csharp");
+            sb.AppendLine($"{fence}csharp");
             sb.AppendLine(criteria.Trim());
-            sb.AppendLine("```");
+            sb.AppendLine(fence);
             sb.AppendLine();
         }
 
         if (parameters.SortingSource is { Length: > 0 } sorting)
         {
+            var fence = MarkdownFence.For(sorting);
+
             sb.AppendLine(L("Y el orden", "And the sort order") + ":");
             sb.AppendLine();
-            sb.AppendLine("```csharp");
+            sb.AppendLine($"{fence}csharp");
             sb.AppendLine(sorting.Trim());
-            sb.AppendLine("```");
+            sb.AppendLine(fence);
             sb.AppendLine();
         }
     }
@@ -980,14 +984,16 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                     {
                         sb.AppendLine($"**{_l.ExecutionLogic}:**");
                         sb.AppendLine();
-                        sb.AppendLine("```csharp");
                         var lines = action.ExecuteMethodBody.Split('\n');
                         var truncated = lines.Length > 100;
-                        foreach (var line in lines.Take(100))
+                        var shownLines = lines.Take(100).ToList();
+                        var fence = MarkdownFence.For(shownLines);
+                        sb.AppendLine($"{fence}csharp");
+                        foreach (var line in shownLines)
                             sb.AppendLine(line);
                         if (truncated)
                             sb.AppendLine($"// ... ({lines.Length - 100} {_l.MoreLines})");
-                        sb.AppendLine("```");
+                        sb.AppendLine(fence);
                         sb.AppendLine();
                     }
                 }
@@ -1177,11 +1183,12 @@ public class MarkdownDocumentationGenerator : IDocumentationGenerator
                     // Markdown viewer, a model reading the file -- the wrapper is literal text and the
                     // label stops being a label. This costs the fold on GitHub, which is the trade:
                     // these files are read far more often than they are scrolled.
+                    var fence = MarkdownFence.For(seed.RawSourceCode);
                     sb.AppendLine($"#### {_l.SourceCodeOf} {seed.MethodName}");
                     sb.AppendLine();
-                    sb.AppendLine("```csharp");
+                    sb.AppendLine($"{fence}csharp");
                     sb.AppendLine(seed.RawSourceCode);
-                    sb.AppendLine("```");
+                    sb.AppendLine(fence);
                     sb.AppendLine();
                 }
             }

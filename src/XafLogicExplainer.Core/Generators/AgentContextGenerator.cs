@@ -470,16 +470,27 @@ public sealed class AgentContextGenerator
         sb.AppendLine("XAF filters, validates and styles with criteria strings, which are neither SQL nor C#.");
         sb.AppendLine("These are real expressions from this codebase — follow their dialect:");
         sb.AppendLine();
-        sb.AppendLine("```");
 
-        foreach (var example in conventions.CriteriaExamples.Take(MaxCriteriaExamples))
+        var examples = conventions.CriteriaExamples
+            .Take(MaxCriteriaExamples)
+            .Select(example => (example.Context, Expression: Truncate(example.Expression, MaxCriteriaLength)))
+            .ToList();
+
+        // The expressions are copied as they were written. One holding a line that starts with
+        // backticks would close a fixed fence, and the rest of this file, which an agent follows,
+        // would be read as instructions rather than as examples.
+        var fence = MarkdownFence.For(examples.SelectMany(example => new[] { example.Context, example.Expression }));
+
+        sb.AppendLine(fence);
+
+        foreach (var example in examples)
         {
             sb.AppendLine($"// {example.Context}");
-            sb.AppendLine(Truncate(example.Expression, MaxCriteriaLength));
+            sb.AppendLine(example.Expression);
             sb.AppendLine();
         }
 
-        sb.AppendLine("```");
+        sb.AppendLine(fence);
         sb.AppendLine();
 
         if (conventions.CriteriaExamples.Count > MaxCriteriaExamples)
