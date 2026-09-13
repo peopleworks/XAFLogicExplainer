@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Interfaces;
 
@@ -12,75 +13,45 @@ public class ProjectHashCalculator : IChangeDetector
     private const string HashFileName = ".xaflogicexplainer";
 
     /// <summary>
-    /// Computes a SHA-256 hash from relevant source files and model files.
+    /// Computes a SHA-256 hash over every file the extraction can read.
     /// </summary>
     /// <remarks>
     /// It has to cover everything the extraction reads, or the documentation goes stale while the
     /// tool reports it fresh -- which is worse than no change detection at all, because nobody
-    /// re-runs a command that just said there was nothing to do. Since referenced projects became
-    /// readable, that includes their source: editing an inherited property in a shared base
-    /// changes the shape of every entity below it and used to leave this hash untouched.
+    /// re-runs a command that just said there was nothing to do.
     /// <para>
-    /// The project files are in for the same reason. Adding or removing a
-    /// <c>&lt;ProjectReference&gt;</c> changes what is read without changing a line of C#.
+    /// This hash used to list those files itself, and each time the extraction learned to read
+    /// somewhere new the list fell behind: referenced source first, then the controllers in a
+    /// Blazor.Server project and the report layouts at the solution root, which it never covered.
+    /// The list now comes from <see cref="SourceRoster"/>, which is built from the extraction's own
+    /// discovery, and the MCP server's cache fingerprint walks the same one.
     /// </para>
     /// <para>
-    /// It errs wide on purpose. With reference following switched off the hash covers more than
-    /// the extraction reads, and the cost of that is one extra run; the cost of covering less is a
-    /// document that is wrong and says it is current.
+    /// Each file's path goes in with its bytes, so a file that moves changes the hash as well: the
+    /// documentation says where things are declared.
     /// </para>
     /// </remarks>
     /// <param name="projectDirectory">Root project directory.</param>
     /// <returns>Upper-case hexadecimal hash string.</returns>
     public string ComputeHash(string projectDirectory)
     {
-        var csFiles = Directory.GetFiles(projectDirectory, "*.cs", SearchOption.AllDirectories);
-        var xafmlFiles = Directory.GetFiles(projectDirectory, "*.xafml", SearchOption.AllDirectories);
-
-        // The same walk the extractor makes, so the two cannot answer differently about what
-        // belongs to this project.
-        var referenced = ProjectFile.ReferencedDirectories(projectDirectory)
-            .SelectMany(directory =>
-            {
-                try { return Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories); }
-                catch (IOException) { return []; }
-                catch (UnauthorizedAccessException) { return []; }
-            });
-
-        var projectFiles = new[] { projectDirectory }
-            .Concat(ProjectFile.ReferencedDirectories(projectDirectory))
-            .SelectMany(directory =>
-            {
-                try { return Directory.GetFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly); }
-                catch (IOException) { return []; }
-                catch (UnauthorizedAccessException) { return []; }
-            });
-
-        // Also include sibling platform xafml files
-        var parentDir = Directory.GetParent(projectDirectory)?.FullName;
-        var siblingXafml = parentDir != null
-            ? Directory.GetDirectories(parentDir)
-                .Where(d => !d.Equals(projectDirectory, StringComparison.OrdinalIgnoreCase))
-                .SelectMany(d =>
-                {
-                    // HACK: IO exceptions are intentionally swallowed to keep hashing resilient when sibling
-                    // modules are inaccessible. A richer diagnostic channel is a future improvement.
-                    try { return Directory.GetFiles(d, "*.xafml", SearchOption.TopDirectoryOnly); }
-                    catch { return []; }
-                })
-            : Enumerable.Empty<string>();
-
-        var files = csFiles.Concat(xafmlFiles).Concat(siblingXafml)
-            .Concat(referenced).Concat(projectFiles)
-            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)
-                        && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
-            .OrderBy(f => f)
-            .ToArray();
-
         using var sha256 = SHA256.Create();
-        foreach (var file in files)
+        foreach (var file in SourceRoster.Files(projectDirectory))
         {
-            var content = File.ReadAllBytes(file);
+            var name = Encoding.UTF8.GetBytes(Path.GetRelativePath(projectDirectory, file) + "\n");
+            sha256.TransformBlock(name, 0, name.Length, null, 0);
+
+            byte[] content;
+            try
+            {
+                content = File.ReadAllBytes(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Locked or gone since the roster was listed. Its path is still in the hash.
+                continue;
+            }
+
             sha256.TransformBlock(content, 0, content.Length, null, 0);
         }
         sha256.TransformFinalBlock([], 0, 0);

@@ -89,15 +89,55 @@ internal static class ReportLayoutReader
         if (!Directory.Exists(sourceDirectory))
             return [];
 
+        var root = RepxRoot(sourceDirectory);
+
+        // Pruned rather than filtered. From a solution folder the walk used to enter every restored
+        // package and every build output before discarding what it found there: on a .NET Framework
+        // solution that is thousands of files, and once change detection began walking the same
+        // search on every question it was nearly all of the time spent. A layout inside one of these
+        // is a package's content or a build's copy, never this application's work.
+        var layouts = new System.IO.Enumeration.FileSystemEnumerable<string>(
+            root,
+            (ref System.IO.Enumeration.FileSystemEntry entry) => entry.ToSpecifiedFullPath(),
+            new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = 0 })
+        {
+            ShouldIncludePredicate = (ref System.IO.Enumeration.FileSystemEntry entry) =>
+                !entry.IsDirectory && entry.FileName.EndsWith(".repx", StringComparison.OrdinalIgnoreCase),
+            ShouldRecursePredicate = (ref System.IO.Enumeration.FileSystemEntry entry) =>
+                !NeverHoldsLayouts(entry.FileName),
+        };
+
+        return layouts
+            .Where(f => BuildOutputFilter.IsAnalyzable(f, root))
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Directories no application keeps its own layouts in: build output, restored packages, and the
+    /// tool folders a leading dot marks — the same ones sibling discovery never treats as a project.
+    /// </summary>
+    private static bool NeverHoldsLayouts(ReadOnlySpan<char> directoryName) =>
+        directoryName.StartsWith(".")
+        || directoryName.Equals("bin", StringComparison.OrdinalIgnoreCase)
+        || directoryName.Equals("obj", StringComparison.OrdinalIgnoreCase)
+        || directoryName.Equals("packages", StringComparison.OrdinalIgnoreCase)
+        || directoryName.Equals("node_modules", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The directory <see cref="RepxFiles"/> searches under.
+    /// </summary>
+    /// <remarks>
+    /// Its own function so that change detection watches the directory this search really covers,
+    /// instead of working it out a second time.
+    /// </remarks>
+    public static string RepxRoot(string sourceDirectory)
+    {
         // The parent is the solution only when this directory is a project. Pointed at a
         // solution folder — or at a working copy sitting in a folder of unrelated repositories —
         // climbing would read every other application's reports as this one's.
         var isProject = Directory.EnumerateFiles(sourceDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Any();
-        var root = isProject ? Directory.GetParent(sourceDirectory)?.FullName ?? sourceDirectory : sourceDirectory;
-
-        return Directory.GetFiles(root, "*.repx", SearchOption.AllDirectories)
-            .Where(f => BuildOutputFilter.IsAnalyzable(f, root))
-            .OrderBy(f => f, StringComparer.Ordinal);
+        return isProject ? Directory.GetParent(sourceDirectory)?.FullName ?? sourceDirectory : sourceDirectory;
     }
 
     // ---------------------------------------------------------------- code

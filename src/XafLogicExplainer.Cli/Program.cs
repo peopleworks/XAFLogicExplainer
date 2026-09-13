@@ -1035,8 +1035,7 @@ watchCommand.SetHandler(async (context) =>
                 if (cts.IsCancellationRequested) return;
 
                 var path = e.FullPath;
-                if (path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
-                    path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+                if (!SourceRoster.IsReadKind(path, ((FileSystemWatcher)sender).Path))
                     return;
 
                 AnsiConsole.MarkupLine($"  [grey][{Markup.Escape(proj.Name)}] File changed: {Markup.Escape(Path.GetFileName(path))}[/]");
@@ -1044,10 +1043,12 @@ watchCommand.SetHandler(async (context) =>
                 projectTimers[proj.Name] = new Timer(TriggerProjectSync, null, debounceSeconds * 1000, Timeout.Infinite);
             }
 
-            // Setup watchers for this project
-            void AddWatcher(string dir, string filter)
+            // Watch every directory the extraction reads from and filter by kind in the handler. One
+            // pattern per watcher is how a Blazor.Server controller and a report layout at the
+            // solution root went unwatched.
+            void AddWatcher(string dir)
             {
-                var w = new FileSystemWatcher(dir, filter)
+                var w = new FileSystemWatcher(dir)
                 {
                     IncludeSubdirectories = true,
                     NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
@@ -1060,30 +1061,10 @@ watchCommand.SetHandler(async (context) =>
                 watchers.Add(w);
             }
 
-            AddWatcher(proj.ProjectPath, "*.cs");
-            AddWatcher(proj.ProjectPath, "*.xafml");
-
-            // Sibling platform projects
-            var projParentDir = Directory.GetParent(proj.ProjectPath)?.FullName;
-            if (projParentDir != null)
+            foreach (var projWatchRoot in SourceRoster.WatchRoots(proj.ProjectPath))
             {
-                var projDirName = new DirectoryInfo(proj.ProjectPath).Name;
-                foreach (var siblingDir in Directory.GetDirectories(projParentDir))
-                {
-                    var siblingName = new DirectoryInfo(siblingDir).Name;
-                    if (siblingName == projDirName) continue;
-
-                    var siblingXafml = Directory.GetFiles(siblingDir, "*.xafml", SearchOption.AllDirectories)
-                        .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                                 && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
-                        .ToArray();
-
-                    if (siblingXafml.Length > 0)
-                    {
-                        AddWatcher(siblingDir, "*.xafml");
-                        AnsiConsole.MarkupLine($"  [blue]{proj.Name}[/] sibling: {siblingName} ({siblingXafml.Length} xafml)");
-                    }
-                }
+                AddWatcher(projWatchRoot);
+                AnsiConsole.MarkupLine($"  [blue]{Markup.Escape(proj.Name)}[/] watching: {Markup.Escape(projWatchRoot)}");
             }
 
             AnsiConsole.MarkupLine($"  [green]✓[/] {proj.Name} -> {proj.ResourceName}");
@@ -1202,10 +1183,9 @@ watchCommand.SetHandler(async (context) =>
     {
         if (cts.IsCancellationRequested) return;
 
-        // Exclude obj/ and bin/ directories
+        // Only the kinds of file the extraction reads, and never build output.
         var path = e.FullPath;
-        if (path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") ||
-            path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+        if (!SourceRoster.IsReadKind(path, ((FileSystemWatcher)sender).Path))
             return;
 
         AnsiConsole.MarkupLine($"  [grey]File changed: {Markup.Escape(Path.GetFileName(path))}[/]");
@@ -1213,69 +1193,28 @@ watchCommand.SetHandler(async (context) =>
         debounceTimer = new Timer(TriggerSync, null, debounceSeconds * 1000, Timeout.Infinite);
     }
 
-    // Watcher for .cs files in project directory
-    var csWatcher = new FileSystemWatcher(projectPath, "*.cs")
+    // Watch every directory the extraction reads from and filter by kind in the handler. One pattern
+    // per watcher is how a Blazor.Server controller and a report layout at the solution root went
+    // unwatched.
+    foreach (var watchRoot in SourceRoster.WatchRoots(projectPath))
     {
-        IncludeSubdirectories = true,
-        NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
-        EnableRaisingEvents = true
-    };
-    csWatcher.Changed += OnFileChanged;
-    csWatcher.Created += OnFileChanged;
-    csWatcher.Deleted += OnFileChanged;
-    csWatcher.Renamed += (s, e) => OnFileChanged(s, e);
-    watchers.Add(csWatcher);
-
-    // Watcher for .xafml files in project directory
-    var xafmlWatcher = new FileSystemWatcher(projectPath, "*.xafml")
-    {
-        IncludeSubdirectories = true,
-        NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
-        EnableRaisingEvents = true
-    };
-    xafmlWatcher.Changed += OnFileChanged;
-    xafmlWatcher.Created += OnFileChanged;
-    xafmlWatcher.Deleted += OnFileChanged;
-    xafmlWatcher.Renamed += (s, e) => OnFileChanged(s, e);
-    watchers.Add(xafmlWatcher);
-
-    // Watchers for sibling platform projects (Blazor.Server, Win)
-    var parentDir = Directory.GetParent(projectPath)?.FullName;
-    if (parentDir != null)
-    {
-        var projectDirName = new DirectoryInfo(projectPath).Name;
-        foreach (var siblingDir in Directory.GetDirectories(parentDir))
+        var rootWatcher = new FileSystemWatcher(watchRoot)
         {
-            var siblingName = new DirectoryInfo(siblingDir).Name;
-            if (siblingName == projectDirName) continue;
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
+            EnableRaisingEvents = true
+        };
+        rootWatcher.Changed += OnFileChanged;
+        rootWatcher.Created += OnFileChanged;
+        rootWatcher.Deleted += OnFileChanged;
+        rootWatcher.Renamed += (s, e) => OnFileChanged(s, e);
+        watchers.Add(rootWatcher);
 
-            // Check if sibling has xafml files (platform project)
-            var siblingXafml = Directory.GetFiles(siblingDir, "*.xafml", SearchOption.AllDirectories)
-                .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                         && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
-                .ToArray();
-
-            if (siblingXafml.Length > 0)
-            {
-                var siblingWatcher = new FileSystemWatcher(siblingDir, "*.xafml")
-                {
-                    IncludeSubdirectories = true,
-                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
-                    EnableRaisingEvents = true
-                };
-                siblingWatcher.Changed += OnFileChanged;
-                siblingWatcher.Created += OnFileChanged;
-                siblingWatcher.Deleted += OnFileChanged;
-                siblingWatcher.Renamed += (s, e) => OnFileChanged(s, e);
-                watchers.Add(siblingWatcher);
-
-                AnsiConsole.MarkupLine($"[blue]Sibling:[/]  {siblingName} ({siblingXafml.Length} xafml files)");
-            }
-        }
+        AnsiConsole.MarkupLine($"[blue]Watching:[/] {Markup.Escape(watchRoot)}");
     }
 
     AnsiConsole.WriteLine();
-    AnsiConsole.MarkupLine($"[green]✓[/] Watching {watchers.Count} directories for .cs and .xafml changes");
+    AnsiConsole.MarkupLine($"[green]✓[/] Watching {watchers.Count} directories for .cs, .xafml, .csproj and .repx changes");
     AnsiConsole.MarkupLine("[grey]  Watching for changes... (Ctrl+C to stop)[/]");
 
     // Wait for cancellation

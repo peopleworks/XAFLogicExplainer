@@ -112,7 +112,7 @@ public class LogicExtractor : ILogicExtractor
         // 2.5. Discover sibling platform projects and extract their entities/controllers
         if (options.DiscoverPlatformModels)
         {
-            var siblings = DiscoverSiblingDirectories(projectPath);
+            var siblings = SourceRoster.SiblingDirectories(projectPath);
             foreach (var siblingDir in siblings)
             {
                 var siblingName = new DirectoryInfo(siblingDir).Name;
@@ -147,7 +147,7 @@ public class LogicExtractor : ILogicExtractor
         //      exactly why nobody reading the business objects ever meets them.
         var editorAnalyzer = new EditorAnalyzer();
         var siblingDirs = options.DiscoverPlatformModels
-            ? DiscoverSiblingDirectories(projectPath).ToList()
+            ? SourceRoster.SiblingDirectories(projectPath).ToList()
             : [];
 
         // Alias constants are gathered across the whole solution before any editor is read. The
@@ -371,46 +371,6 @@ public class LogicExtractor : ILogicExtractor
             if (modelClass.IsCloneable)
                 entity.IsCloneable = true;
         }
-    }
-
-    /// <summary>
-    /// Discovers sibling project directories that may contain additional entities/controllers.
-    /// Uses the same parent-directory pattern as ModelAnalyzer for xafml discovery.
-    /// </summary>
-    private static List<string> DiscoverSiblingDirectories(string moduleDirectory)
-    {
-        var siblings = new List<string>();
-
-        var parentDir = Directory.GetParent(moduleDirectory)?.FullName;
-        if (parentDir == null) return siblings;
-
-        foreach (var siblingDir in Directory.GetDirectories(parentDir))
-        {
-            // Skip the module directory itself
-            if (siblingDir.Equals(moduleDirectory, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            // Skip common non-project directories
-            var dirName = Path.GetFileName(siblingDir);
-            if (dirName.StartsWith(".") || dirName == "packages" || dirName == "node_modules")
-                continue;
-
-            // Only include siblings that have at least one .cs file (actual project dirs)
-            try
-            {
-                if (Directory.GetFiles(siblingDir, "*.cs", SearchOption.AllDirectories)
-                    .Any(f => BuildOutputFilter.IsAnalyzable(f, siblingDir)))
-                {
-                    siblings.Add(siblingDir);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Skip inaccessible directories
-            }
-        }
-
-        return siblings;
     }
 
     /// <summary>
