@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Catalog;
 using XafLogicExplainer.Core.Generators;
 using XafLogicExplainer.Core.Models;
@@ -810,16 +811,20 @@ public sealed class WikiGenerator
 
         sb.AppendLine($"  <h3 class=\"sub\">Entities <span class=\"card__meta\">{entities.Count}</span></h3>");
 
-        foreach (var entity in entities.OrderBy(e => e.ClassName, StringComparer.Ordinal))
+        var directory = new EntityDirectory(entities);
+
+        foreach (var entity in entities
+                     .OrderBy(e => e.ClassName, StringComparer.Ordinal)
+                     .ThenBy(e => e.Namespace, StringComparer.Ordinal))
         {
             var declared = entity.Properties.Where(p => p.InheritedFrom is null).ToList();
             var haystack = Haystack(entity.ClassName, entity.Description, entity.BaseType,
                 string.Join(" ", entity.Properties.Select(p => p.Name + " " + p.TypeName)),
                 string.Join(" ", entity.Relationships.Select(r => r.RelatedEntity)));
 
-            sb.AppendLine($"  <details class=\"card\" id=\"{E(app.Slug)}-entity-{E(entity.ClassName)}\" "
+            sb.AppendLine($"  <details class=\"card\" id=\"{E(app.Slug)}-entity-{E(directory.Anchor(entity))}\" "
                         + $"data-search=\"{haystack}\" data-app=\"{E(app.Slug)}\">");
-            sb.Append($"    <summary><span class=\"card__name\">{E(entity.ClassName)}</span> ");
+            sb.Append($"    <summary><span class=\"card__name\">{E(directory.Label(entity))}</span> ");
             sb.Append($"<span class=\"card__meta\">{E(entity.BaseType)} · {declared.Count} declared properties");
             if (entity.Relationships.Count > 0) sb.Append($" · {entity.Relationships.Count} relationships");
             sb.Append("</span>");
@@ -854,7 +859,11 @@ public sealed class WikiGenerator
                 foreach (var relationship in entity.Relationships)
                 {
                     sb.Append($"      <tr><td class=\"mono\">{E(relationship.PropertyName)}</td>");
-                    sb.Append($"<td class=\"mono\"><a href=\"#{E(app.Slug)}-entity-{E(relationship.RelatedEntity)}\">{E(relationship.RelatedEntity)}</a></td><td>");
+                    // Linked only to a card that exists: a name written with its namespace, or one two
+                    // classes share, has no card under the text as written.
+                    sb.Append(directory.Resolve(relationship.RelatedEntity, entity.Namespace) is { } related
+                        ? $"<td class=\"mono\"><a href=\"#{E(app.Slug)}-entity-{E(directory.Anchor(related))}\">{E(relationship.RelatedEntity)}</a></td><td>"
+                        : $"<td class=\"mono\">{E(relationship.RelatedEntity)}</td><td>");
                     if (relationship.IsAggregated) sb.Append("<span class=\"pill pill--own\">owned</span> ");
                     sb.AppendLine("</td></tr>");
                 }

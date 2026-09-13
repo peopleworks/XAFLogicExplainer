@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Models;
 
 namespace XafLogicExplainer.Core.Generators;
@@ -37,6 +38,7 @@ public sealed class HtmlExplainerGenerator
     {
         var sb = new StringBuilder();
         var graph = EntityGraph.Build(project);
+        var directory = new EntityDirectory(project.Entities);
 
         sb.AppendLine("<!doctype html>");
         sb.AppendLine($"<html lang=\"en\">");
@@ -48,14 +50,14 @@ public sealed class HtmlExplainerGenerator
 
         sb.AppendLine("<main class=\"wrap\">");
         WriteMap(sb, graph);
-        WriteEntities(sb, project);
+        WriteEntities(sb, project, directory);
         WriteOperations(sb, project);
-        WriteScreens(sb, project);
-        WriteReports(sb, project);
+        WriteScreens(sb, project, directory);
+        WriteReports(sb, project, directory);
         WriteRules(sb, project);
         WriteCriteria(sb, project);
         WriteModelEditor(sb, project);
-        WriteEditors(sb, project);
+        WriteEditors(sb, project, directory);
         WriteSeedData(sb, project);
         WriteMigrations(sb, project);
         sb.AppendLine("</main>");
@@ -170,7 +172,7 @@ public sealed class HtmlExplainerGenerator
         {
             var owned = edge.IsAggregated ? " own" : "";
             sb.AppendLine(
-                $"    <path class=\"edge{owned}\" data-from=\"{E(edge.From.Name)}\" data-to=\"{E(edge.To.Name)}\" " +
+                $"    <path class=\"edge{owned}\" data-from=\"{E(edge.From.Anchor)}\" data-to=\"{E(edge.To.Anchor)}\" " +
                 $"d=\"{Curve(edge, graph)}\"><title>{E(edge.From.Name)}.{E(edge.Label)} → {E(edge.To.Name)}" +
                 $"{(edge.IsAggregated ? " (owned)" : "")}</title></path>");
         }
@@ -182,7 +184,9 @@ public sealed class HtmlExplainerGenerator
             var labelX = node.X + Math.Cos(node.Angle) * (node.Radius + 9);
             var labelY = node.Y + Math.Sin(node.Angle) * (node.Radius + 9) + 4;
 
-            sb.AppendLine($"    <g class=\"node\" data-name=\"{E(node.Name)}\">");
+            // The anchor, not the label: the script finds the card by it, and two classes of one
+            // name must not light up together.
+            sb.AppendLine($"    <g class=\"node\" data-name=\"{E(node.Anchor)}\">");
             sb.AppendLine($"      <circle cx=\"{N(node.X)}\" cy=\"{N(node.Y)}\" r=\"{N(node.Radius)}\">" +
                           $"<title>{E(node.Name)} — {node.PropertyCount} properties, {node.Degree} relationships</title></circle>");
             sb.AppendLine($"      <text x=\"{N(labelX)}\" y=\"{N(labelY)}\" text-anchor=\"{outward}\">{E(node.Name)}</text>");
@@ -225,21 +229,23 @@ public sealed class HtmlExplainerGenerator
 
     // -------------------------------------------------------------- entities
 
-    private static void WriteEntities(StringBuilder sb, ExtractedProject project)
+    private static void WriteEntities(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         sb.AppendLine("<section id=\"entities\">");
         sb.AppendLine($"  <h2>Business entities <span class=\"card__meta\">{project.Entities.Count}</span></h2>");
         sb.AppendLine("  <p class=\"lede\">Every business class the application declares, and what each one holds. Markers show what each property is: a key, required, or calculated by the database rather than in C#. A class marked not stored is shown with no table behind it.</p>");
 
-        foreach (var entity in project.Entities.OrderBy(e => e.ClassName, StringComparer.Ordinal))
+        foreach (var entity in project.Entities
+                     .OrderBy(e => e.ClassName, StringComparer.Ordinal)
+                     .ThenBy(e => e.Namespace, StringComparer.Ordinal))
         {
             var haystack = Haystack(entity.ClassName, entity.Description, entity.BaseType,
                 string.Join(" ", entity.Properties.Select(p => p.Name + " " + p.TypeName)),
                 string.Join(" ", entity.Relationships.Select(r => r.RelatedEntity)));
 
-            sb.AppendLine($"  <article class=\"card\" id=\"entity-{E(entity.ClassName)}\" data-search=\"{haystack}\">");
+            sb.AppendLine($"  <article class=\"card\" id=\"entity-{E(directory.Anchor(entity))}\" data-search=\"{haystack}\">");
             sb.AppendLine("    <div class=\"card__head\">");
-            sb.AppendLine($"      <span class=\"card__name\">{E(entity.ClassName)}</span>");
+            sb.AppendLine($"      <span class=\"card__name\">{E(directory.Label(entity))}</span>");
             sb.AppendLine($"      <span class=\"card__meta\">{E(entity.BaseType)} · {entity.Properties.Count} properties{(entity.IsPersistent ? "" : " · not stored")}</span>");
             if (!string.IsNullOrWhiteSpace(entity.ModelCaption))
                 sb.AppendLine($"      <span class=\"pill\">shown as “{E(entity.ModelCaption)}”</span>");
@@ -280,7 +286,7 @@ public sealed class HtmlExplainerGenerator
                 foreach (var relationship in entity.Relationships)
                 {
                     sb.Append($"      <tr><td class=\"mono\">{E(relationship.PropertyName)}</td>");
-                    sb.Append($"<td class=\"mono\"><a href=\"#entity-{E(relationship.RelatedEntity)}\">{E(relationship.RelatedEntity)}</a></td><td>");
+                    sb.Append($"<td class=\"mono\">{EntityLink(directory, relationship.RelatedEntity, entity.Namespace)}</td><td>");
                     sb.Append($"<span class=\"pill\">{Describe(relationship.Type)}</span> ");
                     if (relationship.IsAggregated) sb.Append("<span class=\"pill pill--own\">owned</span> ");
                     if (!string.IsNullOrWhiteSpace(relationship.AssociationName))
@@ -416,7 +422,7 @@ public sealed class HtmlExplainerGenerator
     /// exist in no file; and a controller's activation is four conditions the framework ands
     /// together, evaluated at run time against a view nobody wrote down.
     /// </remarks>
-    private static void WriteScreens(StringBuilder sb, ExtractedProject project)
+    private static void WriteScreens(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         if (project.Views.Count == 0)
             return;
@@ -468,7 +474,7 @@ public sealed class HtmlExplainerGenerator
                 if (view.OwnerProperty is { } ownerProperty)
                 {
                     sb.AppendLine("      <tr><th>Shown by</th><td class=\"mono\">" +
-                                  $"<a href=\"#entity-{E(view.OwnerEntity)}\">{E(view.OwnerEntity)}</a>.{E(ownerProperty)}</td></tr>");
+                                  $"{EntityLink(directory, view.OwnerEntity)}.{E(ownerProperty)}</td></tr>");
                 }
 
                 var mine = view.Activates.Where(a => !a.Framework).ToList();
@@ -619,7 +625,7 @@ public sealed class HtmlExplainerGenerator
     /// one thing the extraction never claims: with <c>ReportsModuleV2</c> registered, users design
     /// reports at run time and those live in the database.
     /// </remarks>
-    private static void WriteReports(StringBuilder sb, ExtractedProject project)
+    private static void WriteReports(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         if (!HasReports(project))
             return;
@@ -633,7 +639,7 @@ public sealed class HtmlExplainerGenerator
         var alreadyShown = new Dictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var report in project.Reports)
-            WriteReport(sb, project, report, alreadyShown);
+            WriteReport(sb, project, directory, report, alreadyShown);
 
         WriteUnregisteredReports(sb, project);
 
@@ -660,14 +666,15 @@ public sealed class HtmlExplainerGenerator
     }
 
     private static void WriteReport(
-        StringBuilder sb, ExtractedProject project, ExtractedReport report, Dictionary<string, string> alreadyShown)
+        StringBuilder sb, ExtractedProject project, EntityDirectory directory, ExtractedReport report,
+        Dictionary<string, string> alreadyShown)
     {
         var haystack = Haystack(report.DisplayName, report.DataType, report.ReportType, report.Layout?.FilterString);
 
         sb.AppendLine($"  <article class=\"card\" data-search=\"{haystack}\">");
         sb.AppendLine("    <div class=\"card__head\">");
         sb.AppendLine($"      <span class=\"card__name card__name--prose\">{E(report.DisplayName)}</span>");
-        sb.AppendLine($"      <span class=\"card__meta\">over {EntityReference(project, report.DataType)}</span>");
+        sb.AppendLine($"      <span class=\"card__meta\">over {EntityReference(directory, report.DataType)}</span>");
         sb.AppendLine("    </div>");
 
         sb.AppendLine("    <table><tbody>");
@@ -861,14 +868,25 @@ public sealed class HtmlExplainerGenerator
     };
 
     /// <summary>The entity a report is over, linked to its card when the page has one.</summary>
-    private static string EntityReference(ExtractedProject project, string dataType)
+    private static string EntityReference(EntityDirectory directory, string dataType)
     {
-        var name = dataType.Split('.').Last();
-
-        return project.Entities.Any(entity => entity.ClassName == name)
-            ? $"<a class=\"mono\" href=\"#entity-{E(name)}\">{E(dataType)}</a>"
+        return directory.Resolve(dataType) is { } entity
+            ? $"<a class=\"mono\" href=\"#entity-{E(directory.Anchor(entity))}\">{E(dataType)}</a>"
             : $"<span class=\"mono\">{E(dataType)}</span>";
     }
+
+    /// <summary>
+    /// A type as written, linked to its card when it is one of the application's classes.
+    /// </summary>
+    /// <remarks>
+    /// Resolved rather than pasted into the fragment: a name written with its namespace, or one two
+    /// classes share, has no card under the text as written, and a link to nowhere reads as a card
+    /// that went missing.
+    /// </remarks>
+    private static string EntityLink(EntityDirectory directory, string? written, string? fromNamespace = null) =>
+        directory.Resolve(written, fromNamespace) is { } entity
+            ? $"<a href=\"#entity-{E(directory.Anchor(entity))}\">{E(written)}</a>"
+            : E(written);
 
     /// <summary>
     /// A citation in the form every other output prints: relative to the project, with its line.
@@ -1040,7 +1058,7 @@ public sealed class HtmlExplainerGenerator
 
     // --------------------------------------------------------- custom editors
 
-    private static void WriteEditors(StringBuilder sb, ExtractedProject project)
+    private static void WriteEditors(StringBuilder sb, ExtractedProject project, EntityDirectory directory)
     {
         var customized = project.Controllers
             .Where(c => c.CustomizedEditors.Count > 0)
@@ -1089,7 +1107,7 @@ public sealed class HtmlExplainerGenerator
                 sb.AppendLine($"      <tr><th>Based on</th><td class=\"mono t\">{E(editor.BaseType)}</td></tr>");
             if (editor.UsedBy.Count > 0)
             {
-                var links = editor.UsedBy.Select(e => $"<a href=\"#entity-{E(e)}\">{E(e)}</a>");
+                var links = editor.UsedBy.Select(e => EntityLink(directory, e));
                 sb.AppendLine($"      <tr><th>Used by</th><td>{string.Join(", ", links)}</td></tr>");
             }
             else if (!editor.IsDefault && !string.IsNullOrWhiteSpace(editor.Alias))

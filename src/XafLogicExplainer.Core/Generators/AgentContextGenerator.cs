@@ -1,4 +1,5 @@
 using System.Text;
+using XafLogicExplainer.Core.Analyzers;
 using XafLogicExplainer.Core.Interfaces;
 using XafLogicExplainer.Core.Models;
 
@@ -307,7 +308,13 @@ public sealed class AgentContextGenerator
         sb.AppendLine("| Entity | Base | Notable properties | Relationships |");
         sb.AppendLine("| --- | --- | --- | --- |");
 
-        foreach (var entity in project.Entities.OrderBy(e => e.ClassName, StringComparer.Ordinal))
+        // Two classes can share a name in two namespaces. The list calls itself complete, and two
+        // rows reading alike would leave an agent to guess which one a question is about.
+        var directory = new EntityDirectory(project.Entities);
+
+        foreach (var entity in project.Entities
+                     .OrderBy(e => e.ClassName, StringComparer.Ordinal)
+                     .ThenBy(e => e.Namespace, StringComparer.Ordinal))
         {
             // What the entity declares comes first. The full list keeps the order the class reads
             // in, root down, but five slots shared with a shared base spend them all on the base:
@@ -329,11 +336,11 @@ public sealed class AgentContextGenerator
             var relationships = entity.Relationships
                 .OrderByDescending(r => r.InheritedFrom is null)
                 .Take(4)
-                .Select(r => $"{RelationshipArrow(r.Type)} `{r.RelatedEntity}`{(r.IsAggregated ? " (owned)" : "")}");
+                .Select(r => $"{RelationshipArrow(r.Type)} `{directory.LabelOf(r.RelatedEntity, entity.Namespace)}`{(r.IsAggregated ? " (owned)" : "")}");
 
             var more = entity.Relationships.Count > 4 ? $" +{entity.Relationships.Count - 4}" : "";
 
-            sb.Append($"| **{entity.ClassName}** ");
+            sb.Append($"| **{directory.Label(entity)}** ");
             // A dialog or a planning screen sits in this list beside the classes that are tables, and
             // a row that does not say so invites a query against something no database holds.
             sb.Append($"| `{Cell(entity.BaseType)}`{(entity.IsPersistent ? "" : " (not stored)")} ");

@@ -26,18 +26,48 @@ public static class ViewInventory
     public static List<ExtractedView> Build(ExtractedProject project)
     {
         var views = new Dictionary<string, ExtractedView>(StringComparer.Ordinal);
-        var known = project.Entities.Select(e => e.ClassName).ToHashSet(StringComparer.Ordinal);
+        var directory = new EntityDirectory(project.Entities);
+        var prefixes = IdPrefixes(project, directory);
 
         // Every class, persistent or not. XAF generates the same views for a class that stores
         // nothing, and they are the only way such a class is ever shown.
         foreach (var entity in project.Entities)
-            AddGenerated(views, entity, known);
+            AddGenerated(views, entity, PrefixOf(entity, prefixes), directory);
 
         MergeModelViews(views, project.ModelEditorInfo);
-        MarkNavigation(views, project);
+        MarkNavigation(views, project, prefixes);
 
         return [.. views.Values.OrderBy(view => view.Id, StringComparer.Ordinal)];
     }
+
+    /// <summary>
+    /// The prefix each class's generated view ids start with, where the module sets one.
+    /// </summary>
+    /// <remarks>
+    /// <c>ModelNodesGeneratorSettings.GetIdPrefix</c> returns the class name unless a prefix was set,
+    /// and the list, detail, lookup and nested list view generators all build their ids from it. XAF
+    /// keeps the first prefix set for a class, and so does this.
+    /// <para>
+    /// A <c>typeof</c> that cannot be tied to exactly one class leaves that class with the ids its name
+    /// gives it. Two classes then claim the same ids and the first one read keeps them — the same
+    /// collision that stops XAF at startup, so the application in question does not run either.
+    /// </para>
+    /// </remarks>
+    private static Dictionary<ExtractedEntity, string> IdPrefixes(ExtractedProject project, EntityDirectory directory)
+    {
+        var prefixes = new Dictionary<ExtractedEntity, string>(ReferenceEqualityComparer.Instance);
+
+        foreach (var setting in project.ModuleInfo?.IdPrefixes ?? [])
+        {
+            if (directory.Resolve(setting.TypeName) is { } entity)
+                prefixes.TryAdd(entity, setting.Prefix);
+        }
+
+        return prefixes;
+    }
+
+    private static string PrefixOf(ExtractedEntity entity, Dictionary<ExtractedEntity, string> prefixes) =>
+        prefixes.TryGetValue(entity, out var prefix) ? prefix : entity.ClassName;
 
     /// <summary>
     /// Adds the four kinds of view XAF generates for one business class.
@@ -45,11 +75,12 @@ public static class ViewInventory
     private static void AddGenerated(
         Dictionary<string, ExtractedView> views,
         ExtractedEntity entity,
-        HashSet<string> known)
+        string prefix,
+        EntityDirectory directory)
     {
         Add(views, new ExtractedView
         {
-            Id = $"{entity.ClassName}_ListView",
+            Id = $"{prefix}_ListView",
             ViewType = ModelViewType.ListView,
             ObjectType = entity.ClassName,
             // Reached from navigation or an action. A collection shown inside a detail view gets
@@ -60,7 +91,7 @@ public static class ViewInventory
 
         Add(views, new ExtractedView
         {
-            Id = $"{entity.ClassName}_DetailView",
+            Id = $"{prefix}_DetailView",
             ViewType = ModelViewType.DetailView,
             ObjectType = entity.ClassName,
             // XAF generates no separate nested detail view: the same id is used when a record is
@@ -71,7 +102,7 @@ public static class ViewInventory
 
         Add(views, new ExtractedView
         {
-            Id = $"{entity.ClassName}_LookupListView",
+            Id = $"{prefix}_LookupListView",
             ViewType = ModelViewType.ListView,
             ObjectType = entity.ClassName,
             Nesting = ViewNesting.Nested,
@@ -87,15 +118,16 @@ public static class ViewInventory
             // XAF generates a nested list view only when the collection holds a business class --
             // ListPropertyEditor requires the item type to be in the model. A List<string> or a
             // collection of some helper type produces no view, and inventing an id for one puts
-            // framework controllers on a screen that does not exist.
-            if (itemType is null || !known.Contains(itemType))
+            // framework controllers on a screen that does not exist. Resolved where the property is
+            // written, so a collection of Catalog.Tag is a collection of a business class too.
+            if (directory.Resolve(itemType, entity.Namespace) is not { } item)
                 continue;
 
             Add(views, new ExtractedView
             {
-                Id = $"{entity.ClassName}_{property.Name}_ListView",
+                Id = $"{prefix}_{property.Name}_ListView",
                 ViewType = ModelViewType.ListView,
-                ObjectType = itemType,
+                ObjectType = item.ClassName,
                 Nesting = ViewNesting.Nested,
                 Origin = ViewOrigin.Generated,
                 OwnerEntity = entity.ClassName,
@@ -142,7 +174,10 @@ public static class ViewInventory
     /// <summary>
     /// Marks the views a navigation item opens.
     /// </summary>
-    private static void MarkNavigation(Dictionary<string, ExtractedView> views, ExtractedProject project)
+    private static void MarkNavigation(
+        Dictionary<string, ExtractedView> views,
+        ExtractedProject project,
+        Dictionary<ExtractedEntity, string> prefixes)
     {
         foreach (var item in project.ModelEditorInfo?.NavigationItems?.Groups.SelectMany(g => g.Items) ?? [])
         {
@@ -153,7 +188,7 @@ public static class ViewInventory
         // DefaultClassOptions puts a class in navigation without anything being written down.
         foreach (var entity in project.Entities.Where(e => e.IsDefaultClassOptions))
         {
-            if (views.TryGetValue($"{entity.ClassName}_ListView", out var view))
+            if (views.TryGetValue($"{PrefixOf(entity, prefixes)}_ListView", out var view))
                 view.InNavigation = true;
         }
     }
@@ -199,10 +234,8 @@ public static class ViewInventory
         if (open <= 0 || close <= open)
             return null;
 
-        var argument = typeName[(open + 1)..close].Trim();
-        var lastDot = argument.LastIndexOf('.');
-
-        return lastDot >= 0 ? argument[(lastDot + 1)..] : argument;
+        // As written, namespace included: the directory decides what a qualified name means.
+        return typeName[(open + 1)..close].Trim();
     }
 
     private static void Add(Dictionary<string, ExtractedView> views, ExtractedView view) =>

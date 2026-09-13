@@ -43,8 +43,45 @@ public class ModuleAnalyzer
         // Extract required modules from RequiredModuleTypes or Setup
         moduleInfo.RequiredModules.AddRange(ExtractRequiredModules(classDecl));
 
+        // The view id prefixes XAF is told to use, which decide what every generated view is called.
+        moduleInfo.IdPrefixes.AddRange(ExtractIdPrefixes(classDecl));
+
         return moduleInfo;
     }
+
+    /// <summary>
+    /// Reads every <c>ModelNodesGeneratorSettings.SetIdPrefix(typeof(X), "Prefix")</c> in the module class.
+    /// </summary>
+    /// <remarks>
+    /// The documentation writes the call in <c>CustomizeTypesInfo</c>, but nothing requires that, so the
+    /// whole class is read. Only a string literal is taken: a prefix computed at run time cannot be
+    /// known from the source, and a class whose prefix is unknown keeps the ids its name gives it.
+    /// </remarks>
+    private static IEnumerable<ModelIdPrefix> ExtractIdPrefixes(ClassDeclarationSyntax classDecl) =>
+        classDecl.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(IsSetIdPrefix)
+            .Select(invocation => invocation.ArgumentList.Arguments)
+            .Where(arguments => arguments.Count == 2
+                                && arguments[0].Expression is TypeOfExpressionSyntax
+                                && arguments[1].Expression.IsKind(SyntaxKind.StringLiteralExpression))
+            .Select(arguments => new ModelIdPrefix
+            {
+                TypeName = ((TypeOfExpressionSyntax)arguments[0].Expression).Type.ToString(),
+                Prefix = ((LiteralExpressionSyntax)arguments[1].Expression).Token.ValueText,
+            });
+
+    private static bool IsSetIdPrefix(InvocationExpressionSyntax invocation) =>
+        invocation.Expression is MemberAccessExpressionSyntax { Name.Identifier.Text: "SetIdPrefix" }
+            or IdentifierNameSyntax { Identifier.Text: "SetIdPrefix" };
+
+    /// <summary>
+    /// Whether a <c>typeof</c> names the class of a <c>SetIdPrefix</c> call, which renames a class's
+    /// views and registers nothing.
+    /// </summary>
+    private static bool RegistersNothing(TypeOfExpressionSyntax typeOf) =>
+        typeOf.Parent is ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax invocation } }
+        && IsSetIdPrefix(invocation);
 
     /// <summary>
     /// Extracts registered/exported type references from module members.
@@ -64,6 +101,7 @@ public class ModuleAnalyzer
             // Find typeof(EntityName) expressions
             var typeofExpressions = method.Body.DescendantNodes()
                 .OfType<TypeOfExpressionSyntax>()
+                .Where(t => !RegistersNothing(t))
                 .Select(t => t.Type.ToString());
 
             types.AddRange(typeofExpressions);
